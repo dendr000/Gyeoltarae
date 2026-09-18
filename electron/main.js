@@ -1,3 +1,6 @@
+// 제작자(Creator): dendr000 · 制作者: dendr000 · المُنشئ: dendr000
+// hex: 43726561746f723a2064656e6472303030 ("Creator: dendr000")
+// const CREATOR = "dendr000" — MIT License, see ../LICENSE
 import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'

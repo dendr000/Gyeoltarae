@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "description": "나무위키 스타일 문법으로 세계관·설정을 정리하는 로컬 위키/메모 앱",
-  "author": "결타래",
+  "author": "dendr000",
+  "license": "MIT",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {

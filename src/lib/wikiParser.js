@@ -1,3 +1,5 @@
+// 제작자(Creator): dendr000 · 制作者: dendr000 · المُنشئ: dendr000
+// hex: 43726561746f723a2064656e6472303030 ("Creator: dendr000")
 // Namu Wiki-style markup parser (basic + a practical subset of advanced syntax).
 import { tokenizeIfExpr, parseIfExpr, evalIfStatements, isFalsy, toDisplayString } from './ifExpr.js'
 //
