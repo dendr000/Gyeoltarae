@@ -1,0 +1,94 @@
+:root {
+  --text: #3a3a3f;
+  --text-h: #101014;
+  --bg: #ffffff;
+  --bg-sidebar: #f4f4f6;
+  --bg-header: #f8f8fa;
+  --bg-pane: #ffffff;
+  --border: #e2e2e6;
+  --accent: #6c4ee3;
+  --accent-bg: rgba(108, 78, 227, 0.1);
+  --danger: #d64545;
+
+  --sans: 'Pretendard', system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 14px/1.6 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --text: #c9c9d1;
+    --text-h: #f2f2f5;
+    --bg: #1c1c21;
+    --bg-sidebar: #202024;
+    --bg-header: #1f1f24;
+    --bg-pane: #1c1c21;
+    --border: #33333a;
+    --accent: #9c85f0;
+    --accent-bg: rgba(156, 133, 240, 0.16);
+  }
+}
+
+:root[data-theme='dark'] {
+  --text: #c9c9d1;
+  --text-h: #f2f2f5;
+  --bg: #1c1c21;
+  --bg-sidebar: #202024;
+  --bg-header: #1f1f24;
+  --bg-pane: #1c1c21;
+  --border: #33333a;
+  --accent: #9c85f0;
+  --accent-bg: rgba(156, 133, 240, 0.16);
+}
+
+/* :root's own color-scheme (above) is "light dark" — both allowed, so the
+   browser picks based on OS/system preference, same as prefers-color-scheme
+   would. That's correct for 시스템 theme (no data-theme attribute at all),
+   but a manual 라이트/다크 pick here only ever changed the --bg/--text
+   variables above, never color-scheme itself — so CSS light-dark() (used by
+   wikiParser.js for 문서 내 "색1,색2" dual colors) would silently ignore a
+   manual pick and keep following the OS instead. Pinning color-scheme to a
+   single value here makes a manual pick authoritative for those too. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-h);
+}
