@@ -70,11 +70,14 @@ export default function App() {
     createFolder,
     deleteFile,
     renameFile,
+    moveFile,
     importFiles,
     setMode,
     promptRequest,
     requestPrompt,
     resolvePrompt,
+    activeTabId,
+    closeTab,
   } = useAppStore()
 
   useEffect(() => {
@@ -86,6 +89,22 @@ export default function App() {
     const unsubscribe = getApi().onMenuChooseWorkspace?.(() => chooseWorkspace())
     return unsubscribe
   }, [chooseWorkspace])
+
+  // Ctrl+W — 탭 닫기. electron/main.js가 "창" 메뉴의 role:'close' 기본 가속기(Ctrl+W)를
+  // Alt+F4로 옮겨 뒀으니 여기까지 살아서 도착함 — 그거 없이는 Ctrl+W가 창(=앱) 자체를
+  // 닫아버렸음("Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네" 제보). PromptModal이 떠 있는
+  // 동안은 무시 — 문서 이름 입력 중에 실수로 그 아래 탭이 닫히는 걸 막기 위함.
+  useEffect(() => {
+    function handleGlobalKeyDown(e) {
+      if (promptRequest) return
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault()
+        if (activeTabId) closeTab(activeTabId)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [activeTabId, closeTab, promptRequest])
 
   if (!workspacePath) {
     return (
@@ -155,6 +174,14 @@ export default function App() {
     }
   }
 
+  const handleMove = async (filePath, destDirPath, type) => {
+    try {
+      await moveFile(filePath, destDirPath, type)
+    } catch (err) {
+      window.alert(`이동하지 못했습니다.\n\n${err.message}`)
+    }
+  }
+
   const handleDelete = async (filePath, type) => {
     const message =
       type === 'dir' ? '이 폴더와 안의 모든 문서를 휴지통으로 이동할까요?' : '이 문서를 휴지통으로 이동할까요?'
@@ -218,6 +245,7 @@ export default function App() {
             onCreateFolder={handleCreateFolder}
             onDelete={handleDelete}
             onRename={handleRename}
+            onMove={handleMove}
             onImportFiles={importFiles}
             onImportImages={importImageFiles}
           />

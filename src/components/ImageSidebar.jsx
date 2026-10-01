@@ -12,6 +12,7 @@
 import { useState } from 'react'
 import { getApi } from '../lib/api.js'
 import { readFileAsBase64, IMPORTABLE_IMAGE_EXT } from '../lib/fileEncoding.js'
+import { SidebarSection } from './SidebarSection.jsx'
 
 export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteImage, onRenameImage }) {
   const names = Object.keys(imageIndex).sort((a, b) => a.localeCompare(b, 'ko'))
@@ -79,67 +80,71 @@ export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteIma
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
-      <div className="image-sidebar-title">
-        <span>이미지</span>
-        <button type="button" className="image-sidebar-add-btn" title="이미지 가져오기" onClick={onImport}>
-          +
-        </button>
-      </div>
-      {dragOver && <div className="image-sidebar-drop-hint">여기에 놓으면 이미지로 등록됩니다</div>}
-      {names.length === 0 ? (
-        <p className="category-empty-hint image-sidebar-empty">등록된 이미지가 없습니다. (끌어다 놓아도 됩니다)</p>
-      ) : (
-        <div className="image-sidebar-grid">
-          {names.map((name) => {
-            const entry = imageIndex[name]
-            const isRenaming = renamingName === name
-            return (
-              <div
-                key={name}
-                className="image-sidebar-item"
-                title={isRenaming ? undefined : '클릭해서 [[파일:이름]] 문법 복사, 더블클릭해서 이름 바꾸기'}
-                onClick={() => !isRenaming && handleCopy(name)}
-                onDoubleClick={(e) => {
-                  e.stopPropagation()
-                  if (!isRenaming) beginRename(name)
-                }}
-              >
-                <img className="image-sidebar-thumb" src={entry.dataUrl} alt={name} />
-                {isRenaming ? (
-                  <input
-                    className="image-sidebar-rename-input"
-                    autoFocus
-                    value={draft}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') e.currentTarget.blur()
-                      if (e.key === 'Escape') {
-                        setDraft(name)
-                        setRenamingName(null)
-                      }
-                    }}
-                  />
-                ) : (
-                  <span className="image-sidebar-label">{copiedName === name ? '복사됨' : name}</span>
-                )}
-                <button
-                  type="button"
-                  className="image-sidebar-delete-btn"
-                  title="이미지 삭제 (휴지통으로 이동)"
-                  onClick={(e) => {
+      <SidebarSection
+        id="image"
+        title="이미지"
+        actions={
+          <button type="button" className="image-sidebar-add-btn" title="이미지 가져오기" onClick={onImport}>
+            +
+          </button>
+        }
+      >
+        {dragOver && <div className="image-sidebar-drop-hint">여기에 놓으면 이미지로 등록됩니다</div>}
+        {names.length === 0 ? (
+          <p className="category-empty-hint image-sidebar-empty">등록된 이미지가 없습니다. (끌어다 놓아도 됩니다)</p>
+        ) : (
+          <div className="image-sidebar-grid">
+            {names.map((name) => {
+              const entry = imageIndex[name]
+              const isRenaming = renamingName === name
+              return (
+                <div
+                  key={name}
+                  className="image-sidebar-item"
+                  title={isRenaming ? undefined : '클릭해서 [[파일:이름]] 문법 복사, 더블클릭해서 이름 바꾸기'}
+                  onClick={() => !isRenaming && handleCopy(name)}
+                  onDoubleClick={(e) => {
                     e.stopPropagation()
-                    onDeleteImage(name)
+                    if (!isRenaming) beginRename(name)
                   }}
                 >
-                  ×
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
+                  <img className="image-sidebar-thumb" src={entry.dataUrl} alt={name} />
+                  {isRenaming ? (
+                    <input
+                      className="image-sidebar-rename-input"
+                      autoFocus
+                      value={draft}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur()
+                        if (e.key === 'Escape') {
+                          setDraft(name)
+                          setRenamingName(null)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="image-sidebar-label">{copiedName === name ? '복사됨' : name}</span>
+                  )}
+                  <button
+                    type="button"
+                    className="image-sidebar-delete-btn"
+                    title="이미지 삭제 (휴지통으로 이동)"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteImage(name)
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </SidebarSection>
     </div>
   )
 }

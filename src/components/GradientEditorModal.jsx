@@ -133,7 +133,7 @@ export function GradientEditorModal({ initialMode, onCancel, onConfirm }) {
 
         <div className="gradient-field-row">
           <span className="gradient-field-label">내용</span>
-          <input className="gradient-text-input" value={content} onChange={(e) => setContent(e.target.value)} />
+          <input className="gradient-text-input" value={content} onChange={(e) => setContent(e.target.value)} autoFocus />
         </div>
 
         <div className="gradient-field-row">

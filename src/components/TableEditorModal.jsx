@@ -487,6 +487,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                             fontWeight: r === 0 && headerRow ? 700 : undefined,
                           }}
                           className={focusCell.r === r && focusCell.c === c ? 'cell-selected' : ''}
+                          autoFocus={r === 0 && c === 0}
                           onFocus={() => selectCell(r, c, false)}
                           onChange={(e) => updateCell(r, c, { text: e.target.value })}
                           placeholder={r === 0 && headerRow ? `헤더 ${c + 1}` : ''}

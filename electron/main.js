@@ -14,6 +14,7 @@ import {
   createDoc,
   createFolder,
   renamePath,
+  movePath,
   CATEGORIES_DIR_NAME,
   scanCategoryPages,
   ensureCategoryPage,
@@ -47,6 +48,14 @@ const isDev = !app.isPackaged
 // 바뀌어서 이미 실사용 중인 워크스페이스 기억이 끊길 뻔했음. app.getPath('userData')를
 // 처음 호출하기 전에(모듈 로드 시점에 바로) 고정해야 함.
 app.setName('wikidesk')
+
+// 작업 표시줄 고정·실행 중 창 묶기의 기준(AppUserModelID) — 창을 만들기 전에(모듈 로드
+// 시점에) 호출해야 함. app.setName('wikidesk')와는 별개: 저건 userData 경로용 내부 이름,
+// 이건 Windows가 "고정한 바로가기"와 "지금 떠 있는 창"을 같은 앱으로 인식하게 하는 값
+// (지침: C:\dev\docs\guidelines\510_electron-icon.md). 패키징 스크립트(scripts/package-win.js)의
+// win32metadata와 짝을 맞춰야 하며, 한 번 정하면 바꾸지 않는다 — 바꾸면 이미 고정해 둔
+// 바로가기가 새 창을 "다른 앱"으로 취급해 묶이지 않는다.
+app.setAppUserModelId('com.gyeoltarae.app')
 
 let mainWindow = null
 let watcher = null
@@ -191,6 +200,10 @@ function createWindow() {
     minWidth: 780,
     minHeight: 480,
     backgroundColor: '#1e1f22',
+    // 개발 모드(npm run electron:dev 등)에서도 기본 Electron 아톰 아이콘이 아니라 앱
+    // 아이콘이 뜨게 함 — 패키징된 exe는 exe 리소스에 구운 아이콘을 쓰므로(packager의
+    // icon 옵션) 이 값과 무관하게 항상 정확함.
+    icon: path.join(__dirname, '..', 'build', 'icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -252,7 +265,13 @@ function buildMenu() {
       label: '창',
       submenu: [
         { role: 'minimize', label: '최소화' },
-        { role: 'close', label: '닫기' },
+        // role: 'close'에 accelerator를 안 주면 Electron이 플랫폼 기본값(Windows/Linux는
+        // CmdOrCtrl+W)을 알아서 붙여버려서, 탭 하나만 닫으려고 누른 Ctrl+W가 렌더러까지
+        // 가지도 못하고 창 전체를 닫아버렸음(제보: "Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네").
+        // Alt+F4는 원래 OS 차원에서 창을 닫는 단축키라 Electron 가속기 없이도 항상 동작하니,
+        // 여기 명시적으로 그걸 붙여서 기본값(Ctrl+W)을 밀어내고 Ctrl+W는 렌더러(App.jsx의
+        // 전역 keydown, "탭 닫기")가 쓸 수 있게 비워 둠.
+        { role: 'close', label: '닫기', accelerator: 'Alt+F4' },
       ],
     },
   ]
@@ -374,6 +393,16 @@ ipcMain.handle('file:rename', async (_event, oldPath, newName) => {
   await stopWatching()
   try {
     return renamePath(oldPath, newName)
+  } finally {
+    if (currentWorkspacePath) startWatching(currentWorkspacePath)
+  }
+})
+
+ipcMain.handle('file:move', async (_event, sourcePath, destDirPath) => {
+  // Same watcher-vs-directory-handle race as file:delete/file:rename above.
+  await stopWatching()
+  try {
+    return movePath(sourcePath, destDirPath)
   } finally {
     if (currentWorkspacePath) startWatching(currentWorkspacePath)
   }

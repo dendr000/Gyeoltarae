@@ -24,11 +24,14 @@ function searchDict(dictMap, query) {
   return results
 }
 
-export function DictModal({ onClose }) {
+export function DictModal({ onClose, initialWord = '' }) {
   const bulkAddDictEntries = useAppStore((s) => s.bulkAddDictEntries)
   const deleteDictEntry = useAppStore((s) => s.deleteDictEntry)
 
-  const [word, setWord] = useState('')
+  // initialWord — Alt+Shift+H(한자 등록)로 열렸고 그 순간 에디터에 선택 영역이 있었을 때,
+  // "원문" 칸을 미리 채워서 옴. 모달은 매번 새로 마운트되므로(App.jsx가 dictModalOpen일
+  // 때만 렌더) useState 초깃값으로 충분 — 열려 있는 도중에 initialWord가 바뀌는 경우는 없음.
+  const [word, setWord] = useState(initialWord)
   const [translation, setTranslation] = useState('')
   const [editing, setEditing] = useState(null)
   const [bulkMode, setBulkMode] = useState(false)
@@ -93,8 +96,22 @@ export function DictModal({ onClose }) {
         </div>
 
         <form className="snippet-modal-form-row" onSubmit={handleSubmit}>
-          <input type="text" placeholder="원문" value={word} onChange={(e) => setWord(e.target.value)} />
-          <input type="text" placeholder="한자/영문" value={translation} onChange={(e) => setTranslation(e.target.value)} />
+          {/* initialWord로 이미 채워져 열렸으면(Alt+Shift+H) 다음 입력이 필요한 건 한자/영문
+              쪽이므로 그쪽에 커서를 둠 — 아니면 첫 칸(원문)에. */}
+          <input
+            type="text"
+            placeholder="원문"
+            value={word}
+            onChange={(e) => setWord(e.target.value)}
+            autoFocus={!initialWord}
+          />
+          <input
+            type="text"
+            placeholder="한자/영문"
+            value={translation}
+            onChange={(e) => setTranslation(e.target.value)}
+            autoFocus={!!initialWord}
+          />
           <button type="submit" className="snippet-inline-submit-btn">
             {editing ? '저장' : '추가'}
           </button>

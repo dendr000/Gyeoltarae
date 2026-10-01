@@ -699,6 +699,10 @@
   margin: -6px 0 12px;
 }
 
+.wiki-footnote {
+  position: relative;
+}
+
 .wiki-footnote a {
   color: var(--accent);
   font-weight: 600;
@@ -708,6 +712,35 @@
 
 .wiki-footnote a:hover {
   text-decoration: underline;
+}
+
+/* 나무위키처럼 각주에 마우스를 올리면 바로 내용이 뜨는 팝오버 — 클릭해서 최하단 각주
+   목록으로 이동하는 기존 동작은 그대로 유지하면서, 그럴 필요 없이 훑어볼 수 있게 추가. */
+.wiki-footnote-popover {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  width: max-content;
+  max-width: 320px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-pane);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-h);
+  text-align: left;
+  white-space: normal;
+  cursor: default;
+}
+
+.wiki-footnote:hover .wiki-footnote-popover {
+  display: block;
 }
 
 .wiki-footnote-divider {
@@ -1112,14 +1145,50 @@
   cursor: pointer;
 }
 
-.editor-textarea {
+/* 편집기 폰트로는 제목(=텍스트=) 줄이 잘 안 보인다는 피드백에 맞춰, 실제 글자를 그리는
+   textarea 뒤에 같은 텍스트를 보이지 않게(color: transparent) 겹쳐 그리는 배경판 하나를
+   추가 — 제목 줄만 배경색이 살아남아 하이라이트 막대처럼 보임(withCaretMirror와 같은
+   "숨은 거울 텍스트" 기법). .editor-textarea가 배경을 투명하게 두면 이 배경판의 하이라이트가
+   그 위에 그대로 비쳐 보임 — 실제 글자는 항상 진짜 textarea가 그림.
+   EditorPane.jsx의 highlightLines/backdropRef 참고. */
+.editor-text-wrap {
+  position: relative;
   flex: 1;
   min-height: 0;
+  background: var(--bg-pane);
+}
+
+.editor-highlight-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 24px 32px;
+  font: 14px/1.7 var(--mono);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: transparent;
+  pointer-events: none;
+}
+
+.editor-heading-highlight-line {
+  display: block;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--accent-bg);
+}
+
+.editor-textarea {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
   border: none;
   outline: none;
   resize: none;
   padding: 24px 32px;
-  background: var(--bg-pane);
+  background: transparent;
   color: var(--text-h);
   font: 14px/1.7 var(--mono);
 }
@@ -1176,6 +1245,53 @@
 
 .prompt-modal-panel {
   width: min(420px, 92vw);
+}
+
+.move-modal-panel {
+  width: min(420px, 92vw);
+}
+
+.move-modal-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.65;
+}
+
+.move-modal-tree {
+  max-height: 40vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 0;
+  margin-bottom: 14px;
+}
+
+.move-modal-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 13px;
+  color: var(--text-h);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.move-modal-folder-row:hover {
+  background: var(--accent-bg);
+}
+
+.move-modal-folder-row.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.move-modal-folder-row.disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
 }
 
 .table-editor-modal-panel {
@@ -1780,20 +1896,56 @@
   text-align: center;
 }
 
-/* --- Category (분류) --- */
+/* --- 사이드바 섹션 공통(접기 가능한 제목 줄) --- */
+/* 분류/자료/틀/이미지/상용구/사전이 전부 공유 — SidebarSection.jsx 참고. */
 
-.category-sidebar {
-  padding: 10px 0 8px;
-  border-top: 1px solid var(--border);
+.sidebar-section-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 6px 12px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.category-sidebar-title {
-  padding: 4px 16px 6px;
+.sidebar-section-caret {
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: transform 0.12s ease;
+}
+
+.sidebar-section-caret.open {
+  transform: rotate(90deg);
+}
+
+.sidebar-section-title:hover .sidebar-section-caret {
+  opacity: 0.85;
+}
+
+.sidebar-section-title-label {
+  flex: 1;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--text);
   opacity: 0.55;
+}
+
+.sidebar-section-title:hover .sidebar-section-title-label {
+  opacity: 0.8;
+}
+
+.sidebar-section-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Category (분류) --- */
+
+.category-sidebar {
+  padding: 10px 0 8px;
+  border-top: 1px solid var(--border);
 }
 
 .category-sidebar-row {
@@ -2083,21 +2235,6 @@
 .data-sidebar {
   padding: 10px 0 8px;
   border-top: 1px solid var(--border);
-}
-
-.data-sidebar-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px 6px 16px;
-}
-
-.data-sidebar-title span {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text);
-  opacity: 0.55;
 }
 
 .data-sidebar-add-btn {
@@ -2437,21 +2574,6 @@
   border-top: 1px solid var(--border);
 }
 
-.template-sidebar-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px 6px 16px;
-}
-
-.template-sidebar-title span {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text);
-  opacity: 0.55;
-}
-
 .template-sidebar-add-btn {
   border: none;
   background: transparent;
@@ -2568,21 +2690,6 @@
   color: var(--accent);
   font-size: 12px;
   text-align: center;
-}
-
-.image-sidebar-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px 6px 16px;
-}
-
-.image-sidebar-title span {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text);
-  opacity: 0.55;
 }
 
 .image-sidebar-add-btn {

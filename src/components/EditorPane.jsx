@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Heading1,
   Bold,
@@ -31,6 +31,7 @@ import { useAppStore } from '../store/useAppStore.js'
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { getApi } from '../lib/api.js'
 import { resolveCycleReplacement } from '../lib/dictCycle.js'
+import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -92,7 +93,7 @@ function insertBlockText(textarea, onChange, block) {
 // wrapSelection already used for Ctrl+B/Ctrl+U). Typing the matching
 // closer while it's already the very next character steps over it rather
 // than inserting a redundant one, same as most code editors.
-const AUTO_PAIRS = { '(': ')', '[': ']', "'": "'", '"': '"' }
+const AUTO_PAIRS = { '(': ')', '[': ']', "'": "'", '"': '"', '<': '>', '{': '}' }
 const AUTO_PAIR_CLOSERS = new Set(Object.values(AUTO_PAIRS))
 
 // [[분류:...]]/[[자료:...]]/[[별칭:...]]/[[파일:...]] are reserved link-target
@@ -463,6 +464,24 @@ const FOLDING_TEMPLATE = `{{{#!folding 더 보기
 숨겨진 내용
 }}}`
 
+// wikiParser.js의 HEADING_EQ_RE와 같은 모양(=제목= ~ ======제목======) — 편집기 폰트가
+// 구분하기 힘들다는 피드백에 맞춰, 문단(제목) 줄만 배경을 얹어 눈에 띄게 함. 진짜 문법
+// 강조(색칠)까지는 아니고 "이 줄이 제목이다"만 표시하는 가벼운 수준 — 일반 <textarea>는
+// 글자 하나하나를 다른 색으로 칠할 방법이 없어서(그러려면 contentEditable로 통째로 바꿔야
+// 함, 실행취소/IME 등 기존 동작이 전부 걸려 있어 위험도가 큼), 실제 글자는 여전히 진짜
+// textarea가 그대로 그리고, 그 뒤에 깔린 이 배경만 흉내냄(withCaretMirror와 같은 기법 —
+// 보이지 않는 거울 텍스트 뒤에 하이라이트 막대만 살아남게).
+const HEADING_LINE_RE = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/
+
+function renderHighlightLines(text) {
+  return text.split('\n').map((line, i) => (
+    <span key={i} className={HEADING_LINE_RE.test(line) ? 'editor-heading-highlight-line' : undefined}>
+      {line}
+      {'\n'}
+    </span>
+  ))
+}
+
 function ToolbarButton({ icon: Icon, label, title, onClick }) {
   return (
     <button type="button" className="toolbar-btn" title={title} onClick={onClick}>
@@ -474,6 +493,8 @@ function ToolbarButton({ icon: Icon, label, title, onClick }) {
 
 export function EditorPane({ text, onChange, disabled }) {
   const textareaRef = useRef(null)
+  const backdropRef = useRef(null)
+  const highlightLines = useMemo(() => renderHighlightLines(text), [text])
   const [tableModal, setTableModal] = useState(null)
   const [gradientModal, setGradientModal] = useState(null)
   const [fileSuggest, setFileSuggest] = useState(null)
@@ -491,6 +512,8 @@ export function EditorPane({ text, onChange, disabled }) {
   const openPath = useAppStore((s) => s.openPath)
   const editorJumpOffset = useAppStore((s) => s.editorJumpOffset)
   const clearEditorJump = useAppStore((s) => s.clearEditorJump)
+  const openDictModal = useAppStore((s) => s.openDictModal)
+  const activeTabId = useAppStore((s) => s.activeTabId)
 
   // Switching to a different document should never leave a stale suggestion
   // popup floating over the new one — but this must key on openPath, not
@@ -501,6 +524,18 @@ export function EditorPane({ text, onChange, disabled }) {
     setSnippetSuggest(null)
     setFindBar(null)
   }, [openPath])
+
+  // 탭 전환 시 에디터 스크롤 위치 복원 — activeTabId가 바뀔 때만(타이핑으로 text가 바뀔
+  // 때마다는 아님) 그 탭에서 마지막으로 기억해 둔 위치로 되돌림. 실제 저장은 아래
+  // textarea의 onScroll에서 매 스크롤마다 scrollMemory.js에 직접 씀 — 리액트 상태를 거치지
+  // 않아 리렌더를 안 일으킴(이유는 scrollMemory.js 자체 주석 참고).
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const restored = getEditorScroll(activeTabId)
+    textarea.scrollTop = restored
+    if (backdropRef.current) backdropRef.current.scrollTop = restored
+  }, [activeTabId])
 
   // Freshly created 문서/틀/자료/분류 open with no content yet — auto-focus
   // the editor so typing works immediately instead of requiring a manual
@@ -548,6 +583,7 @@ export function EditorPane({ text, onChange, disabled }) {
     const offset = Math.min(editorJumpOffset, textarea.value.length)
     const contentTop = getContentTopOffset(textarea, offset)
     textarea.scrollTop = Math.max(0, contentTop - textarea.clientHeight / 3)
+    if (backdropRef.current) backdropRef.current.scrollTop = textarea.scrollTop
     textarea.focus()
     textarea.setSelectionRange(offset, offset)
     clearEditorJump()
@@ -881,6 +917,15 @@ export function EditorPane({ text, onChange, disabled }) {
         return
       }
     }
+    // Alt+Shift+H — 한자(사전) 등록. 선택된 텍스트가 있으면 그걸 "원문" 칸에 미리 채운 채로
+    // 사전 모달을 열어서, 선택 → 단축키 → 한자만 입력하고 저장으로 바로 등록할 수 있게 함.
+    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'h') {
+      e.preventDefault()
+      const { selectionStart, selectionEnd } = textarea
+      const selected = selectionStart !== selectionEnd ? textarea.value.slice(selectionStart, selectionEnd) : ''
+      openDictModal(selected)
+      return
+    }
     // Alt+H — 고유명사 사전 순환치환(다른 Alt+Shift+H 단축키와 안 겹치게 Shift 안 눌렸을
     // 때만). 매치가 없어도 이 앱 안에서 예약된 조합으로 취급해 항상 여기서 소비한다.
     if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key.toLowerCase() === 'h') {
@@ -905,7 +950,12 @@ export function EditorPane({ text, onChange, disabled }) {
       openFindBar(e.shiftKey ? 'replace' : 'find')
       return
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    // Ctrl+S/B/U — Caps Lock이 켜진 상태에서는 e.key가 's' 대신 'S'로 오는데(Caps Lock은
+    // 글자 키에 한해 Shift와 똑같이 대소문자를 뒤집음) 예전엔 여기서 소문자만 비교하고
+    // 있었음 — 그래서 "처음엔 되다가 쓰다 보면 갑자기 안 됨, 그러다 또 됨" 현상이 실제로
+    // Caps Lock이 켜져 있던 동안엔 이 세 단축키가 전부 조용히 무시되고 있었던 것. Ctrl+F와
+    // 똑같이 toLowerCase 비교로 통일.
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       // Docs already autosave 800ms after the last keystroke — Ctrl+S here
       // only needs to stop the browser's own "Save Page As" dialog and,
       // since the user reached for it anyway, save immediately instead of
@@ -914,12 +964,12 @@ export function EditorPane({ text, onChange, disabled }) {
       saveOpenFile()
       return
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
       e.preventDefault()
       wrapSelection(textarea, "'''", "'''", onChange)
       return
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') {
       e.preventDefault()
       wrapSelection(textarea, '__', '__', onChange)
       return
@@ -1176,39 +1226,48 @@ export function EditorPane({ text, onChange, disabled }) {
           </div>
         </div>
       )}
-      <textarea
-        ref={textareaRef}
-        className="editor-textarea"
-        value={text}
-        disabled={disabled}
-        placeholder={
-          disabled
-            ? ''
-            : '=제목=\n\n나무위키 스타일 문법으로 작성하세요.\n\'\'\'굵게\'\'\', __밑줄__, ~~취소선~~, \'\'기울임\'\'\n[* 각주 내용]\n* 목록\n> 인용\n||=칸1=||=칸2=||\n||값1||값2||\n#태그1 #태그2\n\n위 툴바 버튼으로도 문법을 몰라도 서식을 넣을 수 있습니다.'
-        }
-        onChange={(e) => {
-          const rewrote = maybeAutoResolveLink(e.target, docIndex, onChange)
-          if (!rewrote) onChange(e.target.value)
-          updateFileSuggest()
-          updateSnippetSuggest()
-        }}
-        onKeyDown={handleKeyDown}
-        onClick={() => {
-          updateFileSuggest()
-          updateSnippetSuggest()
-        }}
-        onKeyUp={(e) => {
-          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+      <div className="editor-text-wrap">
+        <div ref={backdropRef} className="editor-highlight-backdrop" aria-hidden="true">
+          {highlightLines}
+        </div>
+        <textarea
+          ref={textareaRef}
+          className="editor-textarea"
+          value={text}
+          disabled={disabled}
+          placeholder={
+            disabled
+              ? ''
+              : '=제목=\n\n나무위키 스타일 문법으로 작성하세요.\n\'\'\'굵게\'\'\', __밑줄__, ~~취소선~~, \'\'기울임\'\'\n[* 각주 내용]\n* 목록\n> 인용\n||=칸1=||=칸2=||\n||값1||값2||\n#태그1 #태그2\n\n위 툴바 버튼으로도 문법을 몰라도 서식을 넣을 수 있습니다.'
+          }
+          onChange={(e) => {
+            const rewrote = maybeAutoResolveLink(e.target, docIndex, onChange)
+            if (!rewrote) onChange(e.target.value)
             updateFileSuggest()
             updateSnippetSuggest()
-          }
-        }}
-        onBlur={() => {
-          setFileSuggest(null)
-          setSnippetSuggest(null)
-        }}
-        spellCheck={false}
-      />
+          }}
+          onKeyDown={handleKeyDown}
+          onClick={() => {
+            updateFileSuggest()
+            updateSnippetSuggest()
+          }}
+          onKeyUp={(e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
+              updateFileSuggest()
+              updateSnippetSuggest()
+            }
+          }}
+          onBlur={() => {
+            setFileSuggest(null)
+            setSnippetSuggest(null)
+          }}
+          onScroll={(e) => {
+            setEditorScroll(activeTabId, e.target.scrollTop)
+            if (backdropRef.current) backdropRef.current.scrollTop = e.target.scrollTop
+          }}
+          spellCheck={false}
+        />
+      </div>
       {findBar && (
         <FindReplaceBar
           state={findBar}

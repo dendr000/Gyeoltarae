@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
+import { SidebarSection } from './SidebarSection.jsx'
 
 function groupByType(dataIndex) {
   const groups = new Map()
@@ -38,46 +39,50 @@ export function DataSidebar({ dataIndex, activeEntry, onOpenEntry, onDeleteEntry
 
   return (
     <div className="data-sidebar">
-      <div className="data-sidebar-title">
-        <span>자료</span>
-        <button type="button" className="data-sidebar-add-btn" title="새 자료" onClick={handleAdd}>
-          +
-        </button>
-      </div>
-      {groups.map(({ type, entries }) => (
-        <div key={type}>
-          <div className="data-sidebar-type">{type}</div>
-          {entries.map((entry) => {
-            const isActive = activeEntry?.type === entry.type && activeEntry?.name === entry.name
-            return (
-              <div
-                key={`${entry.type}/${entry.name}`}
-                className={`data-sidebar-row ${isActive ? 'active' : ''} ${!entry.path ? 'data-sidebar-row-missing' : ''}`}
-                onClick={() => {
-                  getApi().refocusWindow?.()
-                  onOpenEntry(entry.type, entry.name)
-                }}
-                title={entry.path ? undefined : '아직 만들어지지 않은 자료 (참조만 있음)'}
-              >
-                <span className="data-sidebar-label">{entry.name}</span>
-                {entry.path && (
-                  <button
-                    type="button"
-                    className="data-sidebar-delete-btn"
-                    title="자료 삭제 (휴지통으로 이동)"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteEntry(entry.type, entry.name)
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ))}
+      <SidebarSection
+        id="data"
+        title="자료"
+        actions={
+          <button type="button" className="data-sidebar-add-btn" title="새 자료" onClick={handleAdd}>
+            +
+          </button>
+        }
+      >
+        {groups.map(({ type, entries }) => (
+          <div key={type}>
+            <div className="data-sidebar-type">{type}</div>
+            {entries.map((entry) => {
+              const isActive = activeEntry?.type === entry.type && activeEntry?.name === entry.name
+              return (
+                <div
+                  key={`${entry.type}/${entry.name}`}
+                  className={`data-sidebar-row ${isActive ? 'active' : ''} ${!entry.path ? 'data-sidebar-row-missing' : ''}`}
+                  onClick={() => {
+                    getApi().refocusWindow?.()
+                    onOpenEntry(entry.type, entry.name)
+                  }}
+                  title={entry.path ? undefined : '아직 만들어지지 않은 자료 (참조만 있음)'}
+                >
+                  <span className="data-sidebar-label">{entry.name}</span>
+                  {entry.path && (
+                    <button
+                      type="button"
+                      className="data-sidebar-delete-btn"
+                      title="자료 삭제 (휴지통으로 이동)"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteEntry(entry.type, entry.name)
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </SidebarSection>
     </div>
   )
 }

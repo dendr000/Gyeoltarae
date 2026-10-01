@@ -84,6 +84,17 @@ const appPaths = await packager({
   overwrite: true,
   appCopyright: '결타래',
   name: 'Gyeoltarae',
+  // exe 아이콘·파일 정보 — 없으면 작업 표시줄에 고정했을 때 Electron 기본 아이콘/이름("Electron")이
+  // 나옴(지침: C:\dev\docs\guidelines\510_electron-icon.md). icon은 build/icon.ico를
+  // 빌드마다 새로 만들지 않고 저장소에 커밋해 둔 그대로 씀.
+  icon: path.join(root, 'build', 'icon.ico'),
+  win32metadata: {
+    CompanyName: 'dendr000',
+    FileDescription: '결타래',
+    ProductName: '결타래',
+    InternalName: 'Gyeoltarae',
+    OriginalFilename: 'Gyeoltarae.exe',
+  },
   ignore: (file) => IGNORE_PATTERNS.some((re) => re.test(file)),
   // create-workspace-shortcut.ps1 gets run by spawning a real powershell.exe
   // process (see ensureWorkspaceShortcut in electron/main.js), which can't

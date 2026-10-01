@@ -343,17 +343,41 @@ function renderResolvedLink(resolved, innerHtml) {
 }
 
 function applyInline(text, footnotes, docIndex = {}) {
-  let out = escapeHtml(text)
-
-  // Footnotes first, so bracket content isn't mangled by later rules. The
-  // marker is a real #fn-N link (not just a styled number) so clicking it
-  // jumps to the footnote list at the bottom of the document; fn-back-N on
-  // the marker itself is the matching jump-back target for the "↩" link the
-  // footnote list entry gets (see parseWikiText's footnote-list rendering).
-  out = out.replace(/\[\*\s?([^\]]*)\]/g, (_m, content) => {
-    footnotes.push(content)
+  // Footnotes are pulled out of the RAW (still-unescaped) source first,
+  // before escapeHtml runs below — each match is swapped for a plain-ASCII
+  // placeholder token so escapeHtml can't touch it, and the footnote's own
+  // body is rendered right here (via a fresh recursive applyInline call, so
+  // its own '''굵게'''/링크/[br] etc. all work) from that same raw text.
+  // Doing this on already-escaped text instead (as this used to) double-
+  // escapes entities in the footnote body. The capture group's shape —
+  // (?:\[br\]|[^\]])* instead of a plain [^\]]* — matters too: a plain
+  // [^\]]* would stop at the ] that closes a [br] macro INSIDE the
+  // footnote, silently truncating everything after it and leaking the rest
+  // as plain text in the body (실제 버그: "각주 안에 [br]을 쓰면 뒤 내용이
+  // 잘리고 새어 나옴"). Trying \[br\] as a whole token first lets it skip
+  // over that macro intact; only a real closing ] (not part of a [br])
+  // still ends the footnote. 각주 위에 마우스를 올리면 나무위키처럼 내용이
+  // 바로 뜨는 팝오버(wiki-footnote-popover)도 여기서 같이 만듦 — 클릭하면
+  // 여전히 최하단 각주 목록으로도 이동함(각주가 길어 팝오버에 다 안 보일
+  // 때의 대안).
+  const footnoteHtmlByMarker = []
+  const withFootnoteMarkers = text.replace(/\[\*\s?((?:\[br\]|[^\]])*)\]/g, (_m, rawContent) => {
+    footnotes.push(rawContent)
     const n = footnotes.length
-    return `<sup class="wiki-footnote"><a href="#fn-${n}" id="fn-back-${n}" data-footnote="${n}">${n}</a></sup>`
+    const popoverHtml = applyInline(rawContent, [], docIndex)
+    const marker = `@@WD_FOOTNOTE_${footnoteHtmlByMarker.length}@@`
+    footnoteHtmlByMarker.push(
+      `<sup class="wiki-footnote" data-footnote="${n}">` +
+        `<a href="#fn-${n}" id="fn-back-${n}">${n}</a>` +
+        `<span class="wiki-footnote-popover" contenteditable="false">${popoverHtml}</span>` +
+        `</sup>`,
+    )
+    return marker
+  })
+
+  let out = escapeHtml(withFootnoteMarkers)
+  footnoteHtmlByMarker.forEach((html, i) => {
+    out = out.replace(`@@WD_FOOTNOTE_${i}@@`, html)
   })
 
   // [br] — explicit line break (실제 나무위키 매크로). 문단 안에 그냥 줄바꿈을 쳐서는
@@ -422,8 +446,6 @@ function applyInline(text, footnotes, docIndex = {}) {
     return renderResolvedLink(resolved, displayText)
   })
 
-  out = out.replace(/\[br\]/g, '<br>')
-
   out = out.replace(/'''([^'\n]+)'''/g, '<strong>$1</strong>')
   out = out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
   out = out.replace(/''([^'\n]+)''/g, '<em>$1</em>')
@@ -441,11 +463,6 @@ const TOC_PLACEHOLDER = '@@WIKIDESK_TOC_PLACEHOLDER@@'
 const TAG_LINE_RE = /^(?:\s*#[^\s#]+)+\s*$/
 const TAG_TOKEN_RE = /#([^\s#]+)/g
 const HEADING_EQ_RE = /^(={1,6})[ \t]*(.+?)[ \t]*\1$/
-// Same shape as HEADING_EQ_RE but anchored to real line boundaries (`m`
-// flag) over the whole raw source in one pass, so matchAll's `.index` gives
-// a real character offset — used only to build collectRawHeadingOffsets
-// below (see its own comment for why).
-const RAW_HEADING_LINE_RE = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/gm
 const HR_RE = /^(-{4,7})$/
 // [\s\S] (not .) so a merged multi-line row (see mergeMultilineTableRows)
 // still matches across its embedded newlines.
@@ -541,27 +558,43 @@ function slugifyHeading(text) {
   return `h-${slugifyName(text)}`
 }
 
-// Maps each `=제목=`-style heading to where it starts in the ORIGINAL,
-// unexpanded editor text — used only so a heading's [편집] link (see the
+// Finds where each `=제목=`-style heading starts in the ORIGINAL, unexpanded
+// editor text — used only so a heading's [편집] link (see the
 // heading-rendering block in parseWikiText) can tell EditorPane.jsx where
-// to jump the cursor. Keyed by "level:text" with the offsets in the order
-// they appear, so duplicate headings (rare, but see slugifyName's own
-// "first one wins" reasoning) resolve positionally as the main parse loop
-// consumes them one at a time (see parseWikiText's rawHeadingOffsetCursor).
-// Deliberately built from the raw, pre-expandTemplates source rather than
-// the line array the main loop actually walks: a heading that came from an
-// expanded {{틀:...}} call exists in that expanded text but not here at
-// all, so it just gets no offset and no [편집] link renders for it —
-// correct, since "jump this document's editor to it" has no right answer
-// for text that actually lives in a different (template) document.
-function collectRawHeadingOffsets(rawSource) {
-  const offsets = new Map()
-  for (const m of (rawSource ?? '').matchAll(RAW_HEADING_LINE_RE)) {
-    const key = `${m[1].length}:${m[2]}`
-    if (!offsets.has(key)) offsets.set(key, [])
-    offsets.get(key).push(m.index)
+// to jump the cursor. Returns a `find(level, text)` closure the main parse
+// loop calls once per heading it renders, in the same top-to-bottom order
+// it walks them, so a monotonic single cursor into rawSource — not a count
+// per "level:text" key — is what actually keeps the two in lock-step: a
+// heading that came from an expanded {{틀:...}} call exists in the expanded
+// text the main loop walks but not in rawSource at all, so find() simply
+// fails for it (no offset, no [편집] link — correct, since "jump this
+// document's editor to it" has no right answer for text that actually lives
+// in a different, template document) WITHOUT consuming/advancing past a
+// later real heading that happens to share the same level+text. A previous
+// version counted occurrences per key instead, which broke exactly in that
+// case — a template-original heading whose text collided with a real one
+// elsewhere silently ate that real heading's slot, sending [편집] to the
+// wrong place (or nowhere) for it and everything after.
+function createRawHeadingOffsetFinder(rawSource) {
+  const source = rawSource ?? ''
+  const re = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/gm
+  let cursor = 0
+  return function find(level, text) {
+    re.lastIndex = cursor
+    let m
+    while ((m = re.exec(source))) {
+      if (m[1].length === level && m[2] === text) {
+        cursor = re.lastIndex
+        return m.index
+      }
+    }
+    // No match from `cursor` onward — this heading has no raw counterpart
+    // (template-originated). Reset lastIndex (exec running to the end just
+    // now leaves it at 0) so the NEXT heading's search still starts from
+    // the same `cursor`, not from the start of the document.
+    re.lastIndex = cursor
+    return undefined
   }
-  return offsets
 }
 
 function countOccurrences(str, needle) {
@@ -1265,8 +1298,7 @@ export function parseWikiText(
   // here, so computing offsets against ITS `source` would point at the
   // wrong place if used for a jump; leaving this Map empty for those calls
   // means their headings just get no [편집] link at all instead.
-  const rawHeadingOffsets = editableOffsets ? collectRawHeadingOffsets(source) : new Map()
-  const rawHeadingOffsetCursor = new Map()
+  const findRawHeadingOffset = editableOffsets ? createRawHeadingOffsetFinder(source) : null
   const footnotes = []
   const tags = new Set()
   const toc = []
@@ -1465,10 +1497,7 @@ export function parseWikiText(
       const id = slugifyHeading(text)
       const number = nextHeadingNumber(level)
       toc.push({ level, text, id, number })
-      const offsetKey = `${level}:${text}`
-      const offsetCursor = rawHeadingOffsetCursor.get(offsetKey) ?? 0
-      const rawOffset = rawHeadingOffsets.get(offsetKey)?.[offsetCursor]
-      rawHeadingOffsetCursor.set(offsetKey, offsetCursor + 1)
+      const rawOffset = findRawHeadingOffset?.(level, text)
       const editLink =
         rawOffset === undefined
           ? ''

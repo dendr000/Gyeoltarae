@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   createFile: (dirPath, name) => ipcRenderer.invoke('file:create', dirPath, name),
   deleteFile: (filePath) => ipcRenderer.invoke('file:delete', filePath),
   renameFile: (oldPath, newName) => ipcRenderer.invoke('file:rename', oldPath, newName),
+  moveFile: (sourcePath, destDirPath) => ipcRenderer.invoke('file:move', sourcePath, destDirPath),
   createFolder: (parentPath, name) => ipcRenderer.invoke('dir:create', parentPath, name),
 
   scanCategories: (workspacePath) => ipcRenderer.invoke('categories:scan', workspacePath),

@@ -115,9 +115,10 @@ export function writeDoc(filePath, content) {
   fs.writeFileSync(filePath, content, 'utf-8')
 }
 
-// Every new document starts with this skeleton: an auto TOC, an "개요"
-// heading to fill in, and an empty 분류 tag ready to be filled in.
-const NEW_DOC_TEMPLATE = '[목차]\n= 개요 =\n\n\n[[분류:]]\n'
+// Every new document starts with just an empty 분류 tag ready to be filled
+// in — no auto [목차]/"개요" heading (문서 대부분이 소제목 하나짜리로 끝나는
+// 경우가 많아서, 안 쓸 때가 더 많은 틀을 기본으로 깔아두지 않음).
+const NEW_DOC_TEMPLATE = '[[분류:]]\n'
 
 export function createDoc(dirPath, name) {
   const safeName = sanitizeFileName(name, '새 문서')
@@ -151,6 +152,35 @@ export function renamePath(oldPath, newName) {
   const newPath = path.join(dir, isDoc ? `${safeName}${DOC_EXT}` : safeName)
   fs.renameSync(oldPath, newPath)
   return newPath
+}
+
+// Moves a file/folder to a different parent directory, keeping its own name
+// (and, for a file, its real on-disk extension) as-is — a plain
+// fs.renameSync across directories, same as renamePath uses within one.
+// Guards against dropping a folder into itself or one of its own
+// descendants (fs.renameSync would otherwise throw a confusing ENOTEMPTY/
+// EINVAL, or on some platforms silently corrupt the tree), and — same
+// reasoning as createFolder/createDoc — avoids clobbering an existing
+// same-named entry at the destination by appending " (2)", " (3)", etc.
+// instead of failing outright.
+export function movePath(sourcePath, destDirPath) {
+  const resolvedSource = path.resolve(sourcePath)
+  const resolvedDest = path.resolve(destDirPath)
+  if (resolvedDest === resolvedSource || resolvedDest.startsWith(`${resolvedSource}${path.sep}`)) {
+    throw new Error('폴더를 자기 자신이나 하위 폴더로 옮길 수 없습니다.')
+  }
+  const name = path.basename(sourcePath)
+  if (path.dirname(resolvedSource) === resolvedDest) return sourcePath
+  const ext = path.extname(name)
+  const stem = ext ? name.slice(0, -ext.length) : name
+  let destPath = path.join(destDirPath, name)
+  let counter = 1
+  while (fs.existsSync(destPath)) {
+    counter += 1
+    destPath = path.join(destDirPath, `${stem} (${counter})${ext}`)
+  }
+  fs.renameSync(sourcePath, destPath)
+  return destPath
 }
 
 export function categoriesDirPath(workspacePath) {

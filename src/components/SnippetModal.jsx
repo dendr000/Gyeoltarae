@@ -147,7 +147,7 @@ export function SnippetModal({ onClose, onOpenInEditor }) {
         </div>
 
         <form className="snippet-modal-form-row" onSubmit={handleSubmit}>
-          <input type="text" placeholder="단축어" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input type="text" placeholder="단축어" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
           <textarea placeholder="본문 (커서: {#})" value={content} onChange={(e) => setContent(e.target.value)} rows={1} />
           <button type="submit" className="snippet-inline-submit-btn">
             {editingKey ? '저장' : '추가'}

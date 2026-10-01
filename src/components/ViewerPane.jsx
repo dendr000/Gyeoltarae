@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { parseWikiText, groupByChoseong, extractCategories } from '../lib/wikiParser.js'
 import { FloatingToc } from './FloatingToc.jsx'
 import { ContextMenu } from './ContextMenu.jsx'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
+import { getViewerScroll, setViewerScroll } from '../lib/scrollMemory.js'
 
 function dirnameOf(filePath) {
   const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
@@ -435,6 +436,17 @@ export function ViewerPane({ text, emptyHint }) {
   const createTemplate = useAppStore((s) => s.createTemplate)
   const createDoc = useAppStore((s) => s.createDoc)
   const requestEditorJump = useAppStore((s) => s.requestEditorJump)
+  const activeTabId = useAppStore((s) => s.activeTabId)
+
+  // 탭 전환 시 뷰어 스크롤 위치 복원 — 아래 네 개의 분기(분류/자료/틀/일반 문서)가 각자
+  // 다른 .viewer-scroll div를 그리지만 전부 이 ref 하나를 공유해서 씀. 저장은 각 div의
+  // onScroll에서 scrollMemory.js에 직접(리렌더 없이) 기록하고, 복원은 activeTabId가 바뀐
+  // 순간에만(타이핑으로 text가 바뀔 때마다는 아님) 한 번 읽어서 적용.
+  const scrollRef = useRef(null)
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = getViewerScroll(activeTabId)
+  }, [activeTabId, viewingCategory, viewingData?.type, viewingData?.name, viewingTemplate, openPath])
+  const handleViewerScroll = useCallback((e) => setViewerScroll(activeTabId, e.currentTarget.scrollTop), [activeTabId])
 
   // [[문서명]] that doesn't resolve in docIndex (see rebuildIndexes in
   // useAppStore.js) is missing entirely — clicking it creates a new doc
@@ -599,7 +611,7 @@ export function ViewerPane({ text, emptyHint }) {
   if (viewingCategory) {
     return (
       <div className="viewer-pane">
-        <div className="viewer-scroll">
+        <div className="viewer-scroll" ref={scrollRef} onScroll={handleViewerScroll}>
           <CategoryPageView
             categoryName={viewingCategory}
             entry={categoryEntry}
@@ -626,7 +638,7 @@ export function ViewerPane({ text, emptyHint }) {
   if (viewingData) {
     return (
       <div className="viewer-pane">
-        <div className="viewer-scroll">
+        <div className="viewer-scroll" ref={scrollRef} onScroll={handleViewerScroll}>
           <DataEntryView
             type={viewingData.type}
             name={viewingData.name}
@@ -652,7 +664,7 @@ export function ViewerPane({ text, emptyHint }) {
   if (viewingTemplate) {
     return (
       <div className="viewer-pane">
-        <div className="viewer-scroll">
+        <div className="viewer-scroll" ref={scrollRef} onScroll={handleViewerScroll}>
           <TemplateView
             name={viewingTemplate}
             entry={templateEntry}
@@ -681,7 +693,13 @@ export function ViewerPane({ text, emptyHint }) {
 
   return (
     <div className="viewer-pane">
-      <div className="viewer-scroll" onClick={handleContentClick} onDoubleClick={handleContentDoubleClick}>
+      <div
+        className="viewer-scroll"
+        ref={scrollRef}
+        onScroll={handleViewerScroll}
+        onClick={handleContentClick}
+        onDoubleClick={handleContentDoubleClick}
+      >
         <div className="wiki-rendered" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
       <FloatingToc toc={toc} />

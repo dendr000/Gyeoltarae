@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ContextMenu } from './ContextMenu.jsx'
+import { MoveItemModal } from './MoveItemModal.jsx'
 import { getApi } from '../lib/api.js'
 import { splitLeadingNumber } from '../lib/displayName.js'
 import { readFileAsBase64, IMPORTABLE_IMAGE_EXT } from '../lib/fileEncoding.js'
@@ -35,15 +36,20 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(node.name)
 
-  // Windows-only Electron bug: an autofocused input can look focused while
-  // the OS never actually routes keyboard input to the window. Fixing it
-  // needs a window-level blur()+focus() (see refocusMainWindow in
-  // electron/main.js) — but that blur() also blurs whatever's currently
-  // DOM-focused, so it MUST finish before the rename <input> (which cancels
-  // itself onBlur, below) ever mounts and grabs focus. Awaiting it here,
-  // before setRenaming(true), keeps the two from racing.
-  async function beginRename() {
-    await getApi().refocusWindow?.()
+  // beginRename fires directly from a real native gesture already inside
+  // this window (double-click, F2 while the row has focus, or a click on
+  // the (DOM-rendered, not native-OS) context menu) — unlike e.g. a
+  // freshly-created document's editor auto-focusing after createDoc()'s own
+  // IPC round trips, there's no async gap here for Windows' keyboard-input
+  // routing to have drifted from what's visibly focused, so the rename
+  // <input>'s plain `autoFocus` below is enough on its own. This used to
+  // also call refocusMainWindow() (blur()+focus() on the whole window) as a
+  // belt-and-suspenders fix for a related but different bug — but that
+  // window-level blur() is visible for a frame (the desktop/whatever's
+  // behind shows through), and firing it on literally every rename
+  // double-click was the actual cause of "이름 바꾸려고 더블클릭하면 순간
+  // 깜빡이면서 뒤에 있는 다른 창이 비쳐 보임".
+  function beginRename() {
     setRenaming(true)
   }
 
@@ -224,11 +230,13 @@ export function FileTree({
   onCreateFolder,
   onDelete,
   onRename,
+  onMove,
   onImportFiles,
   onImportImages,
 }) {
   const [dragOver, setDragOver] = useState(false)
   const [menu, setMenu] = useState(null)
+  const [moveTarget, setMoveTarget] = useState(null)
 
   if (!workspacePath) return null
 
@@ -240,10 +248,12 @@ export function FileTree({
             { label: '새 문서', onClick: () => onCreateDoc(node.path) },
             { label: '새 폴더', onClick: () => onCreateFolder(node.path) },
             { label: '이름 바꾸기 (F2)', onClick: startRenaming },
+            { label: '다른 위치로 이동…', onClick: () => setMoveTarget(node) },
             { label: '삭제', danger: true, onClick: () => onDelete(node.path, node.type) },
           ]
         : [
             { label: '이름 바꾸기 (F2)', onClick: startRenaming },
+            { label: '다른 위치로 이동…', onClick: () => setMoveTarget(node) },
             { label: '삭제', danger: true, onClick: () => onDelete(node.path, node.type) },
           ]
     setMenu({ x: e.clientX, y: e.clientY, items })
@@ -323,6 +333,17 @@ export function FileTree({
         />
       ))}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+      {moveTarget && (
+        <MoveItemModal
+          itemName={moveTarget.name}
+          itemPath={moveTarget.path}
+          onCancel={() => setMoveTarget(null)}
+          onConfirm={(destDirPath) => {
+            setMoveTarget(null)
+            onMove(moveTarget.path, destDirPath, moveTarget.type)
+          }}
+        />
+      )}
     </div>
   )
 }

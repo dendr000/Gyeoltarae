@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
+import { SidebarSection } from './SidebarSection.jsx'
 
 export function TemplateSidebar({ templateIndex, activeTemplate, onOpenTemplate, onDeleteTemplate, onCreateTemplate }) {
   const names = Object.keys(templateIndex).sort((a, b) => a.localeCompare(b, 'ko'))
@@ -23,42 +24,46 @@ export function TemplateSidebar({ templateIndex, activeTemplate, onOpenTemplate,
 
   return (
     <div className="template-sidebar">
-      <div className="template-sidebar-title">
-        <span>틀</span>
-        <button type="button" className="template-sidebar-add-btn" title="새 틀" onClick={handleAdd}>
-          +
-        </button>
-      </div>
-      {names.map((name) => {
-        const entry = templateIndex[name]
-        return (
-          <div
-            key={name}
-            className={`template-sidebar-row ${activeTemplate === name ? 'active' : ''} ${!entry.path ? 'template-sidebar-row-missing' : ''}`}
-            onClick={() => {
-              getApi().refocusWindow?.()
-              onOpenTemplate(name)
-            }}
-            title={entry.path ? undefined : '아직 만들어지지 않은 틀 (참조만 있음)'}
-          >
-            <span className="template-sidebar-label">{name}</span>
-            <span className="template-sidebar-count">{entry.usedBy.length}</span>
-            {entry.path && (
-              <button
-                type="button"
-                className="template-sidebar-delete-btn"
-                title="틀 삭제 (휴지통으로 이동)"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDeleteTemplate(name)
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        )
-      })}
+      <SidebarSection
+        id="template"
+        title="틀"
+        actions={
+          <button type="button" className="template-sidebar-add-btn" title="새 틀" onClick={handleAdd}>
+            +
+          </button>
+        }
+      >
+        {names.map((name) => {
+          const entry = templateIndex[name]
+          return (
+            <div
+              key={name}
+              className={`template-sidebar-row ${activeTemplate === name ? 'active' : ''} ${!entry.path ? 'template-sidebar-row-missing' : ''}`}
+              onClick={() => {
+                getApi().refocusWindow?.()
+                onOpenTemplate(name)
+              }}
+              title={entry.path ? undefined : '아직 만들어지지 않은 틀 (참조만 있음)'}
+            >
+              <span className="template-sidebar-label">{name}</span>
+              <span className="template-sidebar-count">{entry.usedBy.length}</span>
+              {entry.path && (
+                <button
+                  type="button"
+                  className="template-sidebar-delete-btn"
+                  title="틀 삭제 (휴지통으로 이동)"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteTemplate(name)
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </SidebarSection>
     </div>
   )
 }

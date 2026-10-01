@@ -121,7 +121,7 @@ function buildTree() {
 }
 
 // Mirrors electron/fileSystem.js's NEW_DOC_TEMPLATE.
-const NEW_DOC_TEMPLATE = '[목차]\n= 개요 =\n\n\n[[분류:]]\n'
+const NEW_DOC_TEMPLATE = '[[분류:]]\n'
 
 const CATEGORIES_DIR_NAME = '.wikidesk-categories'
 const DATA_DIR_NAME = '.wikidesk-data'
@@ -153,6 +153,36 @@ const IMAGE_MIME_TYPES = {
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.bmp': 'image/bmp',
+}
+
+// Shared by renameFile (same dir, new name) and moveFile (new dir, same
+// name) below — both are really "swap this path prefix for a new one,
+// carrying every descendant doc/folder along with it," same as a real
+// filesystem rename/move carries a directory's whole subtree.
+function movePathPrefix(oldPath, newPath) {
+  const isFolder = sampleFolders.has(oldPath)
+  if (!isFolder) {
+    sampleDocs[newPath] = sampleDocs[oldPath]
+    delete sampleDocs[oldPath]
+    return newPath
+  }
+  sampleFolders.delete(oldPath)
+  sampleFolders.add(newPath)
+  const oldPrefix = `${oldPath}/`
+  const newPrefix = `${newPath}/`
+  for (const folderPath of [...sampleFolders]) {
+    if (folderPath.startsWith(oldPrefix)) {
+      sampleFolders.delete(folderPath)
+      sampleFolders.add(newPrefix + folderPath.slice(oldPrefix.length))
+    }
+  }
+  for (const docPath of Object.keys(sampleDocs)) {
+    if (docPath.startsWith(oldPrefix)) {
+      sampleDocs[newPrefix + docPath.slice(oldPrefix.length)] = sampleDocs[docPath]
+      delete sampleDocs[docPath]
+    }
+  }
+  return newPath
 }
 
 export function createMockApi() {
@@ -204,30 +234,21 @@ export function createMockApi() {
       const dir = oldPath.slice(0, oldPath.lastIndexOf('/'))
       const isFolder = sampleFolders.has(oldPath)
       const newPath = isFolder ? `${dir}/${newName}` : `${dir}/${newName}.md`
-      if (!isFolder) {
-        sampleDocs[newPath] = sampleDocs[oldPath]
-        delete sampleDocs[oldPath]
-        return newPath
+      return movePathPrefix(oldPath, newPath)
+    },
+    // Mirrors electron/fileSystem.js's movePath — keeps the same name, just
+    // swaps the parent directory. Shares movePathPrefix with renameFile
+    // above since both are really "swap this path prefix for a new one,
+    // carrying every descendant doc/folder along with it"; only how the new
+    // path is built differs (new name vs. new parent).
+    async moveFile(sourcePath, destDirPath) {
+      if (destDirPath === sourcePath || destDirPath.startsWith(`${sourcePath}/`)) {
+        throw new Error('폴더를 자기 자신이나 하위 폴더로 옮길 수 없습니다.')
       }
-      // Renaming a folder needs every doc/subfolder nested under it moved
-      // too, same as a real filesystem rename carries its whole subtree.
-      sampleFolders.delete(oldPath)
-      sampleFolders.add(newPath)
-      const oldPrefix = `${oldPath}/`
-      const newPrefix = `${newPath}/`
-      for (const folderPath of [...sampleFolders]) {
-        if (folderPath.startsWith(oldPrefix)) {
-          sampleFolders.delete(folderPath)
-          sampleFolders.add(newPrefix + folderPath.slice(oldPrefix.length))
-        }
-      }
-      for (const docPath of Object.keys(sampleDocs)) {
-        if (docPath.startsWith(oldPrefix)) {
-          sampleDocs[newPrefix + docPath.slice(oldPrefix.length)] = sampleDocs[docPath]
-          delete sampleDocs[docPath]
-        }
-      }
-      return newPath
+      const name = sourcePath.slice(sourcePath.lastIndexOf('/') + 1)
+      const destPath = `${destDirPath}/${name}`
+      if (destPath === sourcePath) return sourcePath
+      return movePathPrefix(sourcePath, destPath)
     },
     async createFolder(parentPath, name) {
       const folderPath = `${parentPath}/${name}`

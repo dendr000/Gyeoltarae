@@ -11,6 +11,7 @@ import {
 } from '../lib/wikiParser.js'
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
+import { clearScroll } from '../lib/scrollMemory.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -36,6 +37,21 @@ let unsubscribeWatch = null
 // that no longer exists.
 function isPathUnder(childPath, parentPath) {
   return childPath === parentPath || childPath?.startsWith(`${parentPath}/`) || childPath?.startsWith(`${parentPath}\\`)
+}
+
+// Renaming/moving a FOLDER carries its whole subtree with it on disk (one
+// fs.renameSync call), but any open tab pointing at a file nested inside it
+// still has the OLD path until something updates it too — otherwise that
+// tab looks fine but a later autosave writes to a path that no longer
+// exists, silently creating a stray duplicate file instead of saving over
+// the real one (same class of bug closeTab's own comment warns about).
+// Used by both renameFile (same parent, new name) and moveFile (new
+// parent, same name) — either way, a tab whose path is oldPath itself, or
+// nested under it, needs that same prefix swapped for newPath.
+function rewriteTabPath(openPath, oldPath, newPath) {
+  if (openPath === oldPath) return newPath
+  if (isPathUnder(openPath, oldPath)) return newPath + openPath.slice(oldPath.length)
+  return openPath
 }
 
 // 탭 하나 = "지금 화면에 보이는 문서" 필드들의 스냅샷. 파일이든(자료/틀/상용구도 결국 실제
@@ -139,10 +155,16 @@ function loadSnippetSpaceExpandEnabled() {
 const SCAFFOLD_TRIGGER_NAMES = new Set(['소설', '웹툰', '만화'])
 const WORK_FOLDER_SCAFFOLD = {
   주인공: ['능력', '아이템'],
-  등장인물: ['01 파랑', '02 초록', '03 노랑', '04 빨강'],
+  등장인물: ['00 주인공', '01 파랑', '02 초록', '03 노랑', '04 빨강'],
   사전: ['설정'],
   기록: [],
 }
+
+// '주인공' 폴더 이름을 바꾸면(예: 유성호로) 같은 작품 폴더 밑 '등장인물'의 '00 주인공'
+// 문서도 같이 따라가서 이름이 바뀜('00 유성호') — see renameFile's cascade below.
+const PROTAGONIST_FOLDER_NAME = '주인공'
+const PROTAGONIST_LINK_SUBFOLDER = '등장인물'
+const PROTAGONIST_DOC_PREFIX = '00 '
 
 // Folders under these ALSO get every document auto-tagged with
 // [[분류:...]] (see findWorkFolderContext) and get rename-cascading
@@ -153,6 +175,11 @@ const CATEGORY_ONLY_TRIGGER_NAMES = new Set(['포켓몬스터'])
 
 function basename(filePath) {
   return filePath.split(/[\\/]/).pop()
+}
+
+function dirnameOf(filePath) {
+  const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
+  return idx === -1 ? '' : filePath.slice(0, idx)
 }
 
 // Walks a directory path to see whether it's a work folder or nested inside
@@ -328,6 +355,12 @@ export const useAppStore = create((set, get) => ({
   // window.prompt() (alert/confirm work, prompt doesn't), so every
   // "ask for a name" flow in the app goes through this instead.
   promptRequest: null,
+  // 사전(DictModal) 열림 상태 — DictSidebar의 "사전 관리" 버튼과 EditorPane의
+  // Alt+Shift+H 단축키(한자 등록)가 같은 모달을 공유하도록 여기 둠(로컬 state였다면 둘이
+  // 각자 따로 열려서 모달이 두 개 뜰 수 있었음). dictModalPrefillWord는 Alt+Shift+H를 누른
+  // 순간 에디터에서 선택돼 있던 텍스트 — 있으면 "원문" 입력칸에 미리 채워 넣어 줌.
+  dictModalOpen: false,
+  dictModalPrefillWord: '',
 
   requestPrompt(config) {
     return new Promise((resolve) => {
@@ -341,6 +374,14 @@ export const useAppStore = create((set, get) => ({
     const resolve = promptResolve
     promptResolve = null
     resolve?.(result)
+  },
+
+  openDictModal(prefillWord = '') {
+    set({ dictModalOpen: true, dictModalPrefillWord: prefillWord })
+  },
+
+  closeDictModal() {
+    set({ dictModalOpen: false, dictModalPrefillWord: '' })
   },
 
   initTheme() {
@@ -1070,6 +1111,7 @@ export const useAppStore = create((set, get) => ({
   async closeTab(id) {
     const wasActive = id === get().activeTabId
     if (wasActive) await get().flushActiveTabToDisk()
+    clearScroll(id)
     set((state) => {
       const closedIndex = state.tabs.findIndex((t) => t.id === id)
       const tabs = state.tabs.filter((t) => t.id !== id)
@@ -1083,6 +1125,7 @@ export const useAppStore = create((set, get) => ({
   closeTabsByPath(filePath) {
     set((state) => {
       const closedIndex = state.tabs.findIndex((t) => t.openPath === filePath)
+      for (const t of state.tabs) if (t.openPath === filePath) clearScroll(t.id)
       const tabs = state.tabs.filter((t) => t.openPath !== filePath)
       return resolveTabsAfterRemoval(tabs, state.openPath === filePath, closedIndex)
     })
@@ -1093,6 +1136,7 @@ export const useAppStore = create((set, get) => ({
   closeTabsUnderPath(filePath) {
     set((state) => {
       const closedIndex = state.tabs.findIndex((t) => isPathUnder(t.openPath, filePath))
+      for (const t of state.tabs) if (isPathUnder(t.openPath, filePath)) clearScroll(t.id)
       const tabs = state.tabs.filter((t) => !isPathUnder(t.openPath, filePath))
       return resolveTabsAfterRemoval(tabs, isPathUnder(state.openPath, filePath), closedIndex)
     })
@@ -1187,18 +1231,64 @@ export const useAppStore = create((set, get) => ({
     const api = getApi()
     const oldCategoryName = type === 'dir' ? categoryNameForPath(filePath) : null
     const newPath = await api.renameFile(filePath, newName)
-    // 이름을 바꾼 파일을 가리키던 탭이 있으면(지금 보고 있는 탭이든 배경 탭이든) 경로/제목을
-    // 같이 갱신 — 안 그러면 그 탭은 이제 존재하지 않는 옛 경로를 계속 들고 있다가, 나중에
-    // 그 탭에서 저장할 때 엉뚱한(이미 사라진) 경로에 파일을 새로 만들어버림.
+    // 이름을 바꾼 파일/폴더를 가리키던 탭이 있으면(지금 보고 있는 탭이든 배경 탭이든, 폴더면
+    // 그 안에 중첩된 파일을 가리키던 탭까지) 경로를 같이 갱신 — 안 그러면 그 탭은 이제
+    // 존재하지 않는 옛 경로를 계속 들고 있다가, 나중에 그 탭에서 저장할 때 엉뚱한(이미 사라진)
+    // 경로에 파일을 새로 만들어버림. 이름이 바뀐 그 파일 자신을 가리키던 탭만 제목/표시
+    // 이름도 같이 바뀜 — 중첩된 파일은 자기 파일명은 그대로고 경로 앞부분만 바뀐 것뿐이라서.
     set((state) => {
-      const isActiveRenamed = state.openPath === filePath
-      const tabs = state.tabs.map((t) =>
-        t.openPath === filePath
-          ? { ...t, id: `file:${newPath}`, title: stripLeadingNumber(newName), openPath: newPath, openName: newName }
-          : t,
-      )
-      if (!isActiveRenamed) return { tabs }
-      return { tabs, openPath: newPath, openName: newName, activeTabId: `file:${newPath}` }
+      const tabs = state.tabs.map((t) => {
+        const rewritten = rewriteTabPath(t.openPath, filePath, newPath)
+        if (rewritten === t.openPath) return t
+        const isSelf = t.openPath === filePath
+        return { ...t, id: `file:${rewritten}`, openPath: rewritten, ...(isSelf ? { title: stripLeadingNumber(newName), openName: newName } : {}) }
+      })
+      const rewrittenActive = rewriteTabPath(state.openPath, filePath, newPath)
+      if (rewrittenActive === state.openPath) return { tabs }
+      const isActiveSelf = state.openPath === filePath
+      return { tabs, openPath: rewrittenActive, activeTabId: `file:${rewrittenActive}`, ...(isActiveSelf ? { openName: newName } : {}) }
+    })
+    await get().refreshTree()
+    if (oldCategoryName) {
+      const newCategoryName = categoryNameForPath(newPath)
+      if (newCategoryName && newCategoryName !== oldCategoryName) {
+        const node = findNodeByPath(get().tree, newPath)
+        for (const file of flattenFiles(node?.children ?? [])) {
+          const content = await api.readFile(file.path)
+          const updated = rewriteCategoryPrefix(content, oldCategoryName, newCategoryName)
+          if (updated !== content) await api.writeFile(file.path, updated)
+        }
+      }
+    }
+    // '주인공' 폴더 이름을 바꾸면 같은 작품 폴더 밑 '등장인물/00 <이전 이름>' 문서도 같이
+    // 따라가서 이름이 바뀜 — 그 문서가 정확히 그 폴더가 대표하는 캐릭터 자리라는 의미.
+    // WORK_FOLDER_SCAFFOLD가 처음 만들 때부터 '00 주인공'으로 맞춰 두므로(basename(filePath)
+    // == oldFolderName), 이후 몇 번을 다시 이름 바꿔도 둘은 계속 같은 이름을 유지함.
+    if (type === 'dir' && basename(filePath) === PROTAGONIST_FOLDER_NAME) {
+      const parentNode = findNodeByPath(get().tree, dirnameOf(newPath))
+      const linkFolder = parentNode?.children?.find((c) => c.type === 'dir' && c.name === PROTAGONIST_LINK_SUBFOLDER)
+      const oldDocName = `${PROTAGONIST_DOC_PREFIX}${basename(filePath)}`
+      const doc = linkFolder?.children?.find((c) => c.type === 'file' && c.name === oldDocName)
+      if (doc) await get().renameFile(doc.path, `${PROTAGONIST_DOC_PREFIX}${newName}`, 'file')
+    }
+    await get().rebuildIndexes()
+  },
+
+  // 폴더/문서를 다른 위치로 옮김(우클릭 메뉴의 "다른 위치로 이동…") — 이름은 그대로 두고
+  // 부모 폴더만 바뀐다는 점만 빼면 renameFile과 거의 같은 절차(탭 경로 갱신, 분류 태그
+  // 캐스케이드)를 그대로 따름.
+  async moveFile(filePath, destDirPath, type) {
+    const api = getApi()
+    const oldCategoryName = type === 'dir' ? categoryNameForPath(filePath) : null
+    const newPath = await api.moveFile(filePath, destDirPath)
+    set((state) => {
+      const tabs = state.tabs.map((t) => {
+        const rewritten = rewriteTabPath(t.openPath, filePath, newPath)
+        return rewritten === t.openPath ? t : { ...t, id: `file:${rewritten}`, openPath: rewritten }
+      })
+      const rewrittenActive = rewriteTabPath(state.openPath, filePath, newPath)
+      if (rewrittenActive === state.openPath) return { tabs }
+      return { tabs, openPath: rewrittenActive, activeTabId: `file:${rewrittenActive}` }
     })
     await get().refreshTree()
     if (oldCategoryName) {

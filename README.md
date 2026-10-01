@@ -31,6 +31,14 @@ npm run dist:win:packager   # 권장 — release-packager\Gyeoltarae-win32-x64\G
 npm run dist:win            # electron-builder (nsis 설치파일 + portable) — 환경에 따라 실패할 수 있음
 ```
 
+`build/icon.ico`는 저장소에 커밋돼 있어 평소엔 손댈 필요 없습니다. `build/icon.svg`를 고친 경우에만 다시 만듭니다:
+
+```bash
+node node_modules/electron/cli.js scripts/make-icon.cjs
+```
+
+자세한 내용(아이콘·AppUserModelID)은 [`docs/features/app-icon-taskbar.md`](docs/features/app-icon-taskbar.md) 참고.
+
 ## 문법
 
 **진짜 나무위키 문법** (그대로 복사해서 namu.wiki에 붙여넣어도 대부분 동작):
