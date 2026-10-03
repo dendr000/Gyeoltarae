@@ -16,6 +16,7 @@ const root = path.join(__dirname, '..')
 const IGNORE_PATTERNS = [
   /^\/src(\/|$)/,
   /^\/scripts(\/|$)/,
+  /^\/tests(\/|$)/,
   /^\/\.claude(\/|$)/,
   /^\/\.git(\/|$)/,
   /^\/release(-packager)?(\/|$)/,

@@ -21,6 +21,15 @@ npm run dev
 
 이 경우 실제 파일시스템 대신 `src/lib/mockApi.js`의 예시 데이터로 동작합니다.
 
+## 테스트
+
+```bash
+npm test
+```
+
+파서, 파일 이동·이름 변경, 작품 폴더 스캐폴드, 탭 동작을 확인하는 자동 테스트가 돕니다(1초 안팎). 화면 모양과 Electron 창 동작은 포함하지 않습니다.
+자세한 내용은 [`docs/features/automated-tests.md`](docs/features/automated-tests.md) 참고.
+
 ## exe 빌드
 
 이 프로젝트가 개발된 PC에서는 `electron-builder`가 Windows 환경 이슈(`EPERM: rename win-unpacked.tmp`)로

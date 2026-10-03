@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   Heading1,
   Bold,
@@ -473,13 +473,31 @@ const FOLDING_TEMPLATE = `{{{#!folding 더 보기
 // 보이지 않는 거울 텍스트 뒤에 하이라이트 막대만 살아남게).
 const HEADING_LINE_RE = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/
 
+// 제목 줄 span은 'editor-heading-highlight-line'의 display:block으로 한 줄 전체 너비를
+// 채움 — block 요소는 그 앞뒤로 자동으로 줄바꿈 경계가 생기므로(일반 span들의 흐름 속에
+// 섞여 있어도) 그 자체로 이미 "한 줄 전체"를 차지한다. 여기에 줄 끝 '\n'을 span **안에**
+// 같이 넣으면(white-space: pre-wrap 아래에서) 그 한 글자가 block 박스 안에 "내용 뒤에 남는
+// 빈 줄"을 하나 더 만들어 제목 span이 실제로는 2줄 높이가 되고(제목 자체 1줄 + 빈 줄 1줄),
+// 이게 제목이 많은 문서일수록 뒤쪽 배경판 전체 높이가 textarea보다 계속 더 쌓여서, 스크롤을
+// 내릴수록 강조 배경이 실제 제목 줄보다 점점 더 아래(본문 줄들)에 겹쳐 보이는 원인이었음
+// — 유령처럼 쌓이는 한 줄짜리 어긋남이라 스크롤 위치를 아무리 맞춰도(위 useLayoutEffect)
+// 고쳐지지 않음(애초에 두 배경판의 총 높이 자체가 다르므로). 일반(제목이 아닌) 줄은 span이
+// inline이라 같은 문제가 없음 — 그 줄바꿈은 이어지는 다음 줄 내용과 같은 흐름을 공유해서
+// "남는 빈 줄"이 생기지 않음. 그래서 제목 줄만 '\n'을 span 밖으로 빼서(block 자체의 자동
+// 줄바꿈에 맡김) 정확히 1줄 높이가 되게 함.
 function renderHighlightLines(text) {
-  return text.split('\n').map((line, i) => (
-    <span key={i} className={HEADING_LINE_RE.test(line) ? 'editor-heading-highlight-line' : undefined}>
-      {line}
-      {'\n'}
-    </span>
-  ))
+  return text.split('\n').map((line, i) =>
+    HEADING_LINE_RE.test(line) ? (
+      <span key={i} className="editor-heading-highlight-line">
+        {line}
+      </span>
+    ) : (
+      <span key={i}>
+        {line}
+        {'\n'}
+      </span>
+    ),
+  )
 }
 
 function ToolbarButton({ icon: Icon, label, title, onClick }) {
@@ -536,6 +554,24 @@ export function EditorPane({ text, onChange, disabled }) {
     textarea.scrollTop = restored
     if (backdropRef.current) backdropRef.current.scrollTop = restored
   }, [activeTabId])
+
+  // 제목 줄 강조 배경이 실제 글자와 다른 줄에 겹쳐 보이던 버그 — 뒤에 깔린 하이라이트
+  // 배경판(backdropRef)과 실제 textarea는 서로 다른 DOM 요소라 scrollTop을 따로
+  // 들고 있는데, 지금까지는 textarea의 onScroll 이벤트가 실제로 발생할 때만 둘을
+  // 맞췄음. 그런데 글자를 입력해서 내용 길이가 바뀌면(특히 커서를 따라 textarea가
+  // 자동으로 스크롤될 때) 배경판 쪽 scrollHeight가 그 순간 아직 새 내용 기준으로
+  // 다 안 커져 있어서 scrollTop을 못 따라가고 멈춰버리는 경우가 있었음 — "스크롤을
+  // 위로 올렸다가 내리면 정상으로 보인다"는 제보가 바로 이 증상(수동 스크롤이
+  // onScroll을 다시 발생시켜 그제서야 맞춰짐). text가 바뀔 때마다(탭 전환 포함) 커밋
+  // 직후(페인트 전)에 textarea의 "지금 실제" scrollTop을 배경판에 강제로 다시
+  // 맞춰서, 이벤트를 놓치는 경우가 있어도 다음 렌더에서 바로 복구되게 함.
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current
+    const backdrop = backdropRef.current
+    if (!textarea || !backdrop) return
+    backdrop.scrollTop = textarea.scrollTop
+    backdrop.scrollLeft = textarea.scrollLeft
+  }, [text])
 
   // Freshly created 문서/틀/자료/분류 open with no content yet — auto-focus
   // the editor so typing works immediately instead of requiring a manual

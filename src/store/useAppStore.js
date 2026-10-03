@@ -160,9 +160,9 @@ const WORK_FOLDER_SCAFFOLD = {
   기록: [],
 }
 
-// '주인공' 폴더 이름을 바꾸면(예: 유성호로) 같은 작품 폴더 밑 '등장인물'의 '00 주인공'
-// 문서도 같이 따라가서 이름이 바뀜('00 유성호') — see renameFile's cascade below.
-const PROTAGONIST_FOLDER_NAME = '주인공'
+// 작품 폴더 바로 밑 폴더(처음엔 '주인공')의 이름을 바꾸면(예: 유성호로) 같은 작품 폴더 밑
+// '등장인물'의 '00 <이전 이름>' 문서도 같이 따라가서 이름이 바뀜('00 유성호') — see
+// renameFile's cascade below.
 const PROTAGONIST_LINK_SUBFOLDER = '등장인물'
 const PROTAGONIST_DOC_PREFIX = '00 '
 
@@ -1260,16 +1260,21 @@ export const useAppStore = create((set, get) => ({
         }
       }
     }
-    // '주인공' 폴더 이름을 바꾸면 같은 작품 폴더 밑 '등장인물/00 <이전 이름>' 문서도 같이
-    // 따라가서 이름이 바뀜 — 그 문서가 정확히 그 폴더가 대표하는 캐릭터 자리라는 의미.
-    // WORK_FOLDER_SCAFFOLD가 처음 만들 때부터 '00 주인공'으로 맞춰 두므로(basename(filePath)
-    // == oldFolderName), 이후 몇 번을 다시 이름 바꿔도 둘은 계속 같은 이름을 유지함.
-    if (type === 'dir' && basename(filePath) === PROTAGONIST_FOLDER_NAME) {
-      const parentNode = findNodeByPath(get().tree, dirnameOf(newPath))
-      const linkFolder = parentNode?.children?.find((c) => c.type === 'dir' && c.name === PROTAGONIST_LINK_SUBFOLDER)
-      const oldDocName = `${PROTAGONIST_DOC_PREFIX}${basename(filePath)}`
-      const doc = linkFolder?.children?.find((c) => c.type === 'file' && c.name === oldDocName)
-      if (doc) await get().renameFile(doc.path, `${PROTAGONIST_DOC_PREFIX}${newName}`, 'file')
+    // 작품 폴더 바로 밑 폴더의 이름을 바꾸면, 같은 작품 폴더 밑 '등장인물/00 <이전 이름>'
+    // 문서가 있을 때 그 문서도 같이 따라가서 이름이 바뀜 — 그 문서가 정확히 그 폴더가 대표하는
+    // 캐릭터 자리라는 의미. 폴더 이름이 "주인공"인지를 보는 대신 "짝이 되는 00 문서가 실제로
+    // 있는지"로 판별해서, 처음 '주인공'에서 '유성호'로 바꾼 뒤 다시 '민준'으로 바꿔도 계속
+    // 따라감(예전엔 폴더 이름이 정확히 '주인공'일 때만 동작해서 두 번째 변경부터 끊겼음).
+    // 그런 문서가 없으면(지웠거나 이름을 직접 바꿔 뒀으면) 아무것도 하지 않음.
+    if (type === 'dir') {
+      const parentPath = dirnameOf(newPath)
+      if (findWorkFolderContext(parentPath)?.relSubPath === '') {
+        const parentNode = findNodeByPath(get().tree, parentPath)
+        const linkFolder = parentNode?.children?.find((c) => c.type === 'dir' && c.name === PROTAGONIST_LINK_SUBFOLDER)
+        const oldDocName = `${PROTAGONIST_DOC_PREFIX}${basename(filePath)}`
+        const doc = linkFolder?.children?.find((c) => c.type === 'file' && c.name === oldDocName)
+        if (doc) await get().renameFile(doc.path, `${PROTAGONIST_DOC_PREFIX}${newName}`, 'file')
+      }
     }
     await get().rebuildIndexes()
   },
