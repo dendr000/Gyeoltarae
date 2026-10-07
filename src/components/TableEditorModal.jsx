@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bold,
   AlignLeft,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
+import { enterTarget, tabTarget } from '../lib/tableNav.js'
 
 function emptyCell() {
   return { text: '', bg: '', color: '', align: '', bold: false, colspan: 1, rowspan: 1, mergedInto: null, extraAttrs: [] }
@@ -157,6 +158,56 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
 
   const addRow = () => setGrid((g) => [...g, Array.from({ length: g[0]?.length ?? 2 }, emptyCell)])
+
+  // 셀 안에서의 키 이동(Tab·Enter, 규칙은 lib/tableNav.js). 셀마다 입력칸을 ref 로 들고 있다가 포커스를 준다.
+  // 새 행으로 가야 할 때는 행을 만든 직후에는 입력칸이 아직 없으므로, 갈 자리를 기억해 뒀다가 grid 가
+  // 다시 그려진 뒤(아래 useEffect)에 포커스를 준다.
+  const inputRefs = useRef({})
+  const pendingFocusRef = useRef(null)
+
+  function focusCellInput(r, c) {
+    const input = inputRefs.current[`${r}:${c}`]
+    if (!input) return false
+    input.focus()
+    // 글이 있으면 커서를 맨 뒤에 둔다 — 이어서 바로 쓰거나 고칠 수 있게(전체 선택은 실수로 덮어쓰기 쉬움).
+    input.setSelectionRange(input.value.length, input.value.length)
+    return true
+  }
+
+  function goToCell(target) {
+    if (target.addRow) {
+      pendingFocusRef.current = { r: target.r, c: target.c }
+      addRow()
+    } else {
+      focusCellInput(target.r, target.c)
+    }
+  }
+
+  useEffect(() => {
+    const pending = pendingFocusRef.current
+    if (pending && focusCellInput(pending.r, pending.c)) pendingFocusRef.current = null
+  }, [grid])
+
+  // Tab → 아래 행의 첫 번째 셀(없으면 새 행). Enter → 바로 아래 셀(없으면 새 행). Shift+Enter → 셀 안 줄바꿈
+  // [br]. 한글 조합 중(isComposing)의 Enter 는 글자를 확정하는 키라서 이동하지 않는다. Shift+Tab 과
+  // Ctrl/Alt 가 든 조합은 건드리지 않는다.
+  function handleCellKeyDown(e, r, c) {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault()
+      // execCommand 로 넣어야 입력칸의 되돌리기(Ctrl+Z)가 이어진다 — EditorPane.jsx 의 replaceRange 와 같은 이유.
+      document.execCommand('insertText', false, '[br]')
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      goToCell(enterTarget(grid, r, c))
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      goToCell(tabTarget(grid, r))
+    }
+  }
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
   // Removing a row/column first splits any merge it would cut through (so
@@ -479,6 +530,9 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                         }}
                       >
                         <input
+                          ref={(el) => {
+                            inputRefs.current[`${r}:${c}`] = el
+                          }}
                           value={cell.text}
                           style={{
                             background: cell.bg || undefined,
@@ -490,6 +544,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                           autoFocus={r === 0 && c === 0}
                           onFocus={() => selectCell(r, c, false)}
                           onChange={(e) => updateCell(r, c, { text: e.target.value })}
+                          onKeyDown={(e) => handleCellKeyDown(e, r, c)}
                           placeholder={r === 0 && headerRow ? `헤더 ${c + 1}` : ''}
                         />
                       </td>

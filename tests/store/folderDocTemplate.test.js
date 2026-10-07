@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DDAZUA_TEMPLATE } from '../helpers/ddazuaTemplate.js'
 import { ROOT, freshStore } from '../helpers/store.js'
-
-const DDAZUA_TEMPLATE = '[[분류:ddazua]]\n[[분류:]]\n\n[목차]\n\n=  =\n'
 
 let ctx
 let dir // 따즈아 폴더
@@ -62,8 +61,9 @@ describe('새 문서 만들기 — 따즈아 폴더의 기본 내용', () => {
 
     await ctx.state().createDoc(`${ROOT}/소설/작품/따즈아`, '안쪽 문서')
 
+    // 작품 폴더의 자동 분류가 첫 번째 빈 칸에 들어가고(두 줄), 두 번째 빈 칸은 그대로 남는다.
     expect(await read(`${ROOT}/소설/작품/따즈아/안쪽 문서.md`)).toBe(
-      '[[분류:ddazua]]\n[[분류:작품]]\n[[분류:작품/따즈아]]\n\n[목차]\n\n=  =\n',
+      DDAZUA_TEMPLATE.replace('[[분류:]]', '[[분류:작품]]\n[[분류:작품/따즈아]]'),
     )
   })
 

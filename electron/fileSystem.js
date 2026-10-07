@@ -307,6 +307,55 @@ export function scanSnippets(workspacePath) {
   return entries
 }
 
+// 폴더별 "자동 분류" 설정 — 새 문서를 만들 때 폴더·문서 이름에서 읽어들일 글자 목록. 그 폴더 안의 숨김
+// 파일 하나에 { "keywords": [...] } 로 저장해서, 폴더를 옮기거나 이름을 바꿔도 설정이 같이 따라간다.
+// 읽는 규칙과 분류로 바꾸는 규칙은 src/lib/autoCategory.js(파일 이름도 같아야 하며 시험이 확인한다).
+export const AUTO_CATEGORY_FILE_NAME = '.wikidesk-auto-category.json'
+
+// 폴더 하나의 설정 파일에서 글자 목록을 읽는다. 파일이 없거나 망가졌거나 모양이 틀리면 빈 목록.
+function readKeywordsOf(folderPath) {
+  try {
+    const data = JSON.parse(fs.readFileSync(path.join(folderPath, AUTO_CATEGORY_FILE_NAME), 'utf-8'))
+    if (!Array.isArray(data?.keywords)) return []
+    return data.keywords.filter((k) => typeof k === 'string' && k.trim()).map((k) => k.trim())
+  } catch {
+    return []
+  }
+}
+
+// 문서를 만들 폴더(dirPath)에서 위로 올라가며 설정이 있는 가장 가까운 폴더를 찾는다 — { folderPath,
+// keywords } 또는 null. 워크스페이스 밖으로는 올라가지 않는다. 여러 겹이면 가장 가까운 것 하나만(합치지
+// 않음). ownOnly 이면 올라가지 않고 그 폴더 자신의 설정만 본다(설정 창에서 자기 설정을 보여 줄 때).
+export function readAutoCategory(workspacePath, dirPath, ownOnly = false) {
+  if (ownOnly) {
+    const keywords = readKeywordsOf(dirPath)
+    return keywords.length > 0 ? { folderPath: dirPath, keywords } : null
+  }
+  const root = path.resolve(workspacePath)
+  let current = path.resolve(dirPath)
+  for (;;) {
+    const rel = path.relative(root, current)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null
+    const keywords = readKeywordsOf(current)
+    if (keywords.length > 0) return { folderPath: current, keywords }
+    if (current === root) return null
+    const parent = path.dirname(current)
+    if (parent === current) return null
+    current = parent
+  }
+}
+
+// 설정을 쓴다. 정리(앞뒤 공백·빈 항목·중복 제거)한 목록이 비면 설정 파일을 지워서 자동 분류를 해제한다.
+export function writeAutoCategory(folderPath, keywords) {
+  const cleaned = [...new Set(keywords.map((k) => String(k).trim()).filter(Boolean))]
+  const file = path.join(folderPath, AUTO_CATEGORY_FILE_NAME)
+  if (cleaned.length === 0) {
+    fs.rmSync(file, { force: true })
+    return
+  }
+  fs.writeFileSync(file, `${JSON.stringify({ keywords: cleaned }, null, 2)}\n`, 'utf-8')
+}
+
 // 각 상용구 폴더의 순서 목록 파일(추천 팝업의 후보 순서를 정함)의 내용 — { 폴더 이름: 글 }. 파일이 없는
 // 폴더는 키가 없다. 규칙과 해석은 src/lib/snippetOrder.js(파일 이름도 같아야 하며 시험이 확인한다).
 // 여기서는 읽기만 한다: 렌더러가 없는 파일을 읽으려 하면 IPC 오류가 쌓이므로 존재를 확인하고 읽는 건

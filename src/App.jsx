@@ -16,6 +16,7 @@ import { EditorPane } from './components/EditorPane.jsx'
 import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
+import { formatKeywordInput, parseKeywordInput } from './lib/autoCategory.js'
 import './App.css'
 
 // Pokémon-specific, so kept separate from useAppStore.js's general
@@ -71,6 +72,7 @@ export default function App() {
     deleteFile,
     renameFile,
     moveFile,
+    saveAutoCategory,
     importFiles,
     setMode,
     promptRequest,
@@ -174,6 +176,37 @@ export default function App() {
     }
   }
 
+  // 폴더 우클릭 → "자동 분류 설정…": 이 폴더 아래에서 새 문서를 만들 때 폴더·문서 이름에서 읽어들일 글자를
+  // 입력받는다(규칙은 lib/autoCategory.js). 쉼표로 구분하고 비우면 해제. 이미 저장된 글자는 입력칸에 채워 보여
+  // 주고, 이 폴더에는 설정이 없고 윗 폴더의 설정이 적용 중이면 그 사실을 안내한다.
+  const handleAutoCategory = async (folderPath, folderName) => {
+    const api = getApi()
+    const own = await api.readAutoCategory?.(workspacePath, folderPath, true)
+    const inherited = own ? null : await api.readAutoCategory?.(workspacePath, folderPath)
+    const inheritedNote = inherited
+      ? ` — 지금은 윗 폴더(${inherited.folderPath.split(/[\\/]/).pop()})의 설정(${inherited.keywords.join(', ')})이 적용 중이며, 여기에 적으면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다`
+      : ''
+    const result = await requestPrompt({
+      title: `자동 분류 — ${folderName}`,
+      confirmLabel: '저장',
+      fields: [
+        {
+          key: 'keywords',
+          label: `읽어들일 글자 (쉼표로 구분, 비우면 해제) — 이 폴더 아래에서 새 문서를 만들 때 아래 폴더·문서 이름에 이 글자가 있으면 [[분류:글자]]로 자동으로 들어갑니다${inheritedNote}`,
+          placeholder: '예: DBMS, 외래키, Join',
+          defaultValue: formatKeywordInput(own?.keywords),
+          required: false,
+        },
+      ],
+    })
+    if (!result) return
+    try {
+      await saveAutoCategory(folderPath, parseKeywordInput(result.keywords))
+    } catch (err) {
+      window.alert(`자동 분류 설정을 저장하지 못했습니다.\n\n${err.message}`)
+    }
+  }
+
   const handleMove = async (filePath, destDirPath, type) => {
     try {
       await moveFile(filePath, destDirPath, type)
@@ -246,6 +279,7 @@ export default function App() {
             onDelete={handleDelete}
             onRename={handleRename}
             onMove={handleMove}
+            onAutoCategory={handleAutoCategory}
             onImportFiles={importFiles}
             onImportImages={importImageFiles}
           />

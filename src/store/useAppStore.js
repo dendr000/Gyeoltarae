@@ -15,6 +15,7 @@ import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose } from '../lib/snippetScope.js'
 import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
+import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -259,6 +260,16 @@ function applyAutoCategoryTags(content, categoryNames) {
     return content.replace('[[분류:]]', tagLines)
   }
   return `${content.replace(/\s+$/, '')}\n\n${tagLines}\n`
+}
+
+// 폴더의 "자동 분류"(lib/autoCategory.js): 문서를 만드는 폴더에서 위로 올라가 가장 가까운 설정(읽어들일 글자)
+// 을 찾아, 설정 폴더 아래의 폴더 이름들과 문서 이름에서 그 글자를 찾아 비어 있는 [[분류:]] 칸을 채운다.
+// 설정이 없거나 걸리는 글자가 없으면 내용을 그대로 돌려준다.
+async function applyKeywordCategories(api, workspacePath, dirPath, docName, content) {
+  const config = await api.readAutoCategory?.(workspacePath, dirPath)
+  if (!config || config.keywords.length === 0) return content
+  const names = [...relativeSegments(config.folderPath, dirPath), docName]
+  return fillCategoryTags(content, matchKeywords(config.keywords, names))
 }
 
 async function writeAutoCategoryTags(api, filePath, dirPath) {
@@ -1229,19 +1240,32 @@ export const useAppStore = create((set, get) => ({
     const api = getApi()
     const filePath = await api.createFile(dirPath, name)
     const skeleton = skeletonTemplateName ? get().templateIndex[skeletonTemplateName] : null
-    // 우선순위: 사용자가 고른 글양식 > 그 폴더의 기본 틀(lib/folderDocTemplate.js) > 기본 빈 분류 줄.
+    // 시작 내용 우선순위: 사용자가 고른 글양식 > 그 폴더의 기본 틀(lib/folderDocTemplate.js) > 기본 빈 분류 줄.
+    // 그 위에 ① 작품 폴더의 구조 기반 자동 분류 ② 폴더의 "자동 분류"(읽어들일 글자, lib/autoCategory.js)를 차례로
+    // 얹는다. 기본 내용 그대로면(바뀐 게 없으면) 다시 쓰지 않는다.
     const folderTemplate = findFolderDocTemplate(dirPath)
+    const workFolderNames = buildAutoCategoryNames(dirPath)
+    let initial // 기본 빈 분류 줄일 때만: 만들자마자 들어 있던 내용(바뀌었는지 비교용)
+    let content
     if (skeleton?.rawText) {
-      const content = applyAutoCategoryTags(expandTemplateBody(skeleton.rawText, {}), buildAutoCategoryNames(dirPath))
-      await api.writeFile(filePath, content)
+      content = applyAutoCategoryTags(expandTemplateBody(skeleton.rawText, {}), workFolderNames)
     } else if (folderTemplate) {
-      await api.writeFile(filePath, applyAutoCategoryTags(folderTemplate, buildAutoCategoryNames(dirPath)))
+      content = applyAutoCategoryTags(folderTemplate, workFolderNames)
     } else {
-      await writeAutoCategoryTags(api, filePath, dirPath)
+      initial = await api.readFile(filePath)
+      content = applyAutoCategoryTags(initial, workFolderNames)
     }
+    content = await applyKeywordCategories(api, get().workspacePath, dirPath, name, content)
+    if (content !== initial) await api.writeFile(filePath, content)
     await get().refreshTree()
     await get().rebuildIndexes()
     await get().openFile(filePath, name)
+  },
+
+  // 폴더의 "자동 분류" 설정(읽어들일 글자 목록)을 저장한다. 빈 목록이면 해제. 폴더 안의 숨김 파일에 저장되어
+  // 폴더를 옮기거나 이름을 바꿔도 따라간다(electron/fileSystem.js 의 writeAutoCategory).
+  async saveAutoCategory(folderPath, keywords) {
+    await getApi().writeAutoCategory(folderPath, keywords)
   },
 
   // Drag-and-dropped .md/.txt files: create each as a new doc (content

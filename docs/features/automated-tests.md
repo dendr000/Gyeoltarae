@@ -30,10 +30,16 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/codeFence.test.js` | ``` 여는·닫는 줄 판별, 열린 코드블록 안인지, 언어가 적힌 코드블록 안에서만 상용구 추천을 켜는 기준(밖·언어 없음·여는 줄 제외), 에디터 자동 닫기 계산(들여쓰기·인라인 백틱·선택 영역 제외) | 순수 함수 |
 | `tests/lib/codeHighlight.test.js` | 언어 이름 해석(대소문자·한글·구분 기호 무시, 모르는 이름), 색 입히기가 원문 글자를 바꾸지 않는지, HTML 이스케이프 | 순수 함수 |
 | `tests/lib/listAndRule.test.js` | 목록 들여쓰기 하위 항목(공백 1·2·4칸, 탭, 번호 목록, 예전 `**` 방식), 목록 항목 아래 코드블록(목록이 끊기지 않는지, 빈 줄·접기 블록은 예전대로), `---` 구분선과 굵기 | 순수 함수 |
-| `tests/lib/folderDocTemplate.test.js` | 폴더별 새 문서 기본 내용을 찾는 규칙(따즈아 안·하위 폴더·Windows 경로, 이름 일부만 같은 폴더 제외) | 순수 함수 |
+| `tests/lib/folderDocTemplate.test.js` | 폴더별 새 문서 기본 내용(요청받은 따즈아 본문과 줄 단위로 대조)과 찾는 규칙(따즈아 안·하위 폴더·Windows 경로, 이름 일부만 같은 폴더 제외) | 순수 함수 |
 | `tests/store/folderDocTemplate.test.js` | 따즈아 폴더에서 새 문서를 만들 때 기본 내용, 글양식 우선, 가져온 파일은 제외, 작품 폴더 안의 따즈아 | mockApi |
 | `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |
 | `tests/lib/smartQuotes.test.js` | 뷰어의 둥근 따옴표(열림/닫힘 판단, 태그·블록 경계, 코드·속성은 그대로, 두 번 적용해도 같음)와 실제 파서 출력(굵게·표·목록·각주·접기·스타일 상자, 목차 데이터 불변) | 순수 함수 |
+| `tests/lib/autoCategory.test.js` | 폴더 자동 분류의 규칙(읽어들일 글자 입력 해석, 읽을 이름 구하기, 대소문자 무시 부분 일치와 순서, 비어 있는 분류 칸 채우기) — 사용자가 든 예(DBMS·외래키) 포함 | 순수 함수 |
+| `tests/electron/autoCategory.test.js` | 자동 분류 설정 파일(폴더 안 숨김 파일)의 저장·가장 가까운 윗 폴더 찾기·워크스페이스 밖 제외·해제·망가진 파일 | **진짜 디스크**(임시 폴더) |
+| `tests/store/autoCategory.test.js` | 새 문서를 만들 때 자동 분류가 붙는지(예: `04 외래키와 Join` → ddazua·DBMS·외래키), 글양식·가져온 파일·여러 겹 설정 | mockApi |
+| `tests/lib/tableNav.test.js` | 표 편집기 Tab(아래 행 첫 셀)·Enter(바로 아래 셀) 이동 규칙, 새 행 생성, 병합된 셀 | 순수 함수 |
+| `tests/lib/lineDuplicate.test.js` | 코드블록 안 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, ``` 줄·코드블록 밖 제외) | 순수 함수 |
+| `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
 | `tests/lib/snippetOrder.test.js` | 폴더의 순서 목록 파일(`_순서.txt`) 해석(빈 줄·# 설명 건너뛰기, CRLF·BOM, 중복, 대소문자) | 순수 함수 |
 | `tests/electron/snippetOrders.test.js` | 메인이 폴더별 순서 목록 파일을 읽어 주는지(없는 폴더, 상용구로 안 섞임) | **진짜 디스크**(임시 폴더) |

@@ -38,6 +38,8 @@ import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets } from '../lib/snippetScope.js'
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
 import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
+import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
+import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -489,6 +491,9 @@ function ToolbarButton({ icon: Icon, label, title, onClick, active = false }) {
 export function EditorPane({ text, onChange, disabled }) {
   const textareaRef = useRef(null)
   const backdropRef = useRef(null)
+  // 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤(스크롤바를 잡지 않아도 됨).
+  const toolbarRef = useRef(null)
+  useHorizontalWheelScroll(toolbarRef, !disabled)
   const highlightLines = useMemo(() => renderHighlightLines(text), [text])
   const [tableModal, setTableModal] = useState(null)
   const [gradientModal, setGradientModal] = useState(null)
@@ -1019,6 +1024,21 @@ export function EditorPane({ text, onChange, disabled }) {
       wrapSelection(textarea, '__', '__', onChange)
       return
     }
+    // Ctrl+D — 코드블록(```) 안에서 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL
+    // Workbench 의 줄 복제와 같다. 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
+    // 코드블록 밖이거나 ``` 줄이면 duplicateLinesEdit 이 null 을 줘서 아무것도 안 하고 지나간다.
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
+      const edit = duplicateLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      if (edit) {
+        e.preventDefault()
+        replaceRange(textarea, edit.insertAt, edit.insertAt, edit.insertText, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd)
+        })
+        return
+      }
+    }
     // Ctrl+Shift+Alt+- — 취소선. code로 체크(물리 키 기준) — Shift가 눌린 상태에서는
     // 키보드 배열에 따라 e.key가 '-'가 아니라 '_' 등으로 올 수 있어 code가 더 안전함.
     if (e.ctrlKey && e.shiftKey && e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract')) {
@@ -1211,7 +1231,7 @@ export function EditorPane({ text, onChange, disabled }) {
   return (
     <div className="editor-pane">
       {!disabled && (
-        <div className="editor-toolbar">
+        <div className="editor-toolbar" ref={toolbarRef}>
           <div className="toolbar-group">
             <ToolbarButton icon={Heading1} label="제목" title="제목 (=텍스트=)" onClick={() => wrap('=')} />
             <ToolbarButton icon={List} label="목록" title="목록 (* 항목)" onClick={() => linePrefix('* ')} />

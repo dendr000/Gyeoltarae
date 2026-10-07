@@ -7,12 +7,13 @@
 //
 // 내용에 `[[분류:]]`(이름이 빈 줄)를 두면 그 자리는 사용자가 채울 칸이다. 이 문서가 작품 폴더 밑에
 // 있으면 그 빈 칸이 자동 분류 태그로 채워진다(applyAutoCategoryTags).
-const FOLDER_DOC_TEMPLATES = [
-  {
-    folderName: '따즈아',
-    content: '[[분류:ddazua]]\n[[분류:]]\n\n[목차]\n\n=  =\n',
-  },
-]
+// 따즈아: 큰 제목(=  =) 네 묶음, 묶음마다 작은 제목(==  ==) 둘과 빈 목록 항목(* )이 있는 강의 노트 뼈대.
+// 분류는 ddazua 와 비워 둔 칸 둘 — 빈 칸은 폴더의 "자동 분류"(lib/autoCategory.js)가 폴더·문서 이름에서
+// 찾은 글자로 채운다(없으면 비어 있는 채로 남아 직접 쓰면 된다). 줄 끝의 공백("* ")도 그대로 둔다.
+const DDAZUA_SECTION = '=  =\n==  ==\n* \n\n==  ==\n* \n'
+const DDAZUA_TEMPLATE = `[[분류:ddazua]]\n[[분류:]]\n[[분류:]]\n[목차]\n\n${[DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION].join('\n\n')}`
+
+const FOLDER_DOC_TEMPLATES = [{ folderName: '따즈아', content: DDAZUA_TEMPLATE }]
 
 // dirPath(새 문서를 만들 폴더 경로) 위쪽 어딘가에 틀이 정해진 폴더가 있으면 그 틀의 내용,
 // 없으면 null. 경로 구분자는 / 와 \ 둘 다 받는다. 이름은 폴더 이름 전체가 같아야 한다

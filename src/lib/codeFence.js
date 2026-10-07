@@ -50,6 +50,14 @@ function linesBeforeCursorLine(value, pos) {
   return lines
 }
 
+// 커서(pos)가 있는 줄이 열린 코드블록(언어가 있든 없든) 안인가. 여는 줄 자신은 아직 밖이고, 닫는 줄은
+// 안쪽으로 센다(= "그 줄이 시작될 때 열려 있는가"). ``` 줄 자체를 다루지 말아야 하는 호출부(줄 복제 등)는
+// 그 줄이 펜스 모양인지 따로 확인한다.
+export function isInCodeFenceAt(value, pos) {
+  const lines = linesBeforeCursorLine(value, pos)
+  return openCodeFenceAt(lines, lines.length) !== null
+}
+
 // 커서가 "언어 이름이 적힌 코드블록"(```sql, ```MySQL, ```자바스크립트 ...) 안에 있는가. 언어가 없는
 // ``` 블록(그냥 글자일 수 있음)과 여는 줄 자신, 닫힌 뒤는 아니다. 에디터가 이 안에서는 상용구 추천
 // 팝업을 설정과 상관없이 켜는 데 쓴다(EditorPane.jsx 의 updateSnippetSuggest).

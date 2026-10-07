@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('api', {
 
   scanSnippets: (workspacePath) => ipcRenderer.invoke('snippets:scan', workspacePath),
   readSnippetOrders: (workspacePath) => ipcRenderer.invoke('snippets:readOrders', workspacePath),
+  readAutoCategory: (workspacePath, dirPath, ownOnly) =>
+    ipcRenderer.invoke('autocategory:read', workspacePath, dirPath, ownOnly),
+  writeAutoCategory: (folderPath, keywords) => ipcRenderer.invoke('autocategory:write', folderPath, keywords),
   ensureSnippet: (workspacePath, category, title) => ipcRenderer.invoke('snippets:ensure', workspacePath, category, title),
 
   readDict: (workspacePath) => ipcRenderer.invoke('dict:read', workspacePath),

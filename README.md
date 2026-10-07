@@ -117,9 +117,16 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 저장 공간 없이 기존 틀 문서를 재사용함.
 
 **폴더별 기본 내용**: 특정 폴더 밑에서 새 문서를 만들 때 자동으로 채워 넣는 내용이 있음(현재 `따즈아` 폴더와
-그 하위 폴더: `[[분류:ddazua]]`, 빈 `[[분류:]]`, `[목차]`, 빈 제목 `=  =`). 직접 고른 글양식이 있으면 글양식이
-우선이고, 파일을 끌어다 놓아 가져온 문서에는 적용되지 않음. 폴더를 추가하려면 `src/lib/folderDocTemplate.js` 목록에
-항목을 넣음. 자세히: [`docs/features/folder-doc-template.md`](docs/features/folder-doc-template.md).
+그 하위 폴더: 분류 세 줄(`[[분류:ddazua]]` + 빈 칸 둘), `[목차]`, 큰 제목(`=  =`) 네 묶음 — 묶음마다 작은 제목 둘과
+빈 목록 항목). 직접 고른 글양식이 있으면 글양식이 우선이고, 파일을 끌어다 놓아 가져온 문서에는 적용되지 않음.
+폴더를 추가하려면 `src/lib/folderDocTemplate.js` 목록에 항목을 넣음. 자세히:
+[`docs/features/folder-doc-template.md`](docs/features/folder-doc-template.md).
+
+**폴더별 자동 분류**: 폴더를 우클릭 → "자동 분류 설정…"에서 "읽어들일 글자"(예: `DBMS, 외래키`)를 쉼표로 적어 두면,
+그 폴더 아래에서 새 문서를 만들 때 아래 폴더 이름과 문서 이름에서 그 글자를 찾아 비어 있는 `[[분류:]]` 칸에
+`[[분류:글자]]` 로 자동으로 넣음(예: 폴더 `01 올인원 DBMS!! …`, 문서 `04 외래키와 Join` → `ddazua`, `DBMS`, `외래키`).
+어느 폴더에든 설정할 수 있고 비우면 해제됨. 설정은 그 폴더 안의 숨김 파일에 저장되어 폴더를 옮겨도 따라감. 자세히:
+[`docs/features/auto-category.md`](docs/features/auto-category.md).
 
 **파일 트리의 숫자 배지**: 문서뿐 아니라 폴더도 이름이 `01 이름`처럼 숫자+공백으로 시작하면 숫자가 이름 옆에 따로
 배지로 보임(`docs/features/folder-number-badge.md`).
@@ -136,6 +143,14 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Shift+더블클릭**: 뷰어(왼쪽 렌더링 결과)에서 단어를 Shift+더블클릭하면 에디터의 그
   위치로 커서가 이동 — 가장 가까운 앞쪽 제목부터 그 단어를 원문에서 찾아가는 방식이라
   완벽하진 않음(같은 구간에 같은 단어가 여러 번 있으면 첫 번째로 감)
+- **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
+  밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **툴바 휠 스크롤**: 편집 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤됨(스크롤바를 잡지 않아도 됨).
+  [`docs/features/toolbar-wheel-scroll.md`](docs/features/toolbar-wheel-scroll.md)
+- **표 편집기의 셀 키**: Tab = 아래 행의 첫 번째 셀, Enter = 바로 아래 셀(둘 다 없으면 새 행을 만듦), Shift+Enter = 셀 안
+  줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
+- **큰 제목 간격**: 뷰어에서 큰 제목(1. 2. 3. …) 앞 간격을 넓혀 다음 큰 문단으로 넘어간 느낌을 줌.
+  [`docs/features/heading-spacing.md`](docs/features/heading-spacing.md)
 
 ## 상용구 · 고유명사 사전 (편집 보조 기능)
 

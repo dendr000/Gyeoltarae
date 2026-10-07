@@ -642,6 +642,13 @@
   font-size: 24px;
   border-bottom: 2px solid var(--border);
   padding-bottom: 6px;
+  /* 큰 제목(1. 2. 3. ...)은 다음 큰 문단으로 넘어간다는 느낌이 나게 위쪽 간격을 넓힌다(다른 제목은 20px).
+     바로 앞이 작은 제목(1.4. → 2.)이어도 간격이 벌어지도록 마진을 크게 줬고, 문서 맨 처음이면 아래에서 줄인다. */
+  margin-top: 52px;
+}
+
+.wiki-rendered > h1:first-child {
+  margin-top: 20px;
 }
 .wiki-rendered h2 {
   font-size: 20px;
