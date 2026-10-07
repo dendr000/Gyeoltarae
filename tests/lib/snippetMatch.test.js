@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findExactSnippetMatch, findSnippetQuery } from '../../src/lib/snippetMatch.js'
+import { enterAcceptsSuggestion, findExactSnippetMatch, findSnippetQuery } from '../../src/lib/snippetMatch.js'
 
 const snip = (title, category = '공통', content = '') => ({ category, title, content })
 
@@ -41,6 +41,64 @@ describe('findExactSnippetMatch (스페이스 자동 치환 · Alt+Enter)', () =
   it('빈 줄·등록된 상용구 없음은 null', () => {
     expect(findExactSnippetMatch('   ', 3, [snip('MYSQL')])).toBeNull()
     expect(findExactSnippetMatch('MYSQL', 5, [])).toBeNull()
+  })
+})
+
+describe('findSnippetQuery — 이미 친 글자와 똑같이 되는 후보는 내지 않는다', () => {
+  it('다 쳤고 확정해도 아무것도 안 바뀌는 후보(본문이 친 글자와 같음)는 목록에서 빠진다', () => {
+    const exact = { category: 'SQL', title: 'NULL', content: 'NULL' }
+    const longer = { category: 'SQL', title: 'NULLIF', content: 'NULLIF' }
+    expect(findSnippetQuery('NULL', 4, [exact, longer])?.matches).toEqual([longer])
+  })
+
+  it('걸리는 후보가 전부 그런 것이면 팝업 자체가 없다', () => {
+    expect(findSnippetQuery('SELECT', 6, [{ category: 'SQL', title: 'SELECT', content: 'SELECT' }])).toBeNull()
+  })
+
+  it('"NOT NULL" 을 다 쳤으면 끝의 "NULL" 로 NULLIF 를 찾지 않고 팝업을 닫는다', () => {
+    const entries = [
+      { category: 'SQL', title: 'NOT NULL', content: 'NOT NULL' },
+      { category: 'SQL', title: 'NULL', content: 'NULL' },
+      { category: 'SQL', title: 'NULLIF', content: 'NULLIF' },
+    ]
+    expect(findSnippetQuery('name VARCHAR(10) NOT NULL', 25, entries)).toBeNull()
+  })
+
+  it('아직 덜 친 키워드는 그대로 후보가 뜬다 ("NOT NU" → NOT NULL)', () => {
+    const entries = [
+      { category: 'SQL', title: 'NOT NULL', content: 'NOT NULL' },
+      { category: 'SQL', title: 'NULLIF', content: 'NULLIF' },
+    ]
+    expect(findSnippetQuery('x NOT NU', 8, entries)?.matches.map((e) => e.title)).toEqual(['NOT NULL'])
+  })
+
+  it('소문자로 쳤으면 대문자 본문은 바뀌는 것이라 후보로 남는다', () => {
+    const entry = { category: 'SQL', title: 'SELECT', content: 'SELECT' }
+    expect(findSnippetQuery('select', 6, [entry])?.matches).toEqual([entry])
+  })
+
+  it('본문이 다르면(MYSQL → MySQL) 제목이 같아도 후보로 남는다', () => {
+    const entry = { category: '영어', title: 'MYSQL', content: 'MySQL' }
+    expect(findSnippetQuery('MYSQL', 5, [entry])?.matches).toEqual([entry])
+  })
+
+  it('{#} 커서 표시가 든 본문은 확정하면 글자가 바뀌므로 후보로 남는다', () => {
+    const entry = { category: 'SQL', title: 'W', content: 'W{#}' }
+    expect(findSnippetQuery('W', 1, [entry])?.matches).toEqual([entry])
+  })
+})
+
+describe('enterAcceptsSuggestion (Enter 가 추천 후보를 확정하는가)', () => {
+  it('코드블록 밖에서는 예전처럼 Enter 가 확정한다', () => {
+    expect(enterAcceptsSuggestion({ inCodeBlock: false, navigated: false })).toBe(true)
+  })
+
+  it('코드블록 안에서는 방향키로 고르지 않았다면 Enter 는 확정하지 않는다 (줄바꿈이 들어간다)', () => {
+    expect(enterAcceptsSuggestion({ inCodeBlock: true, navigated: false })).toBe(false)
+  })
+
+  it('코드블록 안이어도 방향키로 후보를 골랐다면 Enter 가 확정한다', () => {
+    expect(enterAcceptsSuggestion({ inCodeBlock: true, navigated: true })).toBe(true)
   })
 })
 

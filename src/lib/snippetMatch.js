@@ -26,8 +26,14 @@ export function findSnippetQuery(value, pos, entries) {
   for (let start = checkLimit; start < upToCursor.length; start += 1) {
     const suffix = upToCursor.slice(start)
     const lowerSuffix = suffix.toLowerCase()
-    const matches = entries.filter((entry) => entry.title.toLowerCase().startsWith(lowerSuffix))
-    if (matches.length === 0) continue
+    const prefixMatches = entries.filter((entry) => entry.title.toLowerCase().startsWith(lowerSuffix))
+    if (prefixMatches.length === 0) continue
+    // 확정해도 아무것도 안 바뀌는 후보(본문이 이미 친 글자와 똑같음 — 예: SELECT 를 다 쳤는데 본문이
+    // SELECT 인 후보)는 내지 않는다. 키워드를 상용구로 많이 등록해 두면 다 친 글자에 대해서도 후보가
+    // 뜨고 Enter 가 그걸 확정해 버리기 때문. 걸리는 게 전부 그런 후보면 더 짧은 글자로 되돌아가 다른
+    // 후보를 찾지 않고 팝업을 닫는다 — "NOT NULL" 을 다 쳤는데 끝의 "NULL" 로 "NULLIF" 를 찾으면 안 되므로.
+    const matches = prefixMatches.filter((entry) => entry.content !== suffix)
+    if (matches.length === 0) return null
     // 대소문자까지 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 제목이 짧은 순 —
     // 뒤의 두 기준은 Galpi와 동일.
     matches.sort((a, b) => {
@@ -43,6 +49,14 @@ export function findSnippetQuery(value, pos, entries) {
     return { start: lineStart + start, end: pos, matches }
   }
   return null
+}
+
+// 추천 팝업이 떠 있을 때 Enter 가 후보를 확정하는가. 코드블록 밖(글을 쓰는 중)에서는 예전처럼 항상
+// 확정한다. 코드블록 안에서는 방향키로 후보를 직접 고르기 전에는 확정하지 않고 그냥 줄바꿈이 들어가게
+// 한다 — 코드는 줄 끝이 `NOT NULL` 처럼 키워드로 끝나는 일이 많은데, 그때마다 Enter 가 "NULLIF" 같은
+// 후보를 확정해 버리면 줄바꿈도 안 되고 글자도 망가진다. Tab 은 코드블록 안에서도 항상 확정한다.
+export function enterAcceptsSuggestion({ inCodeBlock, navigated }) {
+  return !inCodeBlock || navigated
 }
 
 // Galpi의 isBpAuto(스페이스바 자동 치환) 포팅 — 커서 앞 줄의 끝부분이 등록된 상용구

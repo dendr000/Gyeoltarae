@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-10-07 13:18
+
+### 추가 (Added)
+- SQL(MySQL) 키워드 147개(SELECT, NULL, NOT NULL, PRIMARY KEY, VARCHAR, COUNT 등)를 상용구로 한꺼번에 만들어 주는 묶음을 추가했다. 코드블록 안에서 `sel` 까지만 치면 추천 팝업에 `SELECT` 가 뜨고 Tab 으로 확정된다. 설치는 `node scripts/install-snippet-pack.mjs sql`(미리보기는 `--dry-run`)이고, 이미 있는 상용구는 덮어쓰지 않아서 여러 번 실행해도 안전하다. 이 PC의 워크스페이스(`D:\WikiDesk`)에는 `SQL` 폴더로 설치했다
+
+### 변경 (Changed)
+- 코드블록 안에서 추천 팝업이 떠 있을 때 Enter 는 후보를 확정하지 않고 줄바꿈이 들어간다. 방향키로 후보를 직접 고른 뒤의 Enter 와 Tab 은 그대로 확정한다. (`NOT NULL`+Enter 에서 `NULLIF` 같은 후보가 확정되어 줄바꿈도 안 되고 글자도 망가지는 일을 막으려는 것) 코드블록 밖에서는 예전과 같다
+- 이미 친 글자와 똑같이 되는 후보(예: `SELECT` 를 다 쳤는데 본문이 `SELECT` 인 상용구)는 추천 목록에 뜨지 않는다. `NOT NULL` 을 다 쳤을 때 끝의 `NULL` 로 `NULLIF` 를 추천하는 일도 없다
+
 ## [0.72.0] - 2026-10-07 13:08
 
 ### 추가 (Added)

@@ -36,7 +36,7 @@ import { resolveCycleReplacement } from '../lib/dictCycle.js'
 import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets } from '../lib/snippetScope.js'
-import { findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
+import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
 import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -885,12 +885,13 @@ export function EditorPane({ text, onChange, disabled }) {
     if (snippetSuggest) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSnippetSuggest((s) => s && { ...s, activeIndex: Math.min(s.activeIndex + 1, s.items.length - 1) })
+        // navigated: 방향키로 후보를 직접 골랐다는 표시 — 코드블록 안에서 Enter 가 확정할지 가르는 기준.
+        setSnippetSuggest((s) => s && { ...s, navigated: true, activeIndex: Math.min(s.activeIndex + 1, s.items.length - 1) })
         return
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSnippetSuggest((s) => s && { ...s, activeIndex: Math.max(s.activeIndex - 1, 0) })
+        setSnippetSuggest((s) => s && { ...s, navigated: true, activeIndex: Math.max(s.activeIndex - 1, 0) })
         return
       }
       if (snippetSuggest.mode === 'browse' && !e.ctrlKey && !e.metaKey && !e.altKey && /^[1-9]$/.test(e.key)) {
@@ -901,7 +902,12 @@ export function EditorPane({ text, onChange, disabled }) {
           return
         }
       }
-      if ((e.key === 'Enter' || e.key === 'Tab') && snippetSuggest.items.length > 0) {
+      // 코드블록 안에서는 방향키로 고르기 전의 Enter 는 확정하지 않고 줄바꿈으로 둔다(팝업은 닫음).
+      // Tab 은 어디서나 확정. 이유는 lib/snippetMatch.js 의 enterAcceptsSuggestion.
+      const inCodeBlock = isInLanguageCodeFenceAt(textarea.value, textarea.selectionStart)
+      if (e.key === 'Enter' && !enterAcceptsSuggestion({ inCodeBlock, navigated: !!snippetSuggest.navigated })) {
+        setSnippetSuggest(null)
+      } else if ((e.key === 'Enter' || e.key === 'Tab') && snippetSuggest.items.length > 0) {
         e.preventDefault()
         selectSnippetSuggestItem(snippetSuggest.items[snippetSuggest.activeIndex])
         return
