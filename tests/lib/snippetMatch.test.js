@@ -121,6 +121,22 @@ describe('findSnippetQuery — rank (순서 목록으로 SELECT 를 SET 보다 �
     expect(titles('MYSQ', entries)).toEqual(['MYSQL', 'mysql'])
   })
 
+  it('순서 목록에 있는 후보는 대소문자가 달라도 목록에 없는 후보보다 위다 — create 에서 CREATE TABLE 이 created_at 위', () => {
+    const entries = [
+      { category: 'SQL', title: 'created_at', content: 'created_at' },
+      { category: 'SQL', title: 'created_by', content: 'created_by' },
+      e('CREATE INDEX', 20),
+      e('CREATE TABLE', 9),
+      { category: 'SQL', title: 'CREATE PROCEDURE', content: 'CREATE PROCEDURE' },
+    ]
+    expect(titles('create', entries)).toEqual(['CREATE TABLE', 'CREATE INDEX', 'created_at', 'created_by', 'CREATE PROCEDURE'])
+  })
+
+  it('둘 다 목록에 없으면 대소문자까지 같은 후보가 먼저다 (예전과 같음)', () => {
+    const entries = ['STUDENTS', 'students', 'student_id'].map((t) => ({ category: 'SQL', title: t, content: t }))
+    expect(titles('stud', entries)).toEqual(['students', 'student_id', 'STUDENTS'])
+  })
+
   it('rank 가 같으면 짧은 순, 그다음 가나다순', () => {
     const entries = [e('SUBSTRING', 3), e('SUM', 3), e('SAVEPOINT', 3)]
     expect(titles('s', entries)).toEqual(['SUM', 'SAVEPOINT', 'SUBSTRING'])

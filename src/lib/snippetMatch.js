@@ -45,10 +45,15 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } 
     // 후보를 찾지 않고 팝업을 닫는다 — "NOT NULL" 을 다 쳤는데 끝의 "NULL" 로 "NULLIF" 를 찾으면 안 되므로.
     const matches = prefixMatches.filter((entry) => entry.content !== suffix)
     if (matches.length === 0) return null
-    // 대소문자까지 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 순서 목록(_순서.txt)의 순서
-    // (entry.rank, 작을수록 위 — 목록에 없으면 맨 뒤), 그다음 제목이 짧은 순 — 정확 일치와 짧은 순은
-    // Galpi와 동일. 순서 목록이 없으면 예전 정렬과 똑같다.
+    // 순서 목록(_순서.txt)에 있는 후보(entry.rank 가 있는 것)를 목록에 없는 후보보다 먼저, 그다음 대소문자까지
+    // 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 rank(작을수록 위), 그다음 제목이 짧은 순 — 정확
+    // 일치와 짧은 순은 Galpi와 동일. 목록에 적은 것은 사용자가 직접 고른 순서라서, 소문자로 `create` 를 쳤을 때
+    // 대소문자가 같다는 이유만으로 목록에 없는 created_at 이 CREATE TABLE 위에 오지 않게 한다.
+    // 순서 목록이 없으면 예전 정렬과 똑같다.
     matches.sort((a, b) => {
+      const aListed = Number.isFinite(a.rank) ? 0 : 1
+      const bListed = Number.isFinite(b.rank) ? 0 : 1
+      if (aListed !== bListed) return aListed - bListed
       const aCase = a.title.startsWith(suffix) ? 0 : 1
       const bCase = b.title.startsWith(suffix) ? 0 : 1
       if (aCase !== bCase) return aCase - bCase
