@@ -820,32 +820,81 @@
   color: var(--text-h);
 }
 
-.wiki-code {
+/* 코드블록: 바깥 틀(wrap) 안에 윗줄(언어 이름 왼쪽 · 복사 버튼 오른쪽)과 본문(pre). */
+.wiki-code-wrap {
   margin: 10px 0;
-  padding: 10px 14px;
   background: var(--bg-header);
   border: 1px solid var(--border);
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.wiki-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  padding: 2px 6px 2px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wiki-code-lang {
+  font-size: 11px;
+  font-family: var(--sans);
+  color: var(--text);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.wiki-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: 12px var(--sans);
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.wiki-code-copy:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.wiki-code-copy[data-state='copied'] {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.wiki-code-copy[data-state='failed'] {
+  color: var(--danger);
+  opacity: 1;
+}
+
+/* 아이콘은 마크업이 아니라 assets/icons 의 svg 를 마스크로 써서 글자색을 따라가게 한다. */
+.wiki-code-copy-icon {
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: url('./assets/icons/copy.svg') center / contain no-repeat;
+}
+
+.wiki-code-copy[data-state='copied'] .wiki-code-copy-icon {
+  mask-image: url('./assets/icons/check.svg');
+}
+
+.wiki-code {
+  margin: 0;
+  padding: 10px 14px;
   overflow-x: auto;
   font: 13px/1.6 var(--mono);
   white-space: pre;
-}
-
-.wiki-code-syntax {
-  position: relative;
-  padding-top: 26px;
-}
-
-.wiki-code-syntax::before {
-  content: attr(data-lang);
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  font-size: 11px;
-  font-family: var(--font-ui, sans-serif);
-  color: var(--text);
-  opacity: 0.5;
-  text-transform: uppercase;
 }
 
 .wiki-toc {

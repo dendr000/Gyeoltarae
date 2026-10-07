@@ -474,6 +474,38 @@ const LIST_RE = /^(\*+)\s+(.+)$/
 const OLIST_RE = /^\d+\.\s+(.+)$/
 const QUOTE_RE = /^(>+)\s?(.*)$/
 const BLOCK_OPEN_RE = /^\{\{\{(.*)$/
+
+// ```언어 ... ``` 코드블록 (마크다운식). 여는 줄은 백틱 3개 이상 + 선택적인 언어
+// 이름만 있어야 한다 — "```코드```"처럼 한 줄에 같이 쓴 건 코드블록이 아니라
+// 그냥 글자. 닫는 줄은 여는 줄 이상의 백틱만 있는 줄이라, 백틱 4개로 열면 안에
+// 백틱 3개짜리 줄을 그대로 보여줄 수 있다.
+const CODE_FENCE_OPEN_RE = /^(`{3,})([A-Za-z0-9_+#.-]*)\s*$/
+const CODE_FENCE_CLOSE_RE = /^(`{3,})\s*$/
+
+function matchCodeFenceOpen(line) {
+  const m = line.trim().match(CODE_FENCE_OPEN_RE)
+  return m ? { ticks: m[1].length, lang: m[2] } : null
+}
+
+function isCodeFenceClose(line, ticks) {
+  const m = line.trim().match(CODE_FENCE_CLOSE_RE)
+  return m !== null && m[1].length >= ticks
+}
+
+// 코드블록의 HTML. 윗줄(언어 이름 + 복사 버튼)과 본문(pre)으로 이뤄지고, 복사 버튼의
+// 클릭은 뷰어가 받아서 처리한다(ViewerPane.jsx → codeCopy.js). 버튼 안 아이콘은
+// 마크업이 아니라 CSS(App.css .wiki-code-copy-icon)가 assets/icons 의 svg 로 그린다.
+function renderCodeBlock(body, lang = '') {
+  const label = lang ? `<span class="wiki-code-lang">${escapeHtml(lang)}</span>` : ''
+  return (
+    `<div class="wiki-code-wrap">` +
+    `<div class="wiki-code-head">${label}` +
+    `<button type="button" class="wiki-code-copy" title="코드 복사" aria-label="코드 복사">` +
+    `<span class="wiki-code-copy-icon" aria-hidden="true"></span>` +
+    `<span class="wiki-code-copy-label">복사</span></button></div>` +
+    `<pre class="wiki-code"><code>${escapeHtml(body)}</code></pre></div>`
+  )
+}
 const CELL_WIKI_STYLE_RE = /^\{\{\{#!wiki([^\n]*)\n([\s\S]*)\}\}\}$/
 
 // Finds where a multi-line {{{ ... }}} block (folding/code/style) actually
@@ -620,6 +652,16 @@ function mergeMultilineTableRows(lines) {
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
+    // ``` 코드블록은 안쪽 줄을 건드리지 않고 닫는 줄까지 그대로 통과시킨다 —
+    // 안에 `||`로 시작하는 줄(SQL 문자열 연결 등)이 있어도 표 행으로 묶이지 않게.
+    const fenceOpen = matchCodeFenceOpen(line)
+    if (fenceOpen) {
+      let end = i + 1
+      while (end < lines.length && !isCodeFenceClose(lines[end], fenceOpen.ticks)) end += 1
+      out.push(...lines.slice(i, end + 1))
+      i = end + 1
+      continue
+    }
     if (/^\s*\|\|/.test(line)) {
       let buffer = line
       let balance = countOccurrences(buffer, '{{{') - countOccurrences(buffer, '}}}')
@@ -1347,6 +1389,19 @@ export function parseWikiText(
       continue
     }
 
+    // ``` 코드블록 — 안의 줄은 이 루프를 거치지 않고 통째로 글자 그대로 쓰이므로
+    // 안에 적힌 ##, = 제목 =, 표(||), [[링크]] 같은 문법은 해석되지 않는다.
+    // 닫는 ``` 가 없으면 문서 끝까지가 코드블록이다(`{{{`와 같은 방식).
+    const fenceOpen = matchCodeFenceOpen(line)
+    if (fenceOpen) {
+      flush()
+      let end = i + 1
+      while (end < lines.length && !isCodeFenceClose(lines[end], fenceOpen.ticks)) end += 1
+      htmlParts.push(renderCodeBlock(lines.slice(i + 1, end).join('\n'), fenceOpen.lang.toLowerCase()))
+      i = end
+      continue
+    }
+
     // 편집기 전용 숨김 노트 — 원문(에디터)에는 그대로 남아있지만 렌더링에는
     // 전혀 나타나지 않음. `##@`는 실제 나무위키에선 편집 페이지 상단 고정
     // 표시라는 별도 UI 의미가 있는데, 결타래엔 그런 "편집 히스토리 페이지"
@@ -1413,9 +1468,9 @@ export function parseWikiText(
         // to show code) — just labels the block with its language so it
         // reads as "this is code, in X" even without color highlighting.
         const lang = syntaxMatch[1].toLowerCase().replace(/[^a-z0-9+#-]/g, '')
-        htmlParts.push(`<pre class="wiki-code wiki-code-syntax" data-lang="${escapeHtml(lang)}"><code>${escapeHtml(body)}</code></pre>`)
+        htmlParts.push(renderCodeBlock(body, lang))
       } else {
-        htmlParts.push(`<pre class="wiki-code"><code>${escapeHtml(body)}</code></pre>`)
+        htmlParts.push(renderCodeBlock(body))
       }
       continue
     }

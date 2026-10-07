@@ -5,6 +5,7 @@ import { ContextMenu } from './ContextMenu.jsx'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
 import { getViewerScroll, setViewerScroll } from '../lib/scrollMemory.js'
+import { copyCodeBlock } from '../lib/codeCopy.js'
 
 function dirnameOf(filePath) {
   const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
@@ -24,6 +25,12 @@ function handleWikiContentClick(
   // preview panes don't, so a heading's [편집] link (when editableOffsets
   // rendered one at all) is simply inert there instead of trying to jump
   // an editor that isn't showing this content in the first place.
+  const codeCopyButton = e.target.closest('.wiki-code-copy')
+  if (codeCopyButton) {
+    e.preventDefault()
+    copyCodeBlock(codeCopyButton)
+    return
+  }
   const editHeadingLink = e.target.closest('.wiki-heading-edit-link')
   if (editHeadingLink && onEditHeading) {
     e.preventDefault()
