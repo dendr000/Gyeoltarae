@@ -185,6 +185,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   코드블록 안에서 `sel` 까지 치면 `SELECT` 가 후보로 뜸. 코드블록 안에서 Enter 는 후보를 확정하지 않고 줄바꿈이며
   Tab(또는 방향키로 고른 뒤 Enter)으로 확정함. 코드블록 안에서는 단어 시작 자리에서만 후보를 찾고, 후보의 순서는
   폴더의 `_순서.txt`(한 줄에 제목 하나, 자주 쓰는 순)로 정함 — 그래서 `s` 에서 SELECT 가 SET 보다 위에 뜸.
+  `sql-practice` 묶음은 같은 `SQL` 폴더에 학습용 이름(student, emp, dept, empno … 소문자·대문자 둘 다)과 추가 키워드·함수
+  1806개를 더함 — `node scripts/install-snippet-pack.mjs sql-practice`.
   자세히: [`docs/features/snippet-packs.md`](docs/features/snippet-packs.md)
 - **고유명사 사전**: 사이드바 "사전 관리"로 모달을 엶 — `원문`/`한자/영문`을 입력해 등록, "일괄"로
   `원문(한자)` 줄을 여러 개 한 번에 등록, 검색(Enter로 실행 — 항목이 10만 개를 넘어갈 수 있어서

@@ -71,6 +71,33 @@ INSERT INTO
 
 전체 목록은 `scripts/snippet-packs/sql.js`.
 
+## 학습용 이름 묶음 — `sql-practice`
+
+SQL 교재·강의 예제에 나오는 **테이블 이름·열 이름·샘플 값**을 같은 `SQL` 폴더에 더 넣는다. `emp`, `dept`, `student`, `name` 처럼 키워드는 아니지만 매번 치게 되는 이름들이다.
+
+```bash
+node scripts/install-snippet-pack.mjs sql-practice --dry-run   # 미리보기
+node scripts/install-snippet-pack.mjs sql-practice             # 설치 (1806개, 파일이 많아서 30초쯤 걸린다)
+```
+
+| 묶음 | 예 | 만드는 모양 |
+|---|---|---|
+| 테이블 이름 | student, course, emp, dept, salgrade, customers, orders, film, rental, board, member … | 소문자 + 대문자 |
+| 열(컬럼) 이름 | name, id, empno, ename, job, mgr, hiredate, sal, comm, deptno, dname, loc, first_name, emp_no, film_id … | 소문자 + 대문자 |
+| 데이터베이스 이름 | scott, hr, sakila, world, employees, classicmodels, northwind … | 소문자 + 대문자 |
+| 샘플 값 | SMITH, KING, CLERK, MANAGER, ACCOUNTING, SALES, NEW YORK … (Oracle SCOTT 의 EMP·DEPT 데이터) | 대문자만 |
+| camelCase 이름 | customerNumber, quantityOrdered, CountryCode, SurfaceArea, UnitPrice … (classicmodels·world·Northwind) | 적힌 그대로 |
+| 추가 키워드·함수 | FULL OUTER JOIN, ROW_NUMBER, PARTITION BY, NVL, DECODE, TO_CHAR, STR_TO_DATE, IF NOT EXISTS, ON DELETE SET NULL, VARCHAR2 … | 대문자만 |
+
+- **소문자와 대문자를 둘 다 만든다**(`student` / `STUDENT`). 교재마다 `emp` 로도 `EMP` 로도 쓰기 때문이다. 팝업은 친 글자와 **대소문자까지 같은 것을 먼저** 보여 주므로 소문자로 치면 소문자가, 대문자로 치면 대문자가 위에 뜬다. 두 파일은 Windows 에서 이름이 같은 파일이라, 두 번째는 `%XX` 로 인코딩된 이름으로 저장된다(앱에서는 입력한 그대로 보인다. `snippet-case-sensitive.md`).
+- **`SQL` 키워드 묶음과 겹치는 이름은 뺐다.** `date`, `count`, `index`, `comment`, `text`, `year`, `time`, `limit` 같은 이름은 이미 대문자 키워드(`DATE` 등)가 있어서, 같은 단어의 소문자 상용구를 또 만들면 팝업에 중복으로 뜨기만 한다. 이 이름들은 `DATE` 를 골라 쓰면 된다.
+- **이미 있는 상용구는 건드리지 않는다.** 이 PC 에서는 `major` 가 이미 있어서 그대로 두고 나머지를 만들었다. 여러 번 실행해도 두 번째는 "새로 만듦 0개"다.
+- **추천 순서**: `_순서.txt` 에 없으므로 `SQL` 키워드 뒤에, 짧은 제목부터 나온다. 자주 쓰는 이름을 위로 올리려면 `SQL\_순서.txt` 에 한 줄씩 적으면 된다(소문자와 대문자는 다른 제목이라 따로 적는다).
+- **목록이 길어진다.** `SQL` 폴더가 약 1950개가 되어 상용구 모달과 사이드바 목록이 길어진다. 폴더를 접어 두면 된다. 글(문단)에서 영어 단어(`name`, `no`, `class`)를 칠 때 후보가 뜨는 게 거슬리면 "추천 팝업"을 끄면 된다(코드블록 안에서는 계속 켜진다).
+- 지우려면 상용구 모달에서 항목을 지우거나 탐색기에서 `.wikidesk-snippets\SQL` 의 파일을 지운다. 키워드 묶음과 같은 폴더라 한꺼번에 지우는 방법은 없다(폴더째 지우면 키워드 147개도 같이 사라진다).
+
+구현: `scripts/snippet-packs/sql-practice.js`(`SQL_PRACTICE_PACK`), 등록은 `install-snippet-pack.mjs` 의 `PACKS`. 테스트: `tests/scripts/snippetPackPractice.test.js`.
+
 ## 용어 설명 (초보자용)
 
 | 용어 | 뜻 |

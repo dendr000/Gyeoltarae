@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-10-07 18:25
+
+### 추가 (Added)
+- SQL 학습용 이름 상용구 묶음(`sql-practice`)을 추가했다. 교재·강의에 자주 나오는 테이블·열 이름(student, emp, dept, empno, ename, deptno, sal, first_name, film_id 등), SCOTT 샘플 값(SMITH, CLERK, NEW YORK 등), 추가 키워드·함수(NVL, DECODE, ROW_NUMBER, FULL OUTER JOIN 등) 1806개다. 이름은 `student` 와 `STUDENT` 처럼 소문자·대문자를 둘 다 만든다. 설치는 `node scripts/install-snippet-pack.mjs sql-practice`(미리보기는 `--dry-run`)이고, 이미 있는 상용구는 덮어쓰지 않는다. 이 PC의 `D:\WikiDesk\.wikidesk-snippets\SQL` 에 설치했다
+
 ## [0.75.1] - 2026-10-07 17:55
 
 ### 수정 (Fixed)

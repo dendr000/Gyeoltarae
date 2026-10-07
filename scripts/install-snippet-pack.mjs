@@ -2,6 +2,7 @@
 
 // 상용구 묶음(scripts/snippet-packs/*.js)을 워크스페이스의 상용구 폴더에 만들어 넣는다.
 //   node scripts/install-snippet-pack.mjs sql                 (워크스페이스는 앱이 마지막에 연 곳)
+//   node scripts/install-snippet-pack.mjs sql-practice        (SQL 학습용 이름: emp, dept, student …)
 //   node scripts/install-snippet-pack.mjs sql --dry-run       (아무것도 안 만들고 개수만 보여 줌)
 //   node scripts/install-snippet-pack.mjs sql --workspace D:\WikiDesk
 //
@@ -13,8 +14,9 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath } from '../electron/fileSystem.js'
 import { SQL_PACK } from './snippet-packs/sql.js'
+import { SQL_PRACTICE_PACK } from './snippet-packs/sql-practice.js'
 
-const PACKS = { sql: SQL_PACK }
+const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK }
 
 // 묶음의 항목 하나는 제목 문자열(본문도 같음) 또는 { title, content }.
 function normalizeEntry(entry) {
