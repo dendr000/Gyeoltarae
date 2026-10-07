@@ -361,6 +361,11 @@ export const useAppStore = create((set, get) => ({
   // 순간 에디터에서 선택돼 있던 텍스트 — 있으면 "원문" 입력칸에 미리 채워 넣어 줌.
   dictModalOpen: false,
   dictModalPrefillWord: '',
+  // 상용구 모달(SnippetModal)도 같은 이유로 여기 둠 — 사이드바 ⚙ 버튼과 에디터의 Alt+T 가 같은
+  // 모달을 공유. snippetModalPrefillContent 는 Alt+T 를 누른 순간 선택돼 있던 글자로, 있으면
+  // 새 상용구의 "본문" 칸에 미리 채워 줌(갈피의 "선택 영역을 템플릿으로 저장"과 같은 동작).
+  snippetModalOpen: false,
+  snippetModalPrefillContent: '',
 
   requestPrompt(config) {
     return new Promise((resolve) => {
@@ -384,6 +389,14 @@ export const useAppStore = create((set, get) => ({
     set({ dictModalOpen: false, dictModalPrefillWord: '' })
   },
 
+  openSnippetModal(prefillContent = '') {
+    set({ snippetModalOpen: true, snippetModalPrefillContent: prefillContent })
+  },
+
+  closeSnippetModal() {
+    set({ snippetModalOpen: false, snippetModalPrefillContent: '' })
+  },
+
   initTheme() {
     const theme = loadStoredTheme()
     applyTheme(theme)
@@ -397,6 +410,11 @@ export const useAppStore = create((set, get) => ({
       /* localStorage unavailable; setting just won't persist across restarts */
     }
     set({ snippetSuggestEnabled: enabled })
+  },
+
+  // Alt+Shift+T / 툴바 마술봉 버튼 — 타이핑 중 추천 팝업만 뒤집음(스페이스바 자동 치환은 별개).
+  toggleSnippetSuggest() {
+    get().setSnippetSuggestEnabled(!get().snippetSuggestEnabled)
   },
 
   setSnippetSpaceExpandEnabled(enabled) {

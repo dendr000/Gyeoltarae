@@ -12,7 +12,7 @@ function getCategories(snippetIndex) {
 // 두 스위치, 단축어+본문 등록 폼(한 화면에서 같이 입력), 일괄 등록, 검색, 목록까지 전부
 // 이 모달 하나 안에서 끝남(예전엔 사이드바에 흩어진 인라인 폼이었는데, Galpi를 쓰던 사용자
 // 입장에서 화면이 너무 달라 혼란스럽다는 피드백을 받아 원본 레이아웃에 맞춰 다시 만듦).
-export function SnippetModal({ onClose, onOpenInEditor }) {
+export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
   const snippetIndex = useAppStore((s) => s.snippetIndex)
   const createSnippetWithContent = useAppStore((s) => s.createSnippetWithContent)
   const bulkCreateSnippets = useAppStore((s) => s.bulkCreateSnippets)
@@ -34,7 +34,9 @@ export function SnippetModal({ onClose, onOpenInEditor }) {
   )
   const [folder, setFolder] = useState('전체')
   const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
+  // initialContent — Alt+T 로 열렸고 그 순간 에디터에 선택 영역이 있었으면 "본문" 칸을 미리
+  // 채워서 옴(단축어만 새로 입력하면 바로 등록). 모달은 매번 새로 마운트되므로 초깃값으로 충분.
+  const [content, setContent] = useState(initialContent)
   const [editingKey, setEditingKey] = useState(null)
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkText, setBulkText] = useState('')

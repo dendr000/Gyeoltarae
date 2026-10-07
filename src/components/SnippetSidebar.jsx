@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
 import { SnippetModal } from './SnippetModal.jsx'
 import { SidebarSection } from './SidebarSection.jsx'
@@ -21,7 +21,11 @@ function groupByCategory(snippetIndex) {
 // 일괄 등록·자동완성 스위치는 전부 SnippetModal로 옮김(Galpi 원본 모달 레이아웃에 맞춤).
 export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDeleteSnippet }) {
   const groups = groupByCategory(snippetIndex)
-  const [modalOpen, setModalOpen] = useState(false)
+  // 모달 열림 상태는 스토어에 둠 — 에디터의 Alt+T 단축키도 같은 모달을 열므로(DictSidebar와 같은 이유).
+  const modalOpen = useAppStore((s) => s.snippetModalOpen)
+  const prefillContent = useAppStore((s) => s.snippetModalPrefillContent)
+  const openSnippetModal = useAppStore((s) => s.openSnippetModal)
+  const closeSnippetModal = useAppStore((s) => s.closeSnippetModal)
 
   return (
     <div className="data-sidebar snippet-sidebar">
@@ -29,7 +33,7 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
         id="snippet"
         title="상용구"
         actions={
-          <button type="button" className="data-sidebar-add-btn" title="상용구 관리" onClick={() => setModalOpen(true)}>
+          <button type="button" className="data-sidebar-add-btn" title="상용구 관리 (Alt+T)" onClick={() => openSnippetModal()}>
             ⚙
           </button>
         }
@@ -69,9 +73,10 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
       </SidebarSection>
       {modalOpen && (
         <SnippetModal
-          onClose={() => setModalOpen(false)}
+          initialContent={prefillContent}
+          onClose={closeSnippetModal}
           onOpenInEditor={(category, title) => {
-            setModalOpen(false)
+            closeSnippetModal()
             getApi().refocusWindow?.()
             onOpenSnippet(category, title)
           }}

@@ -1125,6 +1125,22 @@
   transform: translateY(1px);
 }
 
+/* 켜짐/꺼짐이 있는 토글 버튼(추천 팝업)이 켜져 있을 때 */
+.toolbar-btn.active {
+  background: var(--accent);
+  color: var(--bg-pane);
+}
+
+.toolbar-btn.active svg {
+  opacity: 1;
+}
+
+.toolbar-btn.active:hover {
+  background: var(--accent);
+  color: var(--bg-pane);
+  opacity: 0.88;
+}
+
 .toolbar-color-label {
   display: inline-flex;
   align-items: center;

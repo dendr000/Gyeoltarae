@@ -22,6 +22,8 @@ import {
   LayoutTemplate,
   Image as ImageIcon,
   Zap,
+  WandSparkles,
+  BookmarkPlus,
 } from 'lucide-react'
 import { TableEditorModal } from './TableEditorModal.jsx'
 import { GradientEditorModal } from './GradientEditorModal.jsx'
@@ -32,6 +34,7 @@ import { stripLeadingNumber } from '../lib/displayName.js'
 import { getApi } from '../lib/api.js'
 import { resolveCycleReplacement } from '../lib/dictCycle.js'
 import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
+import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -500,9 +503,9 @@ function renderHighlightLines(text) {
   )
 }
 
-function ToolbarButton({ icon: Icon, label, title, onClick }) {
+function ToolbarButton({ icon: Icon, label, title, onClick, active = false }) {
   return (
-    <button type="button" className="toolbar-btn" title={title} onClick={onClick}>
+    <button type="button" className={`toolbar-btn ${active ? 'active' : ''}`} title={title} onClick={onClick}>
       <Icon size={14} strokeWidth={2} />
       <span>{label}</span>
     </button>
@@ -531,6 +534,8 @@ export function EditorPane({ text, onChange, disabled }) {
   const editorJumpOffset = useAppStore((s) => s.editorJumpOffset)
   const clearEditorJump = useAppStore((s) => s.clearEditorJump)
   const openDictModal = useAppStore((s) => s.openDictModal)
+  const openSnippetModal = useAppStore((s) => s.openSnippetModal)
+  const toggleSnippetSuggest = useAppStore((s) => s.toggleSnippetSuggest)
   const activeTabId = useAppStore((s) => s.activeTabId)
 
   // Switching to a different document should never leave a stale suggestion
@@ -755,6 +760,16 @@ export function EditorPane({ text, onChange, disabled }) {
     })
   }
 
+  // Alt+T 와 툴바 "상용구 등록" 버튼이 같이 씀 — 지금 선택된 글자(없으면 빈 값)를 본문 칸에
+  // 채운 채로 상용구 모달을 엶. textarea 는 포커스를 잃어도(툴바 버튼을 눌러도) 선택 영역을
+  // 그대로 기억하므로 버튼으로 열어도 같은 값을 읽을 수 있음.
+  function openSnippetModalWithSelection() {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const { selectionStart, selectionEnd } = textarea
+    openSnippetModal(selectionStart !== selectionEnd ? textarea.value.slice(selectionStart, selectionEnd) : '')
+  }
+
   // 툴바 "상용구 삽입" 버튼 — 필터링 없이 전체 상용구를 카테고리/제목 순으로 나열하고,
   // 앞 9개는 1~9 숫자키로도 바로 선택 가능(방향키+Enter/Tab도 그대로 동작).
   function openSnippetBrowser() {
@@ -952,6 +967,20 @@ export function EditorPane({ text, onChange, disabled }) {
         applySnippetMatch(match)
         return
       }
+    }
+    // Alt+T / Alt+Shift+T — 갈피와 같은 상용구 단축키(판별은 snippetShortcuts.js).
+    //  Alt+T: 상용구 모달 열기. 선택된 텍스트가 있으면 새 상용구의 "본문" 칸에 미리 채움.
+    //  Alt+Shift+T: 타이핑 중 추천 팝업 켜기/끄기(켜졌는지는 툴바 마술봉 버튼 색으로 보임).
+    const snippetShortcut = matchSnippetShortcut(e)
+    if (snippetShortcut) {
+      e.preventDefault()
+      if (snippetShortcut === 'toggle-suggest') {
+        toggleSnippetSuggest()
+        setSnippetSuggest(null)
+      } else {
+        openSnippetModalWithSelection()
+      }
+      return
     }
     // Alt+Shift+H — 한자(사전) 등록. 선택된 텍스트가 있으면 그걸 "원문" 칸에 미리 채운 채로
     // 사전 모달을 열어서, 선택 → 단축키 → 한자만 입력하고 저장으로 바로 등록할 수 있게 함.
@@ -1258,6 +1287,23 @@ export function EditorPane({ text, onChange, disabled }) {
               label="상용구 삽입"
               title="등록된 상용구 전체 목록에서 골라 삽입 (앞 9개는 숫자키 1~9로도 선택 — 발동 단축어를 직접 타이핑해도 자동완성됨)"
               onClick={openSnippetBrowser}
+            />
+            <ToolbarButton
+              icon={BookmarkPlus}
+              label="상용구 등록"
+              title="새 상용구 등록 (Alt+T) — 글자를 선택해 두면 그 내용이 본문에 채워진 채로 열림"
+              onClick={openSnippetModalWithSelection}
+            />
+            <ToolbarButton
+              icon={WandSparkles}
+              label="추천 팝업"
+              active={snippetSuggestEnabled}
+              title={
+                snippetSuggestEnabled
+                  ? '타이핑 중 상용구 추천 팝업 켜짐 (Alt+Shift+T 또는 클릭하면 꺼짐)'
+                  : '타이핑 중 상용구 추천 팝업 꺼짐 (Alt+Shift+T 또는 클릭하면 켜짐)'
+              }
+              onClick={toggleSnippetSuggest}
             />
           </div>
         </div>
