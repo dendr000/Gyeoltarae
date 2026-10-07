@@ -12,7 +12,7 @@ import {
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
-import { ALL_FOLDER, nextFolderAfterClose } from '../lib/snippetScope.js'
+import { ALL_FOLDER, nextFolderAfterClose, withFolderEnabled } from '../lib/snippetScope.js'
 import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
@@ -165,6 +165,19 @@ function loadActiveSnippetFolder() {
     return localStorage.getItem(SNIPPET_ACTIVE_FOLDER_STORAGE_KEY) || ALL_FOLDER
   } catch {
     return ALL_FOLDER
+  }
+}
+
+// 폴더별 "자동 추천에 쓰기" 체크(규칙은 lib/snippetScope.js). 체크를 푼 폴더 이름의 목록을 저장한다 —
+// 비어 있으면 전부 사용(기본). 이 PC 의 화면 설정이라 활성 폴더처럼 localStorage 에 둔다.
+const SNIPPET_DISABLED_FOLDERS_STORAGE_KEY = 'wikidesk-snippet-disabled-folders'
+
+function loadDisabledSnippetFolders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SNIPPET_DISABLED_FOLDERS_STORAGE_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.filter((name) => typeof name === 'string') : []
+  } catch {
+    return []
   }
 }
 
@@ -385,6 +398,7 @@ export const useAppStore = create((set, get) => ({
   snippetSpaceExpandEnabled: loadSnippetSpaceExpandEnabled(),
   activeSnippetFolder: loadActiveSnippetFolder(),
   snippetResetFolderOnClose: loadSnippetResetFolderOnClose(),
+  disabledSnippetFolders: loadDisabledSnippetFolders(),
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
   dictText: '',
@@ -448,6 +462,21 @@ export const useAppStore = create((set, get) => ({
       /* localStorage unavailable; 재시작하면 '전체'로 돌아갈 뿐 */
     }
     set({ activeSnippetFolder: folder })
+  },
+
+  // 체크를 푼 폴더 목록을 통째로 바꾼다("모두 선택", "모두 해제", "이것만" 이 쓴다).
+  setDisabledSnippetFolders(folders) {
+    const next = [...new Set(folders)]
+    try {
+      localStorage.setItem(SNIPPET_DISABLED_FOLDERS_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      /* localStorage unavailable; 재시작하면 전부 사용으로 돌아갈 뿐 */
+    }
+    set({ disabledSnippetFolders: next })
+  },
+
+  setSnippetFolderEnabled(folder, enabled) {
+    get().setDisabledSnippetFolders(withFolderEnabled(get().disabledSnippetFolders, folder, enabled))
   },
 
   setSnippetResetFolderOnClose(enabled) {

@@ -35,7 +35,7 @@ import { getApi } from '../lib/api.js'
 import { resolveCycleReplacement } from '../lib/dictCycle.js'
 import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
-import { selectActiveSnippets } from '../lib/snippetScope.js'
+import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope.js'
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
 import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
@@ -508,9 +508,11 @@ export function EditorPane({ text, onChange, disabled }) {
   const activeSnippetFolder = useAppStore((s) => s.activeSnippetFolder)
   // 자동 추천 팝업·스페이스바 치환·Alt+Enter 가 쓰는 상용구 — 활성 폴더 범위(기본 '전체'). 툴바
   // "상용구 삽입" 목록은 이 범위와 무관하게 전체를 쓰므로 snippetIndex 를 그대로 둔다.
+  // 거기에 더해 모달의 "폴더별 사용"에서 체크를 푼 폴더의 상용구는 뺀다.
+  const disabledSnippetFolders = useAppStore((s) => s.disabledSnippetFolders)
   const activeSnippets = useMemo(
-    () => selectActiveSnippets(Object.values(snippetIndex), activeSnippetFolder),
-    [snippetIndex, activeSnippetFolder],
+    () => selectEnabledSnippets(selectActiveSnippets(Object.values(snippetIndex), activeSnippetFolder), disabledSnippetFolders),
+    [snippetIndex, activeSnippetFolder, disabledSnippetFolders],
   )
   const snippetSuggestEnabled = useAppStore((s) => s.snippetSuggestEnabled)
   const snippetSpaceExpandEnabled = useAppStore((s) => s.snippetSpaceExpandEnabled)

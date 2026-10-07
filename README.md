@@ -188,6 +188,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   `sql-practice` 묶음은 같은 `SQL` 폴더에 학습용 이름(student, emp, dept, empno … 소문자·대문자 둘 다)과 추가 키워드·함수
   1806개를 더함 — `node scripts/install-snippet-pack.mjs sql-practice`.
   자세히: [`docs/features/snippet-packs.md`](docs/features/snippet-packs.md)
+- **상용구 폴더별 사용**: 상용구 모달의 "폴더별 사용" 탭에서 폴더마다 체크를 풀면 그 폴더의 상용구가 자동 추천·스페이스바
+  치환·Alt+Enter 에서 빠짐(기본은 전부 체크). "이것만" 버튼으로 한 폴더만 남길 수 있음.
+  자세히: [`docs/features/snippet-folder-toggle.md`](docs/features/snippet-folder-toggle.md)
 - **고유명사 사전**: 사이드바 "사전 관리"로 모달을 엶 — `원문`/`한자/영문`을 입력해 등록, "일괄"로
   `원문(한자)` 줄을 여러 개 한 번에 등록, 검색(Enter로 실행 — 항목이 10만 개를 넘어갈 수 있어서
   Galpi처럼 검색 전에는 목록을 그리지 않음), 결과에서 수정·삭제. 사전은 메인 에디터로 열어서

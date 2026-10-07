@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
+import { SnippetFolderTab } from './SnippetFolderTab.jsx'
 
 function getCategories(snippetIndex) {
   const set = new Set()
@@ -52,6 +53,8 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
   const [bulkText, setBulkText] = useState('')
   const [bulkResult, setBulkResult] = useState('')
   const [search, setSearch] = useState('')
+  // 'snippets' = 등록·목록, 'folders' = 폴더별 자동 추천 사용 체크
+  const [tab, setTab] = useState('snippets')
 
   const targetCategory = folder === '전체' ? '공통' : folder
 
@@ -125,19 +128,42 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
           </button>
         </div>
 
-        <div className="snippet-modal-folder-row">
-          <select value={folder} onChange={(e) => setFolder(e.target.value)}>
-            <option value="전체">전체</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="modal-secondary-btn" title="새 폴더" onClick={handleAddFolder}>
-            + 폴더
+        <div className="snippet-modal-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'snippets'}
+            className={`snippet-modal-tab${tab === 'snippets' ? ' active' : ''}`}
+            onClick={() => setTab('snippets')}
+          >
+            상용구
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'folders'}
+            className={`snippet-modal-tab${tab === 'folders' ? ' active' : ''}`}
+            onClick={() => setTab('folders')}
+          >
+            폴더별 사용
           </button>
         </div>
+
+        {tab === 'snippets' && (
+          <div className="snippet-modal-folder-row">
+            <select value={folder} onChange={(e) => setFolder(e.target.value)}>
+              <option value="전체">전체</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="modal-secondary-btn" title="새 폴더" onClick={handleAddFolder}>
+              + 폴더
+            </button>
+          </div>
+        )}
 
         <div className="snippet-modal-toggle-row">
           <label className="modal-checkbox-row">
@@ -169,74 +195,80 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
           </label>
         </div>
 
-        <form className="snippet-modal-form-row" onSubmit={handleSubmit}>
-          <input type="text" placeholder="단축어" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-          <textarea placeholder="본문 (커서: {#})" value={content} onChange={(e) => setContent(e.target.value)} rows={1} />
-          <button type="submit" className="snippet-inline-submit-btn">
-            {editingKey ? '저장' : '추가'}
-          </button>
-          {editingKey && (
-            <button type="button" className="modal-secondary-btn" onClick={handleCancelEdit}>
-              취소
+        {tab === 'folders' && <SnippetFolderTab />}
+
+        {tab === 'snippets' && (
+          <>
+          <form className="snippet-modal-form-row" onSubmit={handleSubmit}>
+            <input type="text" placeholder="단축어" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <textarea placeholder="본문 (커서: {#})" value={content} onChange={(e) => setContent(e.target.value)} rows={1} />
+            <button type="submit" className="snippet-inline-submit-btn">
+              {editingKey ? '저장' : '추가'}
             </button>
-          )}
-          <button type="button" className="modal-secondary-btn" onClick={() => setBulkMode((v) => !v)}>
-            일괄
-          </button>
-        </form>
-
-        {bulkMode && (
-          <form className="snippet-modal-bulk-row" onSubmit={handleBulkSubmit}>
-            <textarea placeholder="단축어::::본문" value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={3} />
-            <div className="snippet-inline-form-actions">
-              <button type="submit" className="snippet-inline-submit-btn">
-                일괄 등록
+            {editingKey && (
+              <button type="button" className="modal-secondary-btn" onClick={handleCancelEdit}>
+                취소
               </button>
-              {bulkResult && <span className="snippet-inline-result">{bulkResult}</span>}
-            </div>
+            )}
+            <button type="button" className="modal-secondary-btn" onClick={() => setBulkMode((v) => !v)}>
+              일괄
+            </button>
           </form>
-        )}
 
-        <input
-          type="text"
-          className="snippet-modal-search-input"
-          placeholder="검색"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <div className="snippet-modal-list">
-          {list.length === 0 ? (
-            <div className="dict-modal-empty">등록된 상용구가 없습니다.</div>
-          ) : (
-            list.map((entry) => (
-              <div key={`${entry.category}/${entry.title}`} className="snippet-modal-row">
-                <span className="snippet-modal-row-category">{entry.category}</span>
-                <span className="snippet-modal-row-title">{entry.title}</span>
-                <span className="snippet-modal-row-content">{entry.content.replace(/\s+/g, ' ')}</span>
-                <button
-                  type="button"
-                  className="snippet-modal-row-btn"
-                  title="에디터에서 열기"
-                  onClick={() => onOpenInEditor(entry.category, entry.title)}
-                >
-                  ⤢
+          {bulkMode && (
+            <form className="snippet-modal-bulk-row" onSubmit={handleBulkSubmit}>
+              <textarea placeholder="단축어::::본문" value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={3} />
+              <div className="snippet-inline-form-actions">
+                <button type="submit" className="snippet-inline-submit-btn">
+                  일괄 등록
                 </button>
-                <button type="button" className="snippet-modal-row-btn" title="수정" onClick={() => handleEdit(entry)}>
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="snippet-modal-row-btn snippet-modal-row-delete"
-                  title="삭제"
-                  onClick={() => handleDelete(entry)}
-                >
-                  ×
-                </button>
+                {bulkResult && <span className="snippet-inline-result">{bulkResult}</span>}
               </div>
-            ))
+            </form>
           )}
-        </div>
+
+          <input
+            type="text"
+            className="snippet-modal-search-input"
+            placeholder="검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <div className="snippet-modal-list">
+            {list.length === 0 ? (
+              <div className="dict-modal-empty">등록된 상용구가 없습니다.</div>
+            ) : (
+              list.map((entry) => (
+                <div key={`${entry.category}/${entry.title}`} className="snippet-modal-row">
+                  <span className="snippet-modal-row-category">{entry.category}</span>
+                  <span className="snippet-modal-row-title">{entry.title}</span>
+                  <span className="snippet-modal-row-content">{entry.content.replace(/\s+/g, ' ')}</span>
+                  <button
+                    type="button"
+                    className="snippet-modal-row-btn"
+                    title="에디터에서 열기"
+                    onClick={() => onOpenInEditor(entry.category, entry.title)}
+                  >
+                    ⤢
+                  </button>
+                  <button type="button" className="snippet-modal-row-btn" title="수정" onClick={() => handleEdit(entry)}>
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="snippet-modal-row-btn snippet-modal-row-delete"
+                    title="삭제"
+                    onClick={() => handleDelete(entry)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+          </>
+        )}
       </div>
     </div>
   )

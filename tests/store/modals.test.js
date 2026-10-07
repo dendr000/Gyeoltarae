@@ -126,3 +126,45 @@ describe('사전 모달 열림 상태 (사이드바 버튼과 Alt+Shift+H 가 �
     expect(state().dictModalPrefillWord).toBe('')
   })
 })
+
+describe('상용구 폴더별 자동 추천 사용 체크', () => {
+  it('처음엔 체크를 푼 폴더가 없다 (= 전체 사용)', async () => {
+    const { state } = await freshStore()
+    expect(state().disabledSnippetFolders).toEqual([])
+  })
+
+  it('폴더 체크를 끄고 켤 수 있다', async () => {
+    const { state } = await freshStore()
+
+    state().setSnippetFolderEnabled('SQL', false)
+    expect(state().disabledSnippetFolders).toEqual(['SQL'])
+
+    state().setSnippetFolderEnabled('영어', false)
+    expect(state().disabledSnippetFolders).toEqual(['SQL', '영어'])
+
+    state().setSnippetFolderEnabled('SQL', true)
+    expect(state().disabledSnippetFolders).toEqual(['영어'])
+  })
+
+  it('목록을 통째로 바꿀 수 있고 중복은 하나로 합친다 (모두 선택·모두 해제·이것만)', async () => {
+    const { state } = await freshStore()
+
+    state().setDisabledSnippetFolders(['SQL', '영어', 'SQL'])
+    expect(state().disabledSnippetFolders).toEqual(['SQL', '영어'])
+
+    state().setDisabledSnippetFolders([])
+    expect(state().disabledSnippetFolders).toEqual([])
+  })
+
+  it('모달을 닫아도 체크는 유지되고, 활성 폴더 복귀와는 서로 독립이다', async () => {
+    const { state } = await freshStore()
+    state().setSnippetFolderEnabled('SQL', false)
+    state().openSnippetModal()
+    state().setActiveSnippetFolder('무협')
+
+    state().closeSnippetModal()
+
+    expect(state().activeSnippetFolder).toBe('전체')
+    expect(state().disabledSnippetFolders).toEqual(['SQL'])
+  })
+})
