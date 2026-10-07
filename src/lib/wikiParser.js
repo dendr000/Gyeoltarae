@@ -1385,6 +1385,19 @@ export function parseWikiText(
     }
   }
 
+  // 코드블록 HTML 을 문서에 넣는다. 목록이 진행 중이면(빈 줄 없이 바로 이어 쓴 경우) 마지막
+  // 항목 안에 넣어서 목록이 끊기지 않게 한다 — 예전에는 여기서 목록이 끝나서, 코드블록 뒤의
+  // "** 하위 항목"이 부모 없이 새 목록의 첫 항목이 되어 하위 항목으로 안 보였다. 번호 목록이면
+  // 번호도 이어진다. 목록이 아니면 앞에 쌓인 내용(문단·표 등)을 마무리하고 따로 놓는다.
+  const pushCodeBlock = (blockHtml) => {
+    if (buffer.kind === 'list' && buffer.items.length > 0) {
+      buffer.items[buffer.items.length - 1].html += blockHtml
+      return
+    }
+    flush()
+    htmlParts.push(blockHtml)
+  }
+
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
     const trimmed = line.trim()
@@ -1399,10 +1412,9 @@ export function parseWikiText(
     // 닫는 ``` 가 없으면 문서 끝까지가 코드블록이다(`{{{`와 같은 방식).
     const fenceOpen = matchCodeFenceOpen(line)
     if (fenceOpen) {
-      flush()
       let end = i + 1
       while (end < lines.length && !isCodeFenceClose(lines[end], fenceOpen.ticks)) end += 1
-      htmlParts.push(renderCodeBlock(lines.slice(i + 1, end).join('\n'), fenceOpen.lang))
+      pushCodeBlock(renderCodeBlock(lines.slice(i + 1, end).join('\n'), fenceOpen.lang))
       i = end
       continue
     }
@@ -1436,7 +1448,8 @@ export function parseWikiText(
     // doesn't also close on this same line (an inline {{{+1 ...}}} span does).
     const blockOpen = trimmed.match(BLOCK_OPEN_RE)
     if (blockOpen && !trimmed.includes('}}}')) {
-      flush()
+      // 여기서는 flush 하지 않는다 — 코드블록은 진행 중인 목록의 마지막 항목 안에 들어가야
+      // 하므로(pushCodeBlock), 목록을 끝내는 종류(접기·wiki·style)만 아래에서 각자 flush 한다.
       const header = blockOpen[1].trim()
       const found = findMultilineBlockEnd(lines, i + 1)
       const bodyLines = found ? lines.slice(i + 1, found.endLineIdx) : lines.slice(i + 1)
@@ -1455,26 +1468,26 @@ export function parseWikiText(
       const isStyleDecl = /^#!style\b/.test(header)
       const syntaxMatch = header.match(/^#!syntax\s+(\S+)/)
       if (foldingMatch) {
+        flush()
         const inner = parseWikiText(body, { dataIndex, templateIndex, docIndex, imageIndex })
         htmlParts.push(
           `<details class="wiki-folding"><summary>${escapeHtml(foldingMatch[1])}</summary>${inner.html}</details>`,
         )
       } else if (isWikiStyleBlock) {
+        flush()
         // header still has the leading "#!wiki" token, but parseWikiAttrs
         // only looks for key="value" pairs so that's harmless noise.
         htmlParts.push(renderWikiStyleBlock(header, body, { dataIndex, templateIndex, docIndex, imageIndex }))
       } else if (isStyleDecl) {
+        flush()
         // Renders nothing here — collected and turned into one <style> tag
         // at the very end (see the bottom of this function).
         styleDeclarations.push(body)
       } else if (syntaxMatch) {
-        // No real tokenizer/highlighting (that needs a whole library, not
-        // worth the bundle size for how rarely a worldbuilding wiki needs
-        // to show code) — just labels the block with its language so it
-        // reads as "this is code, in X" even without color highlighting.
-        htmlParts.push(renderCodeBlock(body, syntaxMatch[1]))
+        // 언어 이름이 있는 코드블록 — 아는 언어면 글자에 색을 입힌다(renderCodeBlock).
+        pushCodeBlock(renderCodeBlock(body, syntaxMatch[1]))
       } else {
-        htmlParts.push(renderCodeBlock(body))
+        pushCodeBlock(renderCodeBlock(body))
       }
       continue
     }

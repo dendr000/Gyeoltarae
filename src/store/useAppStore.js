@@ -13,6 +13,7 @@ import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose } from '../lib/snippetScope.js'
+import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -1221,9 +1222,13 @@ export const useAppStore = create((set, get) => ({
     const api = getApi()
     const filePath = await api.createFile(dirPath, name)
     const skeleton = skeletonTemplateName ? get().templateIndex[skeletonTemplateName] : null
+    // 우선순위: 사용자가 고른 글양식 > 그 폴더의 기본 틀(lib/folderDocTemplate.js) > 기본 빈 분류 줄.
+    const folderTemplate = findFolderDocTemplate(dirPath)
     if (skeleton?.rawText) {
       const content = applyAutoCategoryTags(expandTemplateBody(skeleton.rawText, {}), buildAutoCategoryNames(dirPath))
       await api.writeFile(filePath, content)
+    } else if (folderTemplate) {
+      await api.writeFile(filePath, applyAutoCategoryTags(folderTemplate, buildAutoCategoryNames(dirPath)))
     } else {
       await writeAutoCategoryTags(api, filePath, dirPath)
     }

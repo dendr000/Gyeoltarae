@@ -66,6 +66,95 @@ describe('목록의 들여쓰기 하위 항목', () => {
   })
 })
 
+// 항목 바로 아래(빈 줄 없이)에 코드블록을 쓰면 그 코드블록은 앞 항목의 일부가 되고, 목록은
+// 끊기지 않고 이어진다. 예전에는 코드블록에서 목록이 끝나서 뒤의 "** 항목"이 부모 없이 새 목록의
+// 첫 항목이 되었고, 그래서 하위 항목으로 안 보였다.
+describe('목록 항목 아래의 코드블록', () => {
+  const F = '```'
+  // 코드블록 전체를 [CODE] 로 접어서 목록 구조만 비교한다.
+  function structure(source) {
+    const { html } = parseWikiText(source)
+    // 코드블록을 접은 뒤 남는 줄바꿈(조각들 사이의 구분)은 구조와 상관없으니 지운다.
+    return html.replace(/<div class="wiki-code-wrap">[\s\S]*?<\/pre><\/div>/g, '[CODE]').replace(/\n/g, '')
+  }
+  const listCount = (source) => (parseWikiText(source).html.match(/<div class="wiki-list">/g) || []).length
+
+  const LIKE = [
+    '* LIKE',
+    '** %: 0글자 이상',
+    '%g%면 g 가 있어야 함',
+    `${F}Mysql`,
+    "SELECT * FROM t WHERE name like '%g%';",
+    F,
+    '** _: 딱 1글자를 의미함',
+    '이름이 sglee 면 _g% 라고 씀',
+    `${F}Mysql`,
+    "SELECT * FROM t WHERE name like '_g%';",
+    F,
+  ].join('\n')
+
+  it('코드블록을 사이에 둬도 뒤의 ** 항목이 같은 목록의 하위 항목으로 이어진다 (질문에 쓴 글 그대로)', () => {
+    expect(listCount(LIKE)).toBe(1)
+    expect(structure(LIKE)).toBe(
+      '<div class="wiki-list"><ul><li>LIKE<ul>' +
+        '<li>%: 0글자 이상<br>%g%면 g 가 있어야 함[CODE]</li>' +
+        '<li>_: 딱 1글자를 의미함<br>이름이 sglee 면 _g% 라고 씀[CODE]</li>' +
+        '</ul></li></ul></div>',
+    )
+  })
+
+  it('코드블록은 앞 항목 안에 들어가고 복사 버튼도 그대로 있다', () => {
+    const { html } = parseWikiText(LIKE)
+    const items = [...html.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => m[1])
+    expect(html.match(/class="wiki-code-copy"/g)).toHaveLength(2)
+    // 안쪽(하위) 항목 둘 다 자기 코드블록을 품고 있다
+    expect(items.filter((item) => item.includes('wiki-code-wrap'))).toHaveLength(2)
+  })
+
+  it('번호 목록 항목 아래의 코드블록도 같은 목록이 이어져서 번호가 끊기지 않는다', () => {
+    const source = `1. 가\n${F}\nx\n${F}\n1. 나`
+    expect(listCount(source)).toBe(1)
+    expect(structure(source)).toBe('<div class="wiki-list"><ol><li>가[CODE]</li><li>나</li></ol></div>')
+  })
+
+  it('{{{ }}} 코드블록도 앞 항목에 속한다', () => {
+    const source = '* 가\n{{{\nx\n}}}\n* 나'
+    expect(listCount(source)).toBe(1)
+    expect(structure(source)).toBe('<div class="wiki-list"><ul><li>가[CODE]</li><li>나</li></ul></div>')
+  })
+
+  it('{{{#!syntax 언어}}} 코드블록도 앞 항목에 속한다', () => {
+    const source = '* 가\n{{{#!syntax sql\nSELECT 1;\n}}}\n  * 나'
+    expect(listCount(source)).toBe(1)
+    expect(structure(source)).toBe('<div class="wiki-list"><ul><li>가[CODE]<ul><li>나</li></ul></li></ul></div>')
+  })
+
+  it('빈 줄을 사이에 두면 목록은 거기서 끝난다 (기존 규칙 유지)', () => {
+    const source = `* 가\n\n${F}\nx\n${F}\n* 나`
+    expect(listCount(source)).toBe(2)
+  })
+
+  it('목록 없이 쓴 코드블록은 예전과 같다', () => {
+    const source = `문단\n${F}\nx\n${F}`
+    expect(structure(source)).toBe('<p>문단</p>[CODE]')
+  })
+
+  it('목록이 아닌 줄(문단) 뒤의 코드블록도 예전과 같다', () => {
+    const source = `* 가\n\n문단\n${F}\nx\n${F}`
+    expect(structure(source)).toBe('<div class="wiki-list"><ul><li>가</li></ul></div><p>문단</p>[CODE]')
+  })
+
+  it('접기 블록은 예전처럼 목록을 끝낸다 (코드블록만 항목에 붙는다)', () => {
+    const source = '* 가\n{{{#!folding 제목\n내용\n}}}\n* 나'
+    expect(listCount(source)).toBe(2)
+  })
+
+  it('코드블록 뒤에 이어 쓴 글도 같은 항목에 이어서 붙는다', () => {
+    const source = `* 가\n${F}\nx\n${F}\n뒷글`
+    expect(structure(source)).toBe('<div class="wiki-list"><ul><li>가[CODE]<br>뒷글</li></ul></div>')
+  })
+})
+
 describe('구분선 ---', () => {
   const rule = (weight) => `<hr class="wiki-hr wiki-hr-${weight}">`
 

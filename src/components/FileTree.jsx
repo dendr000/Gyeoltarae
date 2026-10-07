@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ContextMenu } from './ContextMenu.jsx'
 import { MoveItemModal } from './MoveItemModal.jsx'
 import { getApi } from '../lib/api.js'
-import { splitLeadingNumber } from '../lib/displayName.js'
+import { TreeLabel } from './TreeLabel.jsx'
 import { readFileAsBase64, IMPORTABLE_IMAGE_EXT } from '../lib/fileEncoding.js'
 
 // Which folders the user collapsed, by path — everything defaults to
@@ -105,7 +105,7 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
             onContextMenu={(e) => onContextMenu(e, node, beginRename)}
           >
             <span className={`tree-caret ${expanded ? 'open' : ''}`}>▶</span>
-            <span className="tree-label">{node.name}</span>
+            <TreeLabel name={node.name} />
             <span className="tree-actions">
               <button
                 title="새 문서"
@@ -194,17 +194,7 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
       onContextMenu={(e) => onContextMenu(e, node, beginRename)}
     >
       <span className="tree-file-icon">📄</span>
-      {(() => {
-        const split = splitLeadingNumber(node.name)
-        return split ? (
-          <>
-            <span className="tree-number-badge">{split.number}</span>
-            <span className="tree-label">{split.rest}</span>
-          </>
-        ) : (
-          <span className="tree-label">{node.name}</span>
-        )
-      })()}
+      <TreeLabel name={node.name} />
       <button
         className="tree-delete-btn"
         title="삭제 (휴지통으로 이동)"

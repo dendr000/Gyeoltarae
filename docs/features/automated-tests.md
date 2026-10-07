@@ -29,7 +29,10 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/codeBlock.test.js` | ``` 코드블록(언어 표시와 대소문자·한글 이름, 글자 강조, 안의 문법 무시, 닫는 줄 없음, 백틱 4개, 표 행 병합 보호)과 `{{{ }}}` 코드블록의 복사 버튼 | 순수 함수 |
 | `tests/lib/codeFence.test.js` | ``` 여는·닫는 줄 판별, 열린 코드블록 안인지, 에디터 자동 닫기 계산(들여쓰기·인라인 백틱·선택 영역 제외) | 순수 함수 |
 | `tests/lib/codeHighlight.test.js` | 언어 이름 해석(대소문자·한글·구분 기호 무시, 모르는 이름), 색 입히기가 원문 글자를 바꾸지 않는지, HTML 이스케이프 | 순수 함수 |
-| `tests/lib/listAndRule.test.js` | 목록 들여쓰기 하위 항목(공백 1·2·4칸, 탭, 번호 목록, 예전 `**` 방식), `---` 구분선과 굵기 | 순수 함수 |
+| `tests/lib/listAndRule.test.js` | 목록 들여쓰기 하위 항목(공백 1·2·4칸, 탭, 번호 목록, 예전 `**` 방식), 목록 항목 아래 코드블록(목록이 끊기지 않는지, 빈 줄·접기 블록은 예전대로), `---` 구분선과 굵기 | 순수 함수 |
+| `tests/lib/folderDocTemplate.test.js` | 폴더별 새 문서 기본 내용을 찾는 규칙(따즈아 안·하위 폴더·Windows 경로, 이름 일부만 같은 폴더 제외) | 순수 함수 |
+| `tests/store/folderDocTemplate.test.js` | 따즈아 폴더에서 새 문서를 만들 때 기본 내용, 글양식 우선, 가져온 파일은 제외, 작품 폴더 안의 따즈아 | mockApi |
+| `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선) | 순수 함수 |
 | `tests/electron/snippetCase.test.js` | `MYSQL`/`mysql` 처럼 대소문자만 다른 상용구가 서로 덮어쓰지 않는지, 인코딩된 파일 이름 복원 | **진짜 디스크**(Windows 에서만 충돌이 재현됨) |
 | `tests/lib/codeCopy.test.js` | 복사 버튼 동작(본문 읽기, "복사됨" 표시와 되돌리기, 실패 표시, 클립보드가 응답 없을 때 옛 방식으로 전환) | 가짜 버튼·가짜 클립보드 |
