@@ -37,7 +37,7 @@ import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets } from '../lib/snippetScope.js'
 import { findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
-import { fenceAutoCloseEdit } from '../lib/codeFence.js'
+import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -651,7 +651,11 @@ export function EditorPane({ text, onChange, disabled }) {
   function updateSnippetSuggest() {
     const textarea = textareaRef.current
     if (!textarea) return
-    if (!snippetSuggestEnabled) {
+    // "타이핑 중 추천 팝업"이 꺼져 있어도 언어가 적힌 코드블록(```MySQL 등) 안에서는 켠다 —
+    // 코드를 쓸 때는 단축어(SELECT 같은)를 바로 불러 쓸 수 있게. 블록 밖으로 나오면 다시 설정을
+    // 따른다(꺼져 있으면 꺼짐, 켜져 있으면 켜짐). 판단 규칙은 lib/codeFence.js.
+    const inCodeBlock = isInLanguageCodeFenceAt(textarea.value, textarea.selectionStart)
+    if (!snippetSuggestEnabled && !inCodeBlock) {
       setSnippetSuggest(null)
       return
     }

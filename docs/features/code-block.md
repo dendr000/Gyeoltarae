@@ -37,6 +37,20 @@ name VARCHAR(10)
 - 들여쓴 줄에서 치면 닫는 줄도 같은 들여쓰기로 들어간다.
 - 되돌리기(Ctrl+Z) 한 번으로 세 번째 백틱과 자동으로 들어간 닫는 줄이 같이 취소되어 백틱 2개 상태로 돌아간다. (실제 키 입력으로 확인함)
 
+### 코드블록 안에서는 상용구 추천이 자동으로 켜진다
+
+````text
+```MySQL
+sel|     ← 여기서 추천 팝업이 뜬다 ("selx" 상용구 → SELECT * FROM ;)
+```
+````
+
+- **언어 이름이 적힌 코드블록**(```MySQL, ```sql, ```자바스크립트, 모르는 이름이어도 이름이 있으면) 안에서는 "타이핑 중 추천 팝업" 설정이 꺼져 있어도 상용구 추천 팝업이 뜬다. 후보를 고르는 방법(방향키 + Tab/Enter)과 `{#}` 커서 자리는 평소 상용구와 같다.
+- **블록 밖**으로 나오면 팝업은 다시 설정(툴바 "추천 팝업" 버튼, Alt+Shift+T)을 따른다 — 꺼져 있으면 꺼지고, 켜져 있으면 계속 켜진다.
+- 언어가 **없는** ``` 블록(그냥 글자일 수 있음)과 여는 줄 자신(언어를 쓰는 중), 닫힌 뒤는 해당하지 않는다.
+- 쓰이는 상용구는 평소와 같다(상용구 모달에서 고른 활성 폴더 범위 안에서). 스페이스바 자동 치환은 이 기능과 별개의 설정이라 그대로다.
+- **내장 키워드 추천은 없다.** `SELECT`, `FROM` 같은 언어 키워드를 알아서 추천해 주는 게 아니라, **직접 등록해 둔 상용구**만 추천한다. 키워드를 쓰고 싶다면 상용구로 등록해 두어야 한다(예: 단축어 `sel` → 본문 `SELECT`).
+
 ## 글자 강조 (언어 이름)
 
 언어 이름은 **대소문자를 구분하지 않고**, 한글 이름도 받는다. 같은 언어면 윗줄에는 항상 정식 이름이 보인다. (`MYSQL`, `mysql`, `MySQL` → 모두 "MySQL")
@@ -91,11 +105,11 @@ MongoDB 식 질의에 맞췄다). DBMS 별로 더 정확히 칠하려면 문법�
 
 ## 구현 위치
 
-- `src/lib/codeFence.js` — ``` 줄 감지(`matchCodeFenceOpen`, `isCodeFenceClose`, `isInsideCodeFence`)와 에디터 자동 닫기 계산(`fenceAutoCloseEdit`). 뷰어와 에디터가 같은 규칙을 쓰도록 한 곳에 둠.
+- `src/lib/codeFence.js` — ``` 줄 감지(`matchCodeFenceOpen`, `isCodeFenceClose`, `openCodeFenceAt`, `isInsideCodeFence`), 에디터 자동 닫기 계산(`fenceAutoCloseEdit`), 언어 코드블록 안인지 판단(`isInLanguageCodeFenceAt`). 뷰어와 에디터가 같은 규칙을 쓰도록 한 곳에 둠.
 - `src/lib/codeHighlight.js` — 언어 이름 해석(`resolveCodeLanguage`)과 색 입히기(`highlightCode`, 같은 입력은 결과를 재사용). 쓸 언어만 highlight.js 에 등록해서 번들 크기를 줄임.
 - `src/lib/wikiParser.js` — 코드블록 HTML(`renderCodeBlock`, ``` 와 `{{{ }}}` 공용), 표 행 병합 전처리에서 코드블록 안쪽을 건드리지 않게 하는 보호.
 - `src/lib/codeCopy.js` — 복사 버튼 동작(클립보드 쓰기, "복사됨" 표시와 되돌리기).
-- `src/components/EditorPane.jsx` — 백틱 키 처리(자동 닫기). `src/components/ViewerPane.jsx` — 복사 버튼 클릭 처리.
+- `src/components/EditorPane.jsx` — 백틱 키 처리(자동 닫기), 코드블록 안에서 상용구 추천 팝업 켜기(`updateSnippetSuggest`). `src/components/ViewerPane.jsx` — 복사 버튼 클릭 처리.
 - `src/App.css`(`.wiki-code-wrap` 이하), `src/index.css`(`--hl-*` 색) — 스타일.
 - 테스트: `tests/lib/codeBlock.test.js`, `codeFence.test.js`, `codeHighlight.test.js`, `codeCopy.test.js`.
 

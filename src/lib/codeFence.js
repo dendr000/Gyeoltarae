@@ -21,19 +21,42 @@ export function isCodeFenceClose(line, ticks) {
   return m !== null && m[1].length >= ticks
 }
 
-// lines[index] 가 시작될 때 열려 있는 코드블록 안인가 — index 앞 줄들만 훑어서 판단한다.
-// 안이면 그 줄의 ``` 는 새로 여는 게 아니라 닫는 줄이다.
-export function isInsideCodeFence(lines, index) {
-  let openTicks = 0
+// lines[index] 가 시작될 때 열려 있는 코드블록의 여는 줄 정보({ ticks, lang }), 없으면 null —
+// index 앞 줄들만 훑어서 판단한다.
+export function openCodeFenceAt(lines, index) {
+  let open = null
   for (let i = 0; i < index && i < lines.length; i += 1) {
-    if (openTicks === 0) {
-      const open = matchCodeFenceOpen(lines[i])
-      if (open) openTicks = open.ticks
-    } else if (isCodeFenceClose(lines[i], openTicks)) {
-      openTicks = 0
+    if (open === null) {
+      open = matchCodeFenceOpen(lines[i])
+    } else if (isCodeFenceClose(lines[i], open.ticks)) {
+      open = null
     }
   }
-  return openTicks > 0
+  return open
+}
+
+// lines[index] 가 시작될 때 열려 있는 코드블록 안인가. 안이면 그 줄의 ``` 는 새로 여는 게 아니라
+// 닫는 줄이다.
+export function isInsideCodeFence(lines, index) {
+  return openCodeFenceAt(lines, index) !== null
+}
+
+// 커서(pos)가 있는 줄 앞쪽의 줄들(커서 줄은 빼고).
+function linesBeforeCursorLine(value, pos) {
+  const lineStart = value.lastIndexOf('\n', pos - 1) + 1
+  const lines = value.slice(0, lineStart).split('\n')
+  // 마지막 요소는 lineStart 직전의 빈 조각("...\n" 뒤)이라 실제 줄은 아니다.
+  lines.pop()
+  return lines
+}
+
+// 커서가 "언어 이름이 적힌 코드블록"(```sql, ```MySQL, ```자바스크립트 ...) 안에 있는가. 언어가 없는
+// ``` 블록(그냥 글자일 수 있음)과 여는 줄 자신, 닫힌 뒤는 아니다. 에디터가 이 안에서는 상용구 추천
+// 팝업을 설정과 상관없이 켜는 데 쓴다(EditorPane.jsx 의 updateSnippetSuggest).
+export function isInLanguageCodeFenceAt(value, pos) {
+  const lines = linesBeforeCursorLine(value, pos)
+  const open = openCodeFenceAt(lines, lines.length)
+  return open !== null && open.lang !== ''
 }
 
 // 편집기에서 백틱을 눌렀을 때 ``` 가 완성되면 아래 줄에 닫는 ``` 를 같이 넣어 주기 위한 계산.
@@ -54,9 +77,7 @@ export function fenceAutoCloseEdit(value, selectionStart, selectionEnd) {
   if (!indentMatch) return null
   if (value.slice(selectionStart, lineEnd).trim() !== '') return null
 
-  const linesBefore = value.slice(0, lineStart).split('\n')
-  // 마지막 요소는 lineStart 직전의 빈 조각("...\n" 뒤)이라 실제 줄은 아니다.
-  linesBefore.pop()
+  const linesBefore = linesBeforeCursorLine(value, selectionStart)
   if (isInsideCodeFence(linesBefore, linesBefore.length)) return null
 
   return { insert: `\`\n${indentMatch[1]}\`\`\``, caret: 1 }

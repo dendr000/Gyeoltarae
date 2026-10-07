@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { fenceAutoCloseEdit, isCodeFenceClose, isInsideCodeFence, matchCodeFenceOpen } from '../../src/lib/codeFence.js'
+import {
+  fenceAutoCloseEdit,
+  isCodeFenceClose,
+  isInLanguageCodeFenceAt,
+  isInsideCodeFence,
+  matchCodeFenceOpen,
+  openCodeFenceAt,
+} from '../../src/lib/codeFence.js'
 
 const F = '```'
 
@@ -50,6 +57,79 @@ describe('isInsideCodeFence', () => {
 
   it('백틱 4개로 연 블록 안의 ``` 줄은 닫는 줄이 아니다', () => {
     expect(isInsideCodeFence(['````', F, 'x'], 3)).toBe(true)
+  })
+})
+
+describe('openCodeFenceAt', () => {
+  it('열려 있는 코드블록의 여는 줄 정보(틱 개수·언어)를 돌려준다', () => {
+    expect(openCodeFenceAt(['본문', `${F}MySQL`, 'SELECT 1;'], 3)).toEqual({ ticks: 3, lang: 'MySQL' })
+    expect(openCodeFenceAt([F, 'a'], 2)).toEqual({ ticks: 3, lang: '' })
+  })
+
+  it('닫힌 뒤에는 null', () => {
+    expect(openCodeFenceAt([`${F}sql`, 'a', F, '뒤'], 4)).toBeNull()
+  })
+
+  it('가장 최근에 열린 블록을 본다 (닫고 다시 열면 새 블록)', () => {
+    expect(openCodeFenceAt([`${F}sql`, 'a', F, `${F}java`, 'b'], 5)).toEqual({ ticks: 3, lang: 'java' })
+  })
+})
+
+describe('isInLanguageCodeFenceAt (언어가 적힌 코드블록 안에서 추천 팝업을 켜는 기준)', () => {
+  // 문서와 커서 위치(문서 안에서 마커 ^ 의 자리)를 한 번에 적기 위한 도우미
+  const at = (doc) => {
+    const pos = doc.indexOf('^')
+    return isInLanguageCodeFenceAt(doc.replace('^', ''), pos)
+  }
+
+  it('```MySQL 블록의 본문 안이면 true', () => {
+    expect(at(`${F}MySQL\nSELECT^\n${F}`)).toBe(true)
+  })
+
+  it('본문 줄 맨 앞·빈 줄·마지막 본문 줄도 true', () => {
+    expect(at(`${F}sql\n^SELECT\n${F}`)).toBe(true)
+    expect(at(`${F}sql\nSELECT 1;\n^\n${F}`)).toBe(true)
+  })
+
+  it('언어가 한글이거나 모르는 이름이어도 언어가 적혀 있으면 true', () => {
+    expect(at(`${F}자바스크립트\nconst a^\n${F}`)).toBe(true)
+    expect(at(`${F}Foobar\nx^\n${F}`)).toBe(true)
+  })
+
+  it('언어가 없는 ``` 블록 안은 false (그냥 글자일 수 있어서)', () => {
+    expect(at(`${F}\nSELECT^\n${F}`)).toBe(false)
+  })
+
+  it('블록 밖은 false — 앞 문단, 닫는 줄 뒤', () => {
+    expect(at(`앞 문단^\n${F}sql\nSELECT\n${F}`)).toBe(false)
+    expect(at(`${F}sql\nSELECT\n${F}\n뒤 문단^`)).toBe(false)
+  })
+
+  it('여는 줄 자신(언어를 쓰는 중)은 false, 닫는 줄에서는 아직 안쪽이라 true', () => {
+    expect(at(`${F}sql^\nSELECT\n${F}`)).toBe(false)
+    expect(at(`${F}sql\nSELECT\n${F}^`)).toBe(true)
+  })
+
+  it('닫는 줄이 없으면 문서 끝까지가 코드블록 안이다', () => {
+    expect(at(`${F}sql\nSELECT^`)).toBe(true)
+  })
+
+  it('블록을 닫고 다시 밖에서 쓰면 다시 false', () => {
+    expect(at(`${F}sql\nSELECT 1;\n${F}\n\n설명 문단^`)).toBe(false)
+  })
+
+  it('백틱 4개로 연 블록 안의 ``` 줄은 닫는 줄이 아니라서 계속 안이다', () => {
+    expect(at(`\`\`\`\`sql\n${F}\nx^\n\`\`\`\``)).toBe(true)
+  })
+
+  it('두 번째 블록의 언어를 본다 (첫 블록이 언어 있고 둘째가 없으면 false)', () => {
+    expect(at(`${F}sql\na\n${F}\n${F}\nb^\n${F}`)).toBe(false)
+    expect(at(`${F}\na\n${F}\n${F}sql\nb^\n${F}`)).toBe(true)
+  })
+
+  it('문서 맨 앞과 빈 문서는 false', () => {
+    expect(isInLanguageCodeFenceAt('', 0)).toBe(false)
+    expect(isInLanguageCodeFenceAt('본문', 0)).toBe(false)
   })
 })
 
