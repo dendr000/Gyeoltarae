@@ -298,7 +298,7 @@ export function scanSnippets(workspacePath) {
       if (!fileEntry.isFile() || !isDocFile(fileEntry.name)) continue
       entries.push({
         category: catEntry.name,
-        title: fileEntry.name.slice(0, -DOC_EXT.length),
+        title: decodeSnippetFileName(fileEntry.name.slice(0, -DOC_EXT.length)),
         path: path.join(catDir, fileEntry.name),
       })
     }
@@ -307,11 +307,31 @@ export function scanSnippets(workspacePath) {
   return entries
 }
 
+// 상용구는 "단축어 = 파일 이름"이라 단축어에 Windows 파일 이름에 못 쓰는 글자
+// (* ? : / \ " < > | 와 제어 문자)가 들어갈 수 있다 — 예: "*" 를 "※" 로 바꾸는 상용구. 다른
+// 이름들처럼 그 글자를 "_" 로 바꿔 저장하면(sanitizeFileName) 읽을 때 되돌릴 방법이 없어서
+// 단축어가 "_" 로 보이고, 서로 다른 단축어("*" 와 "?")가 같은 "_.md" 로 겹쳐 앞의 것을 덮어쓰기까지
+// 했다. 그래서 상용구만 되돌릴 수 있는 방식으로 인코딩한다: 못 쓰는 글자와 "%" 자신을
+// "%XX"(아스키 코드 16진수 두 자리)로 바꿔 저장하고, 읽을 때 같은 규칙으로 되돌린다. "%" 도
+// 인코딩하므로 단축어가 우연히 "%2A" 모양이어도 "*" 로 잘못 읽히지 않는다. 이미 "_.md" 같은
+// 예전 방식으로 저장된 파일은 "%XX" 가 없으니 읽을 때 그대로 "_" 단축어로 남는다(호환).
+const SNIPPET_NAME_UNESCAPE_RE = /%(25|2A|3F|3A|2F|5C|22|3C|3E|7C|[01][0-9A-F])/g
+
+function encodeSnippetFileName(title) {
+  const hex = (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`
+  // "%" 를 먼저 — 뒤 단계가 만드는 "%2A" 같은 결과의 "%" 까지 다시 인코딩하면 안 되므로.
+  return (title ?? '').replace(/%/g, hex).replace(ILLEGAL_FILENAME_CHARS_RE, hex).trim()
+}
+
+function decodeSnippetFileName(name) {
+  return name.replace(SNIPPET_NAME_UNESCAPE_RE, (_m, hex) => String.fromCharCode(parseInt(hex, 16)))
+}
+
 // Get-or-create, keyed by (카테고리, 제목) — same "no (1) duplicates"
 // reasoning as ensureDataEntry.
 export function ensureSnippet(workspacePath, category, title) {
   const safeCategory = sanitizeFileName(category, '공통')
-  const safeTitle = sanitizeFileName(title, '새 상용구')
+  const safeTitle = encodeSnippetFileName(title) || '새 상용구'
   const dir = path.join(snippetsDirPath(workspacePath), safeCategory)
   fs.mkdirSync(dir, { recursive: true })
   const filePath = path.join(dir, `${safeTitle}${DOC_EXT}`)

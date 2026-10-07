@@ -2,7 +2,16 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createDoc, createFolder, movePath, renamePath, scanTree } from '../../electron/fileSystem.js'
+import {
+  createDoc,
+  createFolder,
+  ensureSnippet,
+  movePath,
+  renamePath,
+  scanSnippets,
+  scanTree,
+  snippetsDirPath,
+} from '../../electron/fileSystem.js'
 
 // 실제 디스크에 임시 폴더를 만들어서 진행 — 파일을 옮기고 이름을 바꾸는 코드는 가짜 파일
 // 시스템으로는 진짜 동작(예: Windows 경로, 폴더째 이동)을 확인할 수 없으므로.
@@ -188,5 +197,85 @@ describe('scanTree — 사이드바에 보이는 트리', () => {
     put('문서.md')
 
     expect(scanTree(root).map((n) => n.name)).toEqual(['문서'])
+  })
+})
+
+// 상용구는 "단축어 = 파일 이름"이라, Windows 파일 이름에 못 쓰는 글자(* ? : / \ " < > |)가
+// 단축어에 들어가면 예전엔 전부 "_"로 바뀌어 저장됐다(제보: "*를 ※로 바꾸려는데 *가 _로 바뀜").
+// 서로 다른 단축어가 같은 "_.md"로 겹쳐서 나중 것이 앞의 것을 덮어쓰기도 했다.
+describe('상용구 단축어에 파일 이름에 못 쓰는 글자가 들어가는 경우', () => {
+  // 백슬래시는 문자 코드(92)로 — 소스에 직접 쓰면 이스케이프 때문에 헷갈리기 쉬움
+  const ILLEGAL = ['*', '?', ':', '/', String.fromCharCode(92), '"', '<', '>', '|']
+
+  function register(title, content = '본문') {
+    const file = ensureSnippet(root, '공통', title)
+    fs.writeFileSync(file, content, 'utf-8')
+    return file
+  }
+
+  it('"*" 를 단축어로 등록하면 다시 읽어도 "*" 그대로다 ("_" 로 바뀌지 않는다)', () => {
+    register('*', '※')
+
+    const [entry] = scanSnippets(root)
+
+    expect(entry.title).toBe('*')
+    expect(fs.readFileSync(entry.path, 'utf-8')).toBe('※')
+  })
+
+  it('못 쓰는 글자 아홉 개 모두 단축어로 저장했다가 그대로 읽힌다', () => {
+    for (const ch of ILLEGAL) register(ch, `본문${ch}`)
+
+    const titles = scanSnippets(root).map((e) => e.title)
+
+    expect(titles.sort()).toEqual([...ILLEGAL].sort())
+  })
+
+  it('글자 사이에 섞여 있어도 그대로 읽힌다 (a*b, 100%, 가:나)', () => {
+    for (const title of ['a*b', '100%', '가:나']) register(title)
+
+    expect(scanSnippets(root).map((e) => e.title).sort()).toEqual(['100%', 'a*b', '가:나'])
+  })
+
+  it('서로 다른 단축어("*" 와 "?")는 서로 다른 파일이라 앞의 것을 덮어쓰지 않는다', () => {
+    register('*', '별표 본문')
+    register('?', '물음표 본문')
+
+    const byTitle = Object.fromEntries(scanSnippets(root).map((e) => [e.title, fs.readFileSync(e.path, 'utf-8')]))
+
+    expect(byTitle).toEqual({ '*': '별표 본문', '?': '물음표 본문' })
+  })
+
+  it('같은 단축어를 다시 등록하면 같은 파일을 쓴다 (중복 파일이 생기지 않는다)', () => {
+    const first = ensureSnippet(root, '공통', '*')
+    const second = ensureSnippet(root, '공통', '*')
+
+    expect(second).toBe(first)
+    expect(scanSnippets(root)).toHaveLength(1)
+  })
+
+  it('디스크의 실제 파일 이름에는 Windows 에서 못 쓰는 글자가 없다', () => {
+    for (const ch of ILLEGAL) register(ch)
+
+    const names = fs.readdirSync(path.join(snippetsDirPath(root), '공통'))
+
+    expect(names).toHaveLength(ILLEGAL.length)
+    for (const name of names) expect(ILLEGAL.some((ch) => name.includes(ch))).toBe(false)
+  })
+
+  it('단축어가 우연히 "%2A" 처럼 생겼어도 "*" 로 잘못 읽히지 않는다', () => {
+    register('%2A', '글자 그대로')
+    register('*', '진짜 별표')
+
+    const titles = scanSnippets(root).map((e) => e.title).sort()
+
+    expect(titles).toEqual(['%2A', '*'])
+  })
+
+  it('이미 "_.md" 로 저장돼 있던 예전 상용구는 그대로 "_" 단축어로 읽힌다 (기존 데이터 호환)', () => {
+    const legacy = path.join(snippetsDirPath(root), '공통', '_.md')
+    fs.mkdirSync(path.dirname(legacy), { recursive: true })
+    fs.writeFileSync(legacy, '예전 본문', 'utf-8')
+
+    expect(scanSnippets(root).map((e) => e.title)).toEqual(['_'])
   })
 })

@@ -27,8 +27,9 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 |---|---|---|
 | `tests/lib/wikiParser.test.js` | 문법 변환(각주·`[br]`·제목 번호·`[편집]` 위치·HTML 이스케이프) | 순수 함수 |
 | `tests/lib/snippetShortcuts.test.js` | 상용구 단축키 판별(Alt+T / Alt+Shift+T, 한글 입력 상태, Ctrl 조합 제외) | 순수 함수 |
-| `tests/store/modals.test.js` | 상용구·사전 모달 열림 상태와 선택 글자 미리 채우기, 추천 팝업 토글 | mockApi |
-| `tests/electron/fileSystem.test.js` | 문서·폴더 이동, 이름 변경, 새 문서 기본 틀, 사이드바 트리 읽기 | **진짜 디스크**(임시 폴더를 만들고 끝나면 지움) |
+| `tests/lib/snippetScope.test.js` | 상용구 활성 폴더 범위 선별, 모달을 닫은 뒤의 활성 폴더 | 순수 함수 |
+| `tests/store/modals.test.js` | 상용구·사전 모달 열림 상태와 선택 글자 미리 채우기, 추천 팝업 토글, 닫으면 '전체'로 복귀(켜짐/꺼짐) | mockApi |
+| `tests/electron/fileSystem.test.js` | 문서·폴더 이동, 이름 변경, 새 문서 기본 틀, 사이드바 트리 읽기, 상용구 단축어 파일 이름(`*` 등 못 쓰는 글자) | **진짜 디스크**(임시 폴더를 만들고 끝나면 지움) |
 | `tests/store/fileOperations.test.js` | 작품 폴더 스캐폴드, 주인공 폴더 ↔ `00` 문서 연동, 분류 태그 갱신, 폴더 이동, 삭제 | mockApi |
 | `tests/store/tabs.test.js` | 탭 열기·닫기, 전환 시 저장 안 된 입력 보존, 폴더 이동·이름 변경 시 탭 경로 갱신 | mockApi |
 

@@ -51,6 +51,68 @@ describe('상용구 추천 팝업 토글 (Alt+Shift+T)', () => {
   })
 })
 
+describe('상용구 활성 폴더 — 모달을 닫으면 "전체"로 자동 복귀', () => {
+  it("처음엔 '전체' 이고 복귀 설정은 켜져 있다", async () => {
+    const { state } = await freshStore()
+    expect(state().activeSnippetFolder).toBe('전체')
+    expect(state().snippetResetFolderOnClose).toBe(true)
+  })
+
+  it('모달을 여는 것만으로는 고른 폴더가 바뀌지 않는다', async () => {
+    const { state } = await freshStore()
+    state().setActiveSnippetFolder('무협')
+
+    state().openSnippetModal()
+
+    expect(state().activeSnippetFolder).toBe('무협')
+  })
+
+  it('폴더를 고른 채 모달을 닫으면 "전체"가 된다 (기본 설정)', async () => {
+    const { state } = await freshStore()
+    state().openSnippetModal()
+    state().setActiveSnippetFolder('무협')
+
+    state().closeSnippetModal()
+
+    expect(state().activeSnippetFolder).toBe('전체')
+    expect(state().snippetModalOpen).toBe(false)
+  })
+
+  it('복귀 설정을 끄면 닫아도 고른 폴더가 그대로 유지된다', async () => {
+    const { state } = await freshStore()
+    state().setSnippetResetFolderOnClose(false)
+    state().openSnippetModal()
+    state().setActiveSnippetFolder('무협')
+
+    state().closeSnippetModal()
+
+    expect(state().activeSnippetFolder).toBe('무협')
+  })
+
+  it('복귀 설정을 다시 켜면 그 뒤로는 닫을 때 "전체"가 된다', async () => {
+    const { state } = await freshStore()
+    state().setSnippetResetFolderOnClose(false)
+    state().setActiveSnippetFolder('무협')
+    state().setSnippetResetFolderOnClose(true)
+
+    state().closeSnippetModal()
+
+    expect(state().activeSnippetFolder).toBe('전체')
+  })
+
+  it('활성 폴더 설정은 추천 팝업·스페이스바 치환 스위치와 서로 독립이다', async () => {
+    const { state } = await freshStore()
+    const before = { suggest: state().snippetSuggestEnabled, space: state().snippetSpaceExpandEnabled }
+
+    state().setActiveSnippetFolder('무협')
+    state().setSnippetResetFolderOnClose(false)
+    state().closeSnippetModal()
+
+    expect(state().snippetSuggestEnabled).toBe(before.suggest)
+    expect(state().snippetSpaceExpandEnabled).toBe(before.space)
+  })
+})
+
 describe('사전 모달 열림 상태 (사이드바 버튼과 Alt+Shift+H 가 같이 쓰는 상태)', () => {
   it('선택한 글자를 넘겨서 열고, 닫으면 비운다', async () => {
     const { state } = await freshStore()

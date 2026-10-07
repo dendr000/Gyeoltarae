@@ -26,12 +26,15 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
   const prefillContent = useAppStore((s) => s.snippetModalPrefillContent)
   const openSnippetModal = useAppStore((s) => s.openSnippetModal)
   const closeSnippetModal = useAppStore((s) => s.closeSnippetModal)
+  // "닫으면 '전체'로 자동 복귀"를 꺼 둔 사람은 닫은 뒤에도 폴더 범위가 남아 있으므로, 에디터가 어느
+  // 폴더 상용구만 쓰는 중인지 사이드바 제목에서 바로 보이게 함(말없이 안 먹히는 일 방지).
+  const activeFolder = useAppStore((s) => s.activeSnippetFolder)
 
   return (
     <div className="data-sidebar snippet-sidebar">
       <SidebarSection
         id="snippet"
-        title="상용구"
+        title={activeFolder === '전체' ? '상용구' : `상용구 · ${activeFolder} 폴더만 사용 중`}
         actions={
           <button type="button" className="data-sidebar-add-btn" title="상용구 관리 (Alt+T)" onClick={() => openSnippetModal()}>
             ⚙

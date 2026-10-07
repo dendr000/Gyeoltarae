@@ -22,17 +22,27 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
   const snippetSpaceExpandEnabled = useAppStore((s) => s.snippetSpaceExpandEnabled)
   const setSnippetSpaceExpandEnabled = useAppStore((s) => s.setSnippetSpaceExpandEnabled)
   const requestPrompt = useAppStore((s) => s.requestPrompt)
+  // 여기서 고른 폴더가 곧 "활성 폴더"(에디터가 쓰는 범위) — 닫을 때 '전체'로 자동 복귀할지는
+  // 아래 체크박스 설정이 정함(스토어의 closeSnippetModal).
+  const folder = useAppStore((s) => s.activeSnippetFolder)
+  const setFolder = useAppStore((s) => s.setActiveSnippetFolder)
+  const snippetResetFolderOnClose = useAppStore((s) => s.snippetResetFolderOnClose)
+  const setSnippetResetFolderOnClose = useAppStore((s) => s.setSnippetResetFolderOnClose)
 
   // 아직 상용구가 하나도 없는 새 폴더는 snippetIndex에서 뽑을 수 없으므로(실제로 저장된
   // 파일이 있어야만 카테고리로 잡힘) "+"로 새 폴더 이름을 받으면 여기 따로 기억해 뒀다가
   // 드롭다운에 얹어줌 — 첫 상용구를 그 폴더에 저장하고 나면 snippetIndex 쪽에도 잡히므로
   // 그 뒤로는 이 목록이 없어도 계속 보임.
   const [extraCategories, setExtraCategories] = useState([])
+  // 복귀를 꺼 둔 채 저장된 활성 폴더가 (비어 있어서) 아직 목록에 없을 수도 있으므로 그것도 선택지에
+  // 포함 — 안 그러면 <select> 가 실제 값과 다른 항목을 보여줌.
   const categories = useMemo(
-    () => [...new Set([...getCategories(snippetIndex), ...extraCategories])].sort((a, b) => a.localeCompare(b, 'ko')),
-    [snippetIndex, extraCategories],
+    () =>
+      [...new Set([...getCategories(snippetIndex), ...extraCategories, ...(folder === '전체' ? [] : [folder])])].sort(
+        (a, b) => a.localeCompare(b, 'ko'),
+      ),
+    [snippetIndex, extraCategories, folder],
   )
-  const [folder, setFolder] = useState('전체')
   const [title, setTitle] = useState('')
   // initialContent — Alt+T 로 열렸고 그 순간 에디터에 선택 영역이 있었으면 "본문" 칸을 미리
   // 채워서 옴(단축어만 새로 입력하면 바로 등록). 모달은 매번 새로 마운트되므로 초깃값으로 충분.
@@ -145,6 +155,17 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
               onChange={(e) => setSnippetSpaceExpandEnabled(e.target.checked)}
             />
             스페이스바 자동 치환
+          </label>
+          <label
+            className="modal-checkbox-row"
+            title="폴더를 골라 정리한 뒤 이 창을 닫으면, 에디터에서 모든 폴더의 상용구를 다시 쓸 수 있게 '전체'로 되돌립니다. 끄면 고른 폴더(와 '공통')의 상용구만 계속 쓰입니다."
+          >
+            <input
+              type="checkbox"
+              checked={snippetResetFolderOnClose}
+              onChange={(e) => setSnippetResetFolderOnClose(e.target.checked)}
+            />
+            닫으면 &apos;전체&apos;로 자동 복귀
           </label>
         </div>
 

@@ -12,6 +12,7 @@ import {
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
+import { ALL_FOLDER, nextFolderAfterClose } from '../lib/snippetScope.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -144,6 +145,29 @@ function loadSnippetSuggestEnabled() {
 function loadSnippetSpaceExpandEnabled() {
   try {
     return localStorage.getItem(SNIPPET_SPACE_EXPAND_STORAGE_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+// 상용구 활성 폴더(에디터가 쓰는 폴더 범위, 규칙은 lib/snippetScope.js)와 "모달을 닫으면 '전체'로
+// 자동 복귀" 설정. 복귀 설정이 기본 켜짐이라 설정을 건드리지 않으면 활성 폴더는 모달이 열려 있는
+// 동안에만 의미가 있고(그동안 에디터는 못 쓰니) 동작은 예전과 같음. 복귀를 끈 사람만 닫은 뒤에도
+// 고른 폴더가 남아 에디터 범위를 좁히므로, 그 값은 재시작해도 유지되게 저장한다.
+const SNIPPET_ACTIVE_FOLDER_STORAGE_KEY = 'wikidesk-snippet-active-folder'
+const SNIPPET_RESET_FOLDER_STORAGE_KEY = 'wikidesk-snippet-reset-folder-on-close'
+
+function loadActiveSnippetFolder() {
+  try {
+    return localStorage.getItem(SNIPPET_ACTIVE_FOLDER_STORAGE_KEY) || ALL_FOLDER
+  } catch {
+    return ALL_FOLDER
+  }
+}
+
+function loadSnippetResetFolderOnClose() {
+  try {
+    return localStorage.getItem(SNIPPET_RESET_FOLDER_STORAGE_KEY) !== 'false'
   } catch {
     return true
   }
@@ -346,6 +370,8 @@ export const useAppStore = create((set, get) => ({
   // 무관한 사용자 UI 설정이라 파일로 저장하지 않음.
   snippetSuggestEnabled: loadSnippetSuggestEnabled(),
   snippetSpaceExpandEnabled: loadSnippetSpaceExpandEnabled(),
+  activeSnippetFolder: loadActiveSnippetFolder(),
+  snippetResetFolderOnClose: loadSnippetResetFolderOnClose(),
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
   dictText: '',
@@ -393,8 +419,31 @@ export const useAppStore = create((set, get) => ({
     set({ snippetModalOpen: true, snippetModalPrefillContent: prefillContent })
   },
 
+  // 닫을 때 "'전체'로 자동 복귀" 설정이 켜져 있으면 활성 폴더를 '전체'로 되돌림(저장값까지) — 사이드바
+  // 버튼, 모달의 X/바깥 클릭, 에디터에서 열기 등 닫는 모든 경로가 이 액션을 지남.
   closeSnippetModal() {
+    const { activeSnippetFolder, snippetResetFolderOnClose } = get()
+    get().setActiveSnippetFolder(nextFolderAfterClose(activeSnippetFolder, snippetResetFolderOnClose))
     set({ snippetModalOpen: false, snippetModalPrefillContent: '' })
+  },
+
+  setActiveSnippetFolder(folder) {
+    if (folder === get().activeSnippetFolder) return
+    try {
+      localStorage.setItem(SNIPPET_ACTIVE_FOLDER_STORAGE_KEY, folder)
+    } catch {
+      /* localStorage unavailable; 재시작하면 '전체'로 돌아갈 뿐 */
+    }
+    set({ activeSnippetFolder: folder })
+  },
+
+  setSnippetResetFolderOnClose(enabled) {
+    try {
+      localStorage.setItem(SNIPPET_RESET_FOLDER_STORAGE_KEY, String(enabled))
+    } catch {
+      /* localStorage unavailable; setting just won't persist across restarts */
+    }
+    set({ snippetResetFolderOnClose: enabled })
   },
 
   initTheme() {

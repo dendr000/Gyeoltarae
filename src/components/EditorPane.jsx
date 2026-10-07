@@ -35,6 +35,7 @@ import { getApi } from '../lib/api.js'
 import { resolveCycleReplacement } from '../lib/dictCycle.js'
 import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
+import { selectActiveSnippets } from '../lib/snippetScope.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -526,6 +527,13 @@ export function EditorPane({ text, onChange, disabled }) {
   const docIndex = useAppStore((s) => s.docIndex)
   const imageIndex = useAppStore((s) => s.imageIndex)
   const snippetIndex = useAppStore((s) => s.snippetIndex)
+  const activeSnippetFolder = useAppStore((s) => s.activeSnippetFolder)
+  // 자동 추천 팝업·스페이스바 치환·Alt+Enter 가 쓰는 상용구 — 활성 폴더 범위(기본 '전체'). 툴바
+  // "상용구 삽입" 목록은 이 범위와 무관하게 전체를 쓰므로 snippetIndex 를 그대로 둔다.
+  const activeSnippets = useMemo(
+    () => selectActiveSnippets(Object.values(snippetIndex), activeSnippetFolder),
+    [snippetIndex, activeSnippetFolder],
+  )
   const snippetSuggestEnabled = useAppStore((s) => s.snippetSuggestEnabled)
   const snippetSpaceExpandEnabled = useAppStore((s) => s.snippetSpaceExpandEnabled)
   const dictMap = useAppStore((s) => s.dictMap)
@@ -678,7 +686,7 @@ export function EditorPane({ text, onChange, disabled }) {
       setSnippetSuggest(null)
       return
     }
-    const ctx = detectSnippetQuery(textarea, Object.values(snippetIndex))
+    const ctx = detectSnippetQuery(textarea, activeSnippets)
     if (!ctx) {
       setSnippetSuggest(null)
       return
@@ -948,7 +956,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 못 함 — 실제로 이 버그로 처음 구현했을 때 스페이스바 치환이 전혀 동작하지 않았음).
     if (snippetSpaceExpandEnabled && e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       if (snippetSuggest) setSnippetSuggest(null)
-      const match = detectExactSnippetMatch(textarea, Object.values(snippetIndex))
+      const match = detectExactSnippetMatch(textarea, activeSnippets)
       if (match) {
         e.preventDefault()
         applySnippetMatch(match)
@@ -961,7 +969,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 이 경우 e.preventDefault()를 안 불러서 기본 동작이 그대로 진행됨 — 여기서도 동일).
     if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key === 'Enter') {
       if (snippetSuggest) setSnippetSuggest(null)
-      const match = detectExactSnippetMatch(textarea, Object.values(snippetIndex))
+      const match = detectExactSnippetMatch(textarea, activeSnippets)
       if (match) {
         e.preventDefault()
         applySnippetMatch(match)

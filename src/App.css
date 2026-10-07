@@ -2373,7 +2373,8 @@
 
 .snippet-modal-toggle-row {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   margin-bottom: 12px;
 }
 
