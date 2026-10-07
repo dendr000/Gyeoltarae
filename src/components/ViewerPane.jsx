@@ -6,6 +6,7 @@ import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
 import { getViewerScroll, setViewerScroll } from '../lib/scrollMemory.js'
 import { copyCodeBlock } from '../lib/codeCopy.js'
+import { toStraightQuotes } from '../lib/smartQuotes.js'
 
 function dirnameOf(filePath) {
   const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
@@ -597,7 +598,8 @@ export function ViewerPane({ text, emptyHint }) {
     (e) => {
       if (!e.shiftKey) return
       if (e.target.closest('a, button')) return
-      const word = window.getSelection()?.toString().trim()
+      // 뷰어는 따옴표를 둥근 것으로 보여 주므로(lib/smartQuotes.js) 곧은 따옴표로 되돌려서 원문에서 찾는다.
+      const word = toStraightQuotes(window.getSelection()?.toString().trim() ?? '')
       if (!word) return
       const container = e.currentTarget
       let searchStart = 0

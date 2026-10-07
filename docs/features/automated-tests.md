@@ -33,6 +33,7 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/folderDocTemplate.test.js` | 폴더별 새 문서 기본 내용을 찾는 규칙(따즈아 안·하위 폴더·Windows 경로, 이름 일부만 같은 폴더 제외) | 순수 함수 |
 | `tests/store/folderDocTemplate.test.js` | 따즈아 폴더에서 새 문서를 만들 때 기본 내용, 글양식 우선, 가져온 파일은 제외, 작품 폴더 안의 따즈아 | mockApi |
 | `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |
+| `tests/lib/smartQuotes.test.js` | 뷰어의 둥근 따옴표(열림/닫힘 판단, 태그·블록 경계, 코드·속성은 그대로, 두 번 적용해도 같음)와 실제 파서 출력(굵게·표·목록·각주·접기·스타일 상자, 목차 데이터 불변) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선) | 순수 함수 |
 | `tests/electron/snippetCase.test.js` | `MYSQL`/`mysql` 처럼 대소문자만 다른 상용구가 서로 덮어쓰지 않는지, 인코딩된 파일 이름 복원 | **진짜 디스크**(Windows 에서만 충돌이 재현됨) |
 | `tests/lib/codeCopy.test.js` | 복사 버튼 동작(본문 읽기, "복사됨" 표시와 되돌리기, 실패 표시, 클립보드가 응답 없을 때 옛 방식으로 전환) | 가짜 버튼·가짜 클립보드 |
