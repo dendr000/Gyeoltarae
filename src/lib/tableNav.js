@@ -13,11 +13,32 @@ function firstVisibleColumn(row) {
   return index === -1 ? 0 : index
 }
 
-// Tab: 어느 열에서 눌러도 "아래 행의 첫 번째 셀". 마지막 행이면 새 행을 만들고 그 행의 첫 번째 셀.
-export function tabTarget(grid, r) {
-  const next = r + 1
-  if (next >= grid.length) return { r: next, c: 0, addRow: true }
-  return { r: next, c: firstVisibleColumn(grid[next]), addRow: false }
+// Tab: 같은 행에서 오른쪽의 다음 셀(병합에 가려진 칸은 건너뜀). 행의 마지막 셀이면 "아래 행의 첫 번째
+// 셀" — 예전에는 여기서 행 끝의 삭제 버튼 [−] 으로 포커스가 갔다. 마지막 행의 마지막 셀이면 새 행을 만들고
+// 그 행의 첫 번째 셀. (처음에는 "어느 열에서 눌러도 아래 행 첫 셀"로 잘못 만들었다가, 오른쪽에 셀이 있는데도
+// 아래로 내려간다는 지적을 받고 이 규칙으로 고쳤다.)
+export function tabTarget(grid, r, c) {
+  const row = grid[r] ?? []
+  for (let next = c + 1; next < row.length; next += 1) {
+    if (!row[next].mergedInto) return { r, c: next, addRow: false }
+  }
+  const nextRow = r + 1
+  if (nextRow >= grid.length) return { r: nextRow, c: 0, addRow: true }
+  return { r: nextRow, c: firstVisibleColumn(grid[nextRow]), addRow: false }
+}
+
+// Shift+Tab: Tab 의 반대 — 같은 행에서 왼쪽의 이전 셀(가려진 칸은 건너뜀), 행의 첫 번째 셀이면 윗 행의 마지막
+// 셀. 표의 맨 처음 셀이면 null(호출한 쪽이 평소 포커스 이동에 맡긴다). 새 행은 만들지 않는다.
+export function shiftTabTarget(grid, r, c) {
+  const row = grid[r] ?? []
+  for (let prev = c - 1; prev >= 0; prev -= 1) {
+    if (!row[prev].mergedInto) return { r, c: prev }
+  }
+  if (r === 0) return null
+  const prevRow = grid[r - 1]
+  let last = prevRow.length - 1
+  while (last > 0 && prevRow[last].mergedInto) last -= 1
+  return { r: r - 1, c: last }
 }
 
 // Enter: 같은 열의 바로 아래 셀. 세로로 병합된 셀(rowspan)에서는 병합이 끝난 다음 행으로 간다(병합된

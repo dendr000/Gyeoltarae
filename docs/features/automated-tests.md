@@ -37,7 +37,7 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/autoCategory.test.js` | 폴더 자동 분류의 규칙(읽어들일 글자 입력 해석, 읽을 이름 구하기, 대소문자 무시 부분 일치와 순서, 비어 있는 분류 칸 채우기) — 사용자가 든 예(DBMS·외래키) 포함 | 순수 함수 |
 | `tests/electron/autoCategory.test.js` | 자동 분류 설정 파일(폴더 안 숨김 파일)의 저장·가장 가까운 윗 폴더 찾기·워크스페이스 밖 제외·해제·망가진 파일 | **진짜 디스크**(임시 폴더) |
 | `tests/store/autoCategory.test.js` | 새 문서를 만들 때 자동 분류가 붙는지(예: `04 외래키와 Join` → ddazua·DBMS·외래키), 글양식·가져온 파일·여러 겹 설정 | mockApi |
-| `tests/lib/tableNav.test.js` | 표 편집기 Tab(아래 행 첫 셀)·Enter(바로 아래 셀) 이동 규칙, 새 행 생성, 병합된 셀 | 순수 함수 |
+| `tests/lib/tableNav.test.js` | 표 편집기 Tab(오른쪽 셀, 행 끝이면 아래 행 첫 셀)·Shift+Tab(그 반대)·Enter(바로 아래 셀) 이동 규칙, 새 행 생성, 병합된 셀 건너뛰기 | 순수 함수 |
 | `tests/lib/lineDuplicate.test.js` | 코드블록 안 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, ``` 줄·코드블록 밖 제외) | 순수 함수 |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |

@@ -147,8 +147,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
 - **툴바 휠 스크롤**: 편집 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤됨(스크롤바를 잡지 않아도 됨).
   [`docs/features/toolbar-wheel-scroll.md`](docs/features/toolbar-wheel-scroll.md)
-- **표 편집기의 셀 키**: Tab = 아래 행의 첫 번째 셀, Enter = 바로 아래 셀(둘 다 없으면 새 행을 만듦), Shift+Enter = 셀 안
-  줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
+- **표 편집기의 셀 키**: Tab = 오른쪽 셀(행의 끝이면 아래 행의 첫 번째 셀), Shift+Tab = 그 반대, Enter = 바로 아래 셀(없으면
+  새 행을 만듦), Shift+Enter = 셀 안 줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
 - **큰 제목 간격**: 뷰어에서 큰 제목(1. 2. 3. …) 앞 간격을 넓혀 다음 큰 문단으로 넘어간 느낌을 줌.
   [`docs/features/heading-spacing.md`](docs/features/heading-spacing.md)
 

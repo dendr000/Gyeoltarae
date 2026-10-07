@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
-import { enterTarget, tabTarget } from '../lib/tableNav.js'
+import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 
 function emptyCell() {
   return { text: '', bg: '', color: '', align: '', bold: false, colspan: 1, rowspan: 1, mergedInto: null, extraAttrs: [] }
@@ -188,9 +188,10 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     if (pending && focusCellInput(pending.r, pending.c)) pendingFocusRef.current = null
   }, [grid])
 
-  // Tab → 아래 행의 첫 번째 셀(없으면 새 행). Enter → 바로 아래 셀(없으면 새 행). Shift+Enter → 셀 안 줄바꿈
-  // [br]. 한글 조합 중(isComposing)의 Enter 는 글자를 확정하는 키라서 이동하지 않는다. Shift+Tab 과
-  // Ctrl/Alt 가 든 조합은 건드리지 않는다.
+  // Tab → 오른쪽 셀(행의 끝이면 아래 행의 첫 번째 셀, 마지막 행이면 새 행). Shift+Tab → 그 반대(왼쪽 셀, 행의
+  // 처음이면 윗 행의 마지막 셀). Enter → 바로 아래 셀(없으면 새 행). Shift+Enter → 셀 안 줄바꿈 [br].
+  // 한글 조합 중(isComposing)의 Enter 는 글자를 확정하는 키라서 이동하지 않는다. Ctrl/Alt 가 든 조합은
+  // 건드리지 않는다.
   function handleCellKeyDown(e, r, c) {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.ctrlKey || e.metaKey || e.altKey) return
@@ -203,9 +204,11 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     if (e.key === 'Enter') {
       e.preventDefault()
       goToCell(enterTarget(grid, r, c))
-    } else if (e.key === 'Tab' && !e.shiftKey) {
+    } else if (e.key === 'Tab') {
+      const target = e.shiftKey ? shiftTabTarget(grid, r, c) : tabTarget(grid, r, c)
+      if (!target) return // 표의 맨 처음 셀에서 Shift+Tab: 평소 포커스 이동에 맡긴다
       e.preventDefault()
-      goToCell(tabTarget(grid, r))
+      goToCell(target)
     }
   }
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
