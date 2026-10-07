@@ -4,9 +4,24 @@ import { parseWikiText } from '../../src/lib/wikiParser.js'
 const FENCE = '```'
 const SQL = 'CREATE TABLE mytable(\nid INT PRIMARY KEY,\nname VARCHAR(10)\n);'
 
-// 코드 본문(pre > code 안 글자)만 꺼낸다.
+// 코드 본문(pre > code 안 HTML)만 꺼낸다. 색을 입힌 블록은 <code class="hljs"> 라 속성을 허용한다.
 function codeBody(html) {
-  return html.match(/<pre class="wiki-code"><code>([\s\S]*?)<\/code><\/pre>/)?.[1]
+  return html.match(/<pre class="wiki-code"><code[^>]*>([\s\S]*?)<\/code><\/pre>/)?.[1]
+}
+
+// 색 입히기용 태그를 걷고 이스케이프를 풀어서 사람이 보는 글자(= 복사될 글자)로 되돌린다.
+function plainText(codeHtml) {
+  return codeHtml
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, '&')
+}
+
+function langLabel(html) {
+  return html.match(/<span class="wiki-code-lang">([^<]*)<\/span>/)?.[1]
 }
 
 describe('``` 코드블록', () => {
@@ -32,11 +47,72 @@ describe('``` 코드블록', () => {
 
   it('언어를 적으면 윗줄에 언어 이름이 나오고 안 적으면 나오지 않는다', () => {
     const withLang = parseWikiText(`${FENCE}sql\nSELECT 1;\n${FENCE}`).html
-    expect(withLang).toContain('<span class="wiki-code-lang">sql</span>')
-    expect(codeBody(withLang)).toBe('SELECT 1;')
+    expect(langLabel(withLang)).toBe('SQL')
+    expect(plainText(codeBody(withLang))).toBe('SELECT 1;')
 
     const noLang = parseWikiText(`${FENCE}\nSELECT 1;\n${FENCE}`).html
     expect(noLang).not.toContain('wiki-code-lang')
+    // 언어가 없으면 색도 입히지 않는다
+    expect(noLang).not.toContain('hljs')
+  })
+
+  it('언어 이름은 대소문자를 가리지 않고 같은 정식 이름·같은 색으로 보인다 (MySQL / MYSQL / mysql)', () => {
+    const results = ['MySQL', 'MYSQL', 'mysql'].map((name) => parseWikiText(`${FENCE}${name}\nSELECT 1;\n${FENCE}`).html)
+    for (const html of results) {
+      expect(langLabel(html)).toBe('MySQL')
+      expect(codeBody(html)).toContain('<span class="hljs-keyword">SELECT</span>')
+    }
+    expect(new Set(results).size).toBe(1)
+  })
+
+  it('요청받은 언어 이름들이 모두 색이 입혀지고 정식 이름으로 보인다', () => {
+    const cases = [
+      ['Oracle', 'Oracle', 'SELECT 1 FROM dual;'],
+      ['오라클', 'Oracle', 'SELECT 1 FROM dual;'],
+      ['oracle', 'Oracle', 'SELECT 1 FROM dual;'],
+      ['ORACLE', 'Oracle', 'SELECT 1 FROM dual;'],
+      ['PostgreSQL', 'PostgreSQL', 'SELECT 1;'],
+      ['MSSQL', 'MSSQL', 'SELECT TOP 1 * FROM t;'],
+      ['MariaDB', 'MariaDB', 'SELECT 1;'],
+      ['MongoDB', 'MongoDB', 'db.users.find({ age: 20 })'],
+      ['No-SQL', 'NoSQL', 'const a = 1'],
+      ['JAVA', 'Java', 'public class A { int x = 1; }'],
+      ['자바스크립트', 'JavaScript', 'const a = 1'],
+      ['타입스크립트', 'TypeScript', 'const a: number = 1'],
+      ['파이썬', 'Python', 'def f():\n    return 1'],
+      ['C++', 'C++', '#include <iostream>\nint main() { return 0; }'],
+    ]
+    for (const [name, label, code] of cases) {
+      const html = parseWikiText(`${FENCE}${name}\n${code}\n${FENCE}`).html
+      expect(langLabel(html), name).toBe(label)
+      expect(codeBody(html), name).toContain('hljs-')
+      // 색을 입혀도 본문 글자는 그대로(복사 버튼이 복사할 글자)
+      expect(plainText(codeBody(html)), name).toBe(code)
+    }
+  })
+
+  it('모르는 언어 이름은 적은 그대로 윗줄에 보이고 색은 입히지 않는다', () => {
+    const html = parseWikiText(`${FENCE}Foobar\nSELECT 1;\n${FENCE}`).html
+    expect(langLabel(html)).toBe('Foobar')
+    expect(html).not.toContain('hljs')
+    expect(codeBody(html)).toBe('SELECT 1;')
+  })
+
+  it('언어 이름에 HTML 이 들어 있어도 이스케이프된다', () => {
+    const html = parseWikiText(`${FENCE}<img\nx\n${FENCE}`).html
+    expect(langLabel(html)).toBe('&lt;img')
+    expect(html).not.toContain('<img')
+  })
+
+  it('색을 입힌 코드블록의 본문 HTML 도 이스케이프되어 실행되지 않는다', () => {
+    const html = parseWikiText(`${FENCE}js\n<script>alert(1)</script>\n${FENCE}`).html
+    expect(html).not.toContain('<script>')
+    expect(plainText(codeBody(html))).toBe('<script>alert(1)</script>')
+  })
+
+  it('색을 입힌 블록의 코드 태그에는 hljs 클래스가 붙는다 (CSS 가 이 아래의 토큰에 색을 준다)', () => {
+    const html = parseWikiText(`${FENCE}sql\nSELECT 1;\n${FENCE}`).html
+    expect(html).toContain('<pre class="wiki-code"><code class="hljs">')
   })
 
   it('앞뒤 문단은 코드블록과 따로 유지된다', () => {
@@ -108,7 +184,13 @@ describe('``` 코드블록', () => {
     expect(codeBody(plain)).toBe('abc')
 
     const syntax = parseWikiText('{{{#!syntax js\nlet a\n}}}').html
-    expect(syntax).toContain('<span class="wiki-code-lang">js</span>')
-    expect(codeBody(syntax)).toBe('let a')
+    expect(langLabel(syntax)).toBe('JavaScript')
+    expect(plainText(codeBody(syntax))).toBe('let a')
+    expect(codeBody(syntax)).toContain('<span class="hljs-keyword">let</span>')
+  })
+
+  it('{{{#!syntax 언어}}} 도 한글·대소문자 이름을 같은 규칙으로 해석한다', () => {
+    const html = parseWikiText('{{{#!syntax 파이썬\nprint(1)\n}}}').html
+    expect(langLabel(html)).toBe('Python')
   })
 })

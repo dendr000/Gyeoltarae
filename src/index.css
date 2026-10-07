@@ -13,6 +13,18 @@
   --sans: 'Pretendard', system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* 코드블록 글자 강조 색(codeHighlight.js 가 입힌 hljs-* 클래스, App.css 의 .wiki-code .hljs-*).
+     light-dark() 는 :root 의 color-scheme 을 따르므로(아래 data-theme 고정 포함) 라이트/다크
+     값을 이 한 곳에 같이 둔다. */
+  --hl-keyword: light-dark(#a626a4, #c792ea);
+  --hl-string: light-dark(#2e7d32, #9ccc65);
+  --hl-number: light-dark(#b45309, #f7b267);
+  --hl-comment: light-dark(#6b7280, #7d8590);
+  --hl-function: light-dark(#1d4ed8, #7aa2f7);
+  --hl-type: light-dark(#0e7490, #4dd0e1);
+  --hl-tag: light-dark(#be185d, #f78fb3);
+  --hl-meta: light-dark(#475569, #9aa5b1);
+
   font: 14px/1.6 var(--sans);
   color-scheme: light dark;
   color: var(--text);

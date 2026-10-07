@@ -315,30 +315,55 @@ export function scanSnippets(workspacePath) {
 // "%XX"(아스키 코드 16진수 두 자리)로 바꿔 저장하고, 읽을 때 같은 규칙으로 되돌린다. "%" 도
 // 인코딩하므로 단축어가 우연히 "%2A" 모양이어도 "*" 로 잘못 읽히지 않는다. 이미 "_.md" 같은
 // 예전 방식으로 저장된 파일은 "%XX" 가 없으니 읽을 때 그대로 "_" 단축어로 남는다(호환).
-const SNIPPET_NAME_UNESCAPE_RE = /%(25|2A|3F|3A|2F|5C|22|3C|3E|7C|[01][0-9A-F])/g
+//
+// 대소문자도 같은 문제가 있다. Windows 는 "MYSQL.md" 와 "mysql.md" 를 같은 파일로 취급해서
+// "mysql" 을 등록하면 이미 있는 "MYSQL" 상용구의 파일을 열어 내용을 덮어썼다(둘을 따로 등록할 수
+// 없었음). 그래서 같은 폴더에 대소문자만 다른 이름이 이미 있을 때만, 새 상용구의 영문자 전부를
+// "%XX"(유니코드 영문자는 "%uXXXX")로 인코딩한 이름으로 저장한다 — 영문자가 글자 그대로는 안
+// 남고(16진수 표기만 대문자로 통일해 씀) "%" 자신도 항상 "%25" 로 인코딩되므로, 일반 이름이나
+// 다른 인코딩 이름과 대소문자만 달라서 겹치는 일이 없다. 평소에는 이름을 그대로 쓰므로 예전
+// 파일과 호환되고, 읽을 때는 같은 규칙으로 되돌린다.
+const SNIPPET_NAME_UNESCAPE_RE = /%(25|2A|3F|3A|2F|5C|22|3C|3E|7C|[01][0-9A-F]|[46][1-9A-F]|[57][0-9A]|u[0-9A-F]{4})/g
+const CASED_LETTER_RE = /[\p{Lu}\p{Ll}\p{Lt}]/gu
 
-function encodeSnippetFileName(title) {
+function encodeSnippetFileName(title, encodeLetters = false) {
   const hex = (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`
+  const letterHex = (ch) => {
+    const code = ch.codePointAt(0)
+    if (code > 0xffff) return ch // 이 범위의 대소문자 글자는 인코딩하지 않음(실사용 거의 없음)
+    return code < 0x80 ? hex(ch) : `%u${code.toString(16).toUpperCase().padStart(4, '0')}`
+  }
   // "%" 를 먼저 — 뒤 단계가 만드는 "%2A" 같은 결과의 "%" 까지 다시 인코딩하면 안 되므로.
-  return (title ?? '').replace(/%/g, hex).replace(ILLEGAL_FILENAME_CHARS_RE, hex).trim()
+  // 영문자 인코딩은 못 쓰는 글자 인코딩보다 앞 — 뒤 단계가 만든 "%2A" 의 "A" 를 다시 건드리지 않게.
+  let name = (title ?? '').replace(/%/g, hex)
+  if (encodeLetters) name = name.replace(CASED_LETTER_RE, letterHex)
+  return name.replace(ILLEGAL_FILENAME_CHARS_RE, hex).trim()
 }
 
 function decodeSnippetFileName(name) {
-  return name.replace(SNIPPET_NAME_UNESCAPE_RE, (_m, hex) => String.fromCharCode(parseInt(hex, 16)))
+  return name.replace(SNIPPET_NAME_UNESCAPE_RE, (_m, code) =>
+    String.fromCharCode(parseInt(code.startsWith('u') ? code.slice(1) : code, 16)),
+  )
 }
 
 // Get-or-create, keyed by (카테고리, 제목) — same "no (1) duplicates"
-// reasoning as ensureDataEntry.
+// reasoning as ensureDataEntry. 같은 제목의 파일이 이미 있으면(평소 이름이든, 위 설명의 영문자
+// 인코딩 이름이든) 그 파일을 돌려주고, 새로 만들 때만 대소문자 충돌을 피한다.
 export function ensureSnippet(workspacePath, category, title) {
   const safeCategory = sanitizeFileName(category, '공통')
-  const safeTitle = encodeSnippetFileName(title) || '새 상용구'
   const dir = path.join(snippetsDirPath(workspacePath), safeCategory)
   fs.mkdirSync(dir, { recursive: true })
-  const filePath = path.join(dir, `${safeTitle}${DOC_EXT}`)
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '', 'utf-8')
+  const plainName = `${encodeSnippetFileName(title) || '새 상용구'}${DOC_EXT}`
+  const encodedName = `${encodeSnippetFileName(title, true) || '새 상용구'}${DOC_EXT}`
+  // readdir 는 저장된 그대로의 대소문자로 돌려주므로 정확한 이름 비교가 된다.
+  const existing = fs.readdirSync(dir)
+  let fileName = [plainName, encodedName].find((name) => existing.includes(name))
+  if (!fileName) {
+    const lowerPlain = plainName.toLowerCase()
+    fileName = existing.some((name) => name.toLowerCase() === lowerPlain) ? encodedName : plainName
+    fs.writeFileSync(path.join(dir, fileName), '', 'utf-8')
   }
-  return filePath
+  return path.join(dir, fileName)
 }
 
 // 고유명사 사전 — a single flat file, one "원문(한자)" pair per line (same

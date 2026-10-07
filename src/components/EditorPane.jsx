@@ -36,6 +36,8 @@ import { resolveCycleReplacement } from '../lib/dictCycle.js'
 import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets } from '../lib/snippetScope.js'
+import { findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
+import { fenceAutoCloseEdit } from '../lib/codeFence.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
 // directly overwriting the React-controlled value. Setting `value` from
@@ -217,39 +219,10 @@ function nearestMatchIndex(matches, cursorPos) {
   return idx === -1 ? 0 : idx
 }
 
-// 상용구 자동완성용 — Galpi 원본과 달리 고정 트리거 문자가 없다. 커서 앞 줄의 끝부분을
-// 최대 SNIPPET_LOOKBACK자까지 가장 긴 접미사부터 하나씩 줄여가며, 등록된 상용구 제목 중
-// 그 접미사로 "시작하는"(prefix match, 대소문자 무시) 것이 하나라도 있는 첫 길이에서 멈춘다
-// (짧은 접미사가 긴 접미사를 가로채지 않도록). 같은 제목이 카테고리마다 따로 있을 수 있으므로
-// 문자열이 아니라 상용구 엔트리 객체 배열을 그대로 돌려준다 — 실제 삽입될 내용(content)이
-// 카테고리에 따라 다르기 때문.
-const SNIPPET_LOOKBACK = 30
-
+// 상용구 자동완성(추천 팝업) — 규칙은 lib/snippetMatch.js. 선택 영역이 있으면 찾지 않는다.
 function detectSnippetQuery(textarea, snippetEntries) {
-  const pos = textarea.selectionStart
-  if (pos !== textarea.selectionEnd || snippetEntries.length === 0) return null
-  const value = textarea.value
-  const lineStart = value.lastIndexOf('\n', pos - 1) + 1
-  const upToCursor = value.slice(lineStart, pos)
-  if (!upToCursor.trim()) return null
-
-  const checkLimit = Math.max(0, upToCursor.length - SNIPPET_LOOKBACK)
-  for (let start = checkLimit; start < upToCursor.length; start += 1) {
-    const suffix = upToCursor.slice(start)
-    const lowerSuffix = suffix.toLowerCase()
-    const matches = snippetEntries.filter((entry) => entry.title.toLowerCase().startsWith(lowerSuffix))
-    if (matches.length === 0) continue
-    // 정확히 일치하는 제목 우선, 그다음 제목이 짧은 순 — Galpi와 동일한 정렬 기준.
-    matches.sort((a, b) => {
-      const aExact = a.title.length === suffix.length ? 0 : 1
-      const bExact = b.title.length === suffix.length ? 0 : 1
-      if (aExact !== bExact) return aExact - bExact
-      if (a.title.length !== b.title.length) return a.title.length - b.title.length
-      return a.title.localeCompare(b.title, 'ko') || a.category.localeCompare(b.category, 'ko')
-    })
-    return { start: lineStart + start, end: pos, matches }
-  }
-  return null
+  if (textarea.selectionStart !== textarea.selectionEnd) return null
+  return findSnippetQuery(textarea.value, textarea.selectionStart, snippetEntries)
 }
 
 // Mirrors the textarea's own text (same font/padding/wrapping) into an
@@ -727,24 +700,12 @@ export function EditorPane({ text, onChange, disabled }) {
   }
 
   // Galpi의 isBpAuto(스페이스바 자동 치환) 포팅 — 커서 앞 줄의 끝부분이 등록된 상용구
-  // 제목과 접두사가 아니라 "정확히" 일치하는지 확인(길이가 다른 제목들이 동시에 일치할 수
-  // 있으므로 가장 긴 것 우선). 같은 길이로 여러 개(카테고리만 다른 동일 제목)가 동시에
-  // 걸리면 하나로 정할 수 없으니 숫자 선택 팝업을 띄움 — 이미 있는 snippetSuggest
-  // 'browse' 모드 렌더링을 그대로 재사용.
+  // 제목과 "정확히"(대소문자 구분) 일치하는지 확인. 규칙은 lib/snippetMatch.js. 같은 길이로
+  // 여러 개(카테고리만 다른 동일 제목)가 동시에 걸리면 하나로 정할 수 없으니 applySnippetMatch
+  // 가 숫자 선택 팝업을 띄움 — 이미 있는 snippetSuggest 'browse' 모드 렌더링을 그대로 재사용.
   function detectExactSnippetMatch(textarea, snippetEntries) {
-    const pos = textarea.selectionStart
-    if (pos !== textarea.selectionEnd || snippetEntries.length === 0) return null
-    const value = textarea.value
-    const lineStart = value.lastIndexOf('\n', pos - 1) + 1
-    const currentLine = value.slice(lineStart, pos)
-    if (!currentLine.trim()) return null
-    const lowerLine = currentLine.toLowerCase()
-
-    const matches = snippetEntries.filter((entry) => entry.title && lowerLine.endsWith(entry.title.toLowerCase()))
-    if (matches.length === 0) return null
-    const maxLen = Math.max(...matches.map((e) => e.title.length))
-    const longest = matches.filter((e) => e.title.length === maxLen)
-    return { start: pos - maxLen, end: pos, matches: longest }
+    if (textarea.selectionStart !== textarea.selectionEnd) return null
+    return findExactSnippetMatch(textarea.value, textarea.selectionStart, snippetEntries)
   }
 
   // detectExactSnippetMatch가 찾은 후보를 실제로 적용 — 하나면 바로 치환, 여럿이면(카테고리만
@@ -1075,6 +1036,22 @@ export function EditorPane({ text, onChange, disabled }) {
     }
     if (!e.ctrlKey && !e.metaKey && !e.altKey) {
       const { selectionStart, selectionEnd, value } = textarea
+      // 줄에 ``` 가 완성되면(백틱 2개 뒤에 세 번째를 침) 아래 줄에 닫는 ``` 를 같이 넣고
+      // 커서는 여는 ``` 바로 뒤에 둔다 — 언어 이름(```sql)을 이어 쓰고 Enter 하면 두 줄 사이로
+      // 들어간다. 이미 열린 코드블록 안에서 치는 ``` 는 닫는 줄이라 건드리지 않는다(규칙은
+      // lib/codeFence.js 의 fenceAutoCloseEdit).
+      if (e.key === '`') {
+        const edit = fenceAutoCloseEdit(value, selectionStart, selectionEnd)
+        if (edit) {
+          e.preventDefault()
+          replaceRange(textarea, selectionStart, selectionEnd, edit.insert, onChange)
+          requestAnimationFrame(() => {
+            textarea.focus()
+            textarea.setSelectionRange(selectionStart + edit.caret, selectionStart + edit.caret)
+          })
+          return
+        }
+      }
       if (AUTO_PAIR_CLOSERS.has(e.key) && selectionStart === selectionEnd && value[selectionStart] === e.key) {
         e.preventDefault()
         const newPos = selectionStart + 1

@@ -2,6 +2,8 @@
 // hex: 43726561746f723a2064656e6472303030 ("Creator: dendr000")
 // Namu Wiki-style markup parser (basic + a practical subset of advanced syntax).
 import { tokenizeIfExpr, parseIfExpr, evalIfStatements, isFalsy, toDisplayString } from './ifExpr.js'
+import { matchCodeFenceOpen, isCodeFenceClose } from './codeFence.js'
+import { resolveCodeLanguage, highlightCode } from './codeHighlight.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -463,7 +465,9 @@ const TOC_PLACEHOLDER = '@@WIKIDESK_TOC_PLACEHOLDER@@'
 const TAG_LINE_RE = /^(?:\s*#[^\s#]+)+\s*$/
 const TAG_TOKEN_RE = /#([^\s#]+)/g
 const HEADING_EQ_RE = /^(={1,6})[ \t]*(.+?)[ \t]*\1$/
-const HR_RE = /^(-{4,7})$/
+// 대시 3~7개. 나무위키 문법은 4~7개(굵기 4단계)인데, 마크다운처럼 3개만 써도 구분선이
+// 되도록 3개도 받는다(굵기는 4개와 같은 가장 얇은 것).
+const HR_RE = /^(-{3,7})$/
 // [\s\S] (not .) so a merged multi-line row (see mergeMultilineTableRows)
 // still matches across its embedded newlines.
 const TABLE_ROW_RE = /^\|\|([\s\S]+)\|\|$/
@@ -475,35 +479,24 @@ const OLIST_RE = /^\d+\.\s+(.+)$/
 const QUOTE_RE = /^(>+)\s?(.*)$/
 const BLOCK_OPEN_RE = /^\{\{\{(.*)$/
 
-// ```언어 ... ``` 코드블록 (마크다운식). 여는 줄은 백틱 3개 이상 + 선택적인 언어
-// 이름만 있어야 한다 — "```코드```"처럼 한 줄에 같이 쓴 건 코드블록이 아니라
-// 그냥 글자. 닫는 줄은 여는 줄 이상의 백틱만 있는 줄이라, 백틱 4개로 열면 안에
-// 백틱 3개짜리 줄을 그대로 보여줄 수 있다.
-const CODE_FENCE_OPEN_RE = /^(`{3,})([A-Za-z0-9_+#.-]*)\s*$/
-const CODE_FENCE_CLOSE_RE = /^(`{3,})\s*$/
-
-function matchCodeFenceOpen(line) {
-  const m = line.trim().match(CODE_FENCE_OPEN_RE)
-  return m ? { ticks: m[1].length, lang: m[2] } : null
-}
-
-function isCodeFenceClose(line, ticks) {
-  const m = line.trim().match(CODE_FENCE_CLOSE_RE)
-  return m !== null && m[1].length >= ticks
-}
-
 // 코드블록의 HTML. 윗줄(언어 이름 + 복사 버튼)과 본문(pre)으로 이뤄지고, 복사 버튼의
 // 클릭은 뷰어가 받아서 처리한다(ViewerPane.jsx → codeCopy.js). 버튼 안 아이콘은
 // 마크업이 아니라 CSS(App.css .wiki-code-copy-icon)가 assets/icons 의 svg 로 그린다.
-function renderCodeBlock(body, lang = '') {
-  const label = lang ? `<span class="wiki-code-lang">${escapeHtml(lang)}</span>` : ''
+// 언어 이름(```MySQL, {{{#!syntax js}}} 등)을 아는 이름이면 윗줄에 정식 이름으로 보여 주고
+// 글자에 색을 입힌다(codeHighlight.js). 모르는 이름은 적은 그대로 보여 주기만 한다.
+// 펜스(여는 줄·닫는 줄) 규칙은 codeFence.js — 편집기의 자동 닫기와 같은 규칙을 쓴다.
+function renderCodeBlock(body, rawLang = '') {
+  const language = resolveCodeLanguage(rawLang)
+  const label = language ? `<span class="wiki-code-lang">${escapeHtml(language.label)}</span>` : ''
+  const highlighted = language?.grammar ? highlightCode(body, language.grammar) : null
+  const codeTag = highlighted === null ? '<code>' : '<code class="hljs">'
   return (
     `<div class="wiki-code-wrap">` +
     `<div class="wiki-code-head">${label}` +
     `<button type="button" class="wiki-code-copy" title="코드 복사" aria-label="코드 복사">` +
     `<span class="wiki-code-copy-icon" aria-hidden="true"></span>` +
     `<span class="wiki-code-copy-label">복사</span></button></div>` +
-    `<pre class="wiki-code"><code>${escapeHtml(body)}</code></pre></div>`
+    `<pre class="wiki-code">${codeTag}${highlighted ?? escapeHtml(body)}</code></pre></div>`
   )
 }
 const CELL_WIKI_STYLE_RE = /^\{\{\{#!wiki([^\n]*)\n([\s\S]*)\}\}\}$/
@@ -863,6 +856,18 @@ function renderTable(rows, footnotes, dataIndex, templateIndex, docIndex, imageI
   const tableClassAttr = tableAttrs.class ? ` ${tableAttrs.class}` : ''
 
   return `<table class="wiki-table${tableClassAttr}"${tableStyleAttr}><tbody>${body}</tbody></table>`
+}
+
+// 들여쓰기로 목록 깊이를 정한다. 목록이 시작된 뒤로 본 들여쓰기 폭들을 쌓아 두고(buffer
+// .indents), 새 항목의 들여쓰기가 마지막 폭보다 크면 한 단계 깊어지고, 같으면 같은 단계,
+// 작으면 그 폭이 나올 때까지 거슬러 올라간다. 한 단계가 공백 1칸이든 2칸이든 4칸(탭)이든
+// 상관없이, "앞 항목보다 더 들어갔는가"만 본다. 탭은 공백 4칸으로 센다.
+function listDepthByIndent(buffer, line) {
+  const indent = line.match(/^[ \t]*/)[0].replace(/\t/g, '    ').length
+  const indents = (buffer.indents ??= [])
+  while (indents.length && indents[indents.length - 1] > indent) indents.pop()
+  if (!indents.length || indents[indents.length - 1] < indent) indents.push(indent)
+  return indents.length
 }
 
 function buildNestedList(items) {
@@ -1397,7 +1402,7 @@ export function parseWikiText(
       flush()
       let end = i + 1
       while (end < lines.length && !isCodeFenceClose(lines[end], fenceOpen.ticks)) end += 1
-      htmlParts.push(renderCodeBlock(lines.slice(i + 1, end).join('\n'), fenceOpen.lang.toLowerCase()))
+      htmlParts.push(renderCodeBlock(lines.slice(i + 1, end).join('\n'), fenceOpen.lang))
       i = end
       continue
     }
@@ -1467,8 +1472,7 @@ export function parseWikiText(
         // worth the bundle size for how rarely a worldbuilding wiki needs
         // to show code) — just labels the block with its language so it
         // reads as "this is code, in X" even without color highlighting.
-        const lang = syntaxMatch[1].toLowerCase().replace(/[^a-z0-9+#-]/g, '')
-        htmlParts.push(renderCodeBlock(body, lang))
+        htmlParts.push(renderCodeBlock(body, syntaxMatch[1]))
       } else {
         htmlParts.push(renderCodeBlock(body))
       }
@@ -1565,7 +1569,7 @@ export function parseWikiText(
 
     if (HR_RE.test(trimmed)) {
       flush()
-      const weight = Math.min(trimmed.length - 3, 4)
+      const weight = Math.min(Math.max(trimmed.length - 3, 1), 4)
       htmlParts.push(`<hr class="wiki-hr wiki-hr-${weight}">`)
       continue
     }
@@ -1573,14 +1577,17 @@ export function parseWikiText(
     const listMatch = trimmed.match(LIST_RE)
     if (listMatch) {
       setBuffer('list')
-      buffer.items.push({ type: 'ul', depth: listMatch[1].length, html: applyInline(listMatch[2], footnotes, docIndex) })
+      // "**" 처럼 별을 여러 개 쓰면 그 개수가 곧 깊이(예전 방식 그대로). 별 하나(*)면 줄 앞
+      // 들여쓰기로 깊이를 정한다 — 마크다운·나무위키처럼 " * 둘째" / "  * 셋째".
+      const depth = listMatch[1].length > 1 ? listMatch[1].length : listDepthByIndent(buffer, line)
+      buffer.items.push({ type: 'ul', depth, html: applyInline(listMatch[2], footnotes, docIndex) })
       continue
     }
 
     const olistMatch = trimmed.match(OLIST_RE)
     if (olistMatch) {
       setBuffer('list')
-      buffer.items.push({ type: 'ol', depth: 1, html: applyInline(olistMatch[1], footnotes, docIndex) })
+      buffer.items.push({ type: 'ol', depth: listDepthByIndent(buffer, line), html: applyInline(olistMatch[1], footnotes, docIndex) })
       continue
     }
 

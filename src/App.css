@@ -843,7 +843,6 @@
   font-family: var(--sans);
   color: var(--text);
   opacity: 0.6;
-  text-transform: uppercase;
 }
 
 .wiki-code-copy {
@@ -895,6 +894,73 @@
   overflow-x: auto;
   font: 13px/1.6 var(--mono);
   white-space: pre;
+}
+
+/* 글자 강조: highlight.js 가 칠한 토큰(hljs-*)에 색을 준다. 색 값은 index.css 의 --hl-*. */
+.wiki-code .hljs-keyword,
+.wiki-code .hljs-selector-tag,
+.wiki-code .hljs-literal,
+.wiki-code .hljs-doctag {
+  color: var(--hl-keyword);
+}
+
+.wiki-code .hljs-string,
+.wiki-code .hljs-regexp,
+.wiki-code .hljs-symbol,
+.wiki-code .hljs-bullet,
+.wiki-code .hljs-template-variable,
+.wiki-code .hljs-addition {
+  color: var(--hl-string);
+}
+
+.wiki-code .hljs-number,
+.wiki-code .hljs-variable {
+  color: var(--hl-number);
+}
+
+.wiki-code .hljs-comment,
+.wiki-code .hljs-quote {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+
+.wiki-code .hljs-title,
+.wiki-code .hljs-section,
+.wiki-code .hljs-function {
+  color: var(--hl-function);
+}
+
+.wiki-code .hljs-built_in,
+.wiki-code .hljs-type,
+.wiki-code .hljs-class,
+.wiki-code .hljs-title.class_ {
+  color: var(--hl-type);
+}
+
+.wiki-code .hljs-attr,
+.wiki-code .hljs-attribute,
+.wiki-code .hljs-name,
+.wiki-code .hljs-tag,
+.wiki-code .hljs-property,
+.wiki-code .hljs-selector-id,
+.wiki-code .hljs-selector-class {
+  color: var(--hl-tag);
+}
+
+.wiki-code .hljs-meta {
+  color: var(--hl-meta);
+}
+
+.wiki-code .hljs-deletion {
+  color: var(--danger);
+}
+
+.wiki-code .hljs-emphasis {
+  font-style: italic;
+}
+
+.wiki-code .hljs-strong {
+  font-weight: 700;
 }
 
 .wiki-toc {
@@ -1221,6 +1287,13 @@
   flex: 1;
   min-height: 0;
   background: var(--bg-pane);
+  /* 아래 여백 계산식의 100cqh(= 이 칸의 높이)의 기준이 되게 하는 설정. */
+  container-type: size;
+  /* 글 아래 여백 — 칸 높이에서 위쪽 여백(24px)과 1px 을 뺀 값. textarea 는 위·아래 여백의 합보다
+     작아질 수 없어서, 아래 여백이 칸 높이 전체면 textarea 가 칸보다 24px 커져 삐져나온다.
+     이 값이면 끝까지 스크롤했을 때 마지막 줄이 화면 맨 위 줄 자리까지 올라온다.
+     textarea 와 배경판의 여백이 같아야 스크롤 위치가 어긋나지 않으므로 둘 다 이 값을 쓴다. */
+  --editor-tail: calc(100cqh - 24px - 1px);
 }
 
 .editor-highlight-backdrop {
@@ -1229,7 +1302,8 @@
   margin: 0;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 24px 32px;
+  /* 아래 여백은 .editor-text-wrap 의 --editor-tail (마지막 줄을 화면 위쪽에 두고 쓸 수 있게). */
+  padding: 24px 32px var(--editor-tail);
   font: 14px/1.7 var(--mono);
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -1252,7 +1326,7 @@
   border: none;
   outline: none;
   resize: none;
-  padding: 24px 32px;
+  padding: 24px 32px var(--editor-tail); /* 배경판(.editor-highlight-backdrop)과 같은 값 */
   background: transparent;
   color: var(--text-h);
   font: 14px/1.7 var(--mono);
