@@ -88,6 +88,96 @@ describe('findSnippetQuery — 이미 친 글자와 똑같이 되는 후보는 �
   })
 })
 
+// 순서 목록(_순서.txt)에서 온 rank(작을수록 위)가 같은 앞글자의 후보 정렬에 쓰인다.
+describe('findSnippetQuery — rank (순서 목록으로 SELECT 를 SET 보다 위로)', () => {
+  const e = (title, rank) => ({ category: 'SQL', title, content: title, rank })
+  const titles = (value, entries) => findSnippetQuery(value, value.length, entries)?.matches.map((m) => m.title)
+
+  it('rank 가 작은(= 목록에서 위인) 후보가 짧은 제목보다 먼저 온다 — s 에서 SELECT 가 SET 보다 위', () => {
+    const entries = [e('SET', 6), e('SUM', 35), e('SELECT', 0), e('SMALLINT', 70)]
+    expect(titles('s', entries)).toEqual(['SELECT', 'SET', 'SUM', 'SMALLINT'])
+  })
+
+  it('rank 가 없는 후보(순서 목록에 없는 상용구)는 rank 있는 후보 뒤에서 예전처럼 짧은 순이다', () => {
+    const entries = [e('SELECT', 0), { category: 'SQL', title: 'SX', content: 'SX' }, { category: 'SQL', title: 'SYSTEM', content: 'SYSTEM' }]
+    expect(titles('s', entries)).toEqual(['SELECT', 'SX', 'SYSTEM'])
+  })
+
+  it('rank 가 전혀 없으면 예전 정렬과 똑같다 (짧은 제목 순)', () => {
+    const entries = ['SELECT', 'SET', 'SUM'].map((t) => ({ category: 'SQL', title: t, content: t }))
+    expect(titles('s', entries)).toEqual(['SET', 'SUM', 'SELECT'])
+  })
+
+  it('친 글자와 제목이 정확히 같은 후보는 rank 가 낮아도 맨 위다', () => {
+    const entries = [e('SETS', 0), e('SET', 9)]
+    expect(titles('set', entries)).toEqual(['SET', 'SETS'])
+  })
+
+  it('대소문자까지 같은 후보가 rank 보다 우선한다', () => {
+    // MYSQL 이 rank 0(더 위)이어도, 소문자로 쳤으면 대소문자까지 같은 mysql 이 먼저
+    const entries = [e('mysql', 9), e('MYSQL', 0)]
+    expect(titles('mysq', entries)).toEqual(['mysql', 'MYSQL'])
+    // 대문자로 쳤으면 MYSQL 이 먼저
+    expect(titles('MYSQ', entries)).toEqual(['MYSQL', 'mysql'])
+  })
+
+  it('rank 가 같으면 짧은 순, 그다음 가나다순', () => {
+    const entries = [e('SUBSTRING', 3), e('SUM', 3), e('SAVEPOINT', 3)]
+    expect(titles('s', entries)).toEqual(['SUM', 'SAVEPOINT', 'SUBSTRING'])
+  })
+})
+
+// 코드블록 안에서는 단어 "중간"(NAME 의 끝 E)부터 시작하는 글자로는 후보를 찾지 않는다.
+// 예전에는 SELECT NAME 을 치면 끝의 "E" 한 글자로 END, ERD, ELSE ... 가 추천됐다.
+describe('findSnippetQuery — wordStartOnly (코드에서 단어 중간부터는 찾지 않음)', () => {
+  const kw = (...titles) => titles.map((title) => ({ category: 'SQL', title, content: title }))
+  const KEYWORDS = kw('END', 'ELSE', 'ENUM', 'ENGINE', 'EXISTS', 'NOW', 'NULL', 'SELECT', 'ORDER BY')
+  const query = (value, entries = KEYWORDS, options = { wordStartOnly: true }) =>
+    findSnippetQuery(value, value.length, entries, options)
+
+  it('NAME 을 치면 끝의 E 로 END 등을 추천하지 않는다 (스크린샷의 증상)', () => {
+    expect(query('SELECT NAME')).toBeNull()
+    expect(query('NAME')).toBeNull()
+  })
+
+  it('옵션을 끄면(코드블록 밖) 예전처럼 끝 글자로도 찾는다', () => {
+    const titles = query('NAME', KEYWORDS, { wordStartOnly: false })?.matches.map((e) => e.title)
+    expect(titles).toContain('END')
+  })
+
+  it('단어를 새로 시작하는 자리에서는 정상으로 찾는다 — 줄 맨 앞, 공백·괄호·점·쉼표 뒤', () => {
+    expect(query('sel')?.matches.map((e) => e.title)).toEqual(['SELECT'])
+    expect(query('SELECT * FROM t WHERE x IS sel')?.matches.map((e) => e.title)).toEqual(['SELECT'])
+    expect(query('COUNT(sel')?.matches.map((e) => e.title)).toEqual(['SELECT'])
+    expect(query('a, sel')?.matches.map((e) => e.title)).toEqual(['SELECT'])
+    expect(query('t.nu')?.matches.map((e) => e.title)).toEqual(['NULL'])
+  })
+
+  it('밑줄이나 숫자 뒤에 이어진 글자(user_name, col1x)는 새 단어가 아니다', () => {
+    expect(query('user_name')).toBeNull()
+    expect(query('col1e')).toBeNull()
+  })
+
+  it('띄어쓰기가 든 키워드는 단어 시작에서부터 이어서 찾는다 ("order b" → ORDER BY)', () => {
+    expect(query('SELECT 1 order b')?.matches.map((e) => e.title)).toEqual(['ORDER BY'])
+  })
+
+  it('한글도 단어 중간에서는 찾지 않고, 공백 뒤에서는 찾는다', () => {
+    const entries = [{ category: '영어', title: '속성', content: '속성(property)' }]
+    expect(query('이름속', entries)).toBeNull()
+    expect(query('이름 속', entries)?.matches.map((e) => e.title)).toEqual(['속성'])
+  })
+
+  it('기호로 시작하는 상용구(->)는 글자 바로 뒤에서도 찾는다', () => {
+    const entries = [{ category: '기호', title: '->', content: '→' }]
+    expect(query('a->', entries)?.matches.map((e) => e.title)).toEqual(['->'])
+  })
+
+  it('다 친 키워드는 여전히 팝업이 없다 (wordStartOnly 와 함께)', () => {
+    expect(query('SELECT')).toBeNull()
+  })
+})
+
 describe('enterAcceptsSuggestion (Enter 가 추천 후보를 확정하는가)', () => {
   it('코드블록 밖에서는 예전처럼 Enter 가 확정한다', () => {
     expect(enterAcceptsSuggestion({ inCodeBlock: false, navigated: false })).toBe(true)

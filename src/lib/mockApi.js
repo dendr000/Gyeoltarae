@@ -283,10 +283,22 @@ export function createMockApi() {
       if (!(filePath in sampleDocs)) sampleDocs[filePath] = ''
       return filePath
     },
+    // 폴더별 순서 목록 파일(_순서.txt) 내용 — electron/fileSystem.js 의 readSnippetOrders 와 같은 모양.
+    async readSnippetOrders(workspacePath) {
+      const prefix = `${workspacePath}/${SNIPPETS_DIR_NAME}/`
+      const suffix = '/_순서.txt'
+      const orders = {}
+      for (const [p, text] of Object.entries(sampleDocs)) {
+        if (!p.startsWith(prefix) || !p.endsWith(suffix)) continue
+        const category = p.slice(prefix.length, -suffix.length)
+        if (category && !category.includes('/')) orders[category] = text
+      }
+      return orders
+    },
     async scanSnippets(workspacePath) {
       const prefix = `${workspacePath}/${SNIPPETS_DIR_NAME}/`
       return Object.keys(sampleDocs)
-        .filter((p) => p.startsWith(prefix))
+        .filter((p) => p.startsWith(prefix) && p.endsWith(DOC_EXT))
         .map((p) => {
           const rest = p.slice(prefix.length, -DOC_EXT.length)
           const slash = rest.indexOf('/')

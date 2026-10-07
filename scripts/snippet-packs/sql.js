@@ -48,9 +48,27 @@ const GROUPS = {
   ],
 }
 
+const ENTRIES = Object.values(GROUPS).flat()
+
+// 추천 팝업에서 앞글자가 같을 때 위에 보일 순서(자주 쓰는 것부터). 기본 정렬은 짧은 제목이 먼저라 `s` 를 치면
+// SET, SUM 이 SELECT 보다 위에 뜨는데, 실제로는 SELECT 를 훨씬 많이 쓰기 때문이다. 여기 없는 키워드는
+// 이 뒤에 묶음 순서대로 붙는다. 설치하면 폴더의 `_순서.txt` 로 저장되고(src/lib/snippetOrder.js),
+// 그 파일을 메모장으로 고치면 순서를 바꿀 수 있다.
+const COMMON_FIRST = [
+  'SELECT', 'FROM', 'WHERE', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM',
+  'CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'ORDER BY', 'GROUP BY', 'HAVING', 'LIMIT',
+  'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS NULL', 'IS NOT NULL', 'NULL', 'NOT NULL',
+  'PRIMARY KEY', 'FOREIGN KEY', 'AUTO_INCREMENT', 'DEFAULT', 'UNIQUE',
+  'JOIN', 'INNER JOIN', 'LEFT JOIN', 'AS', 'DISTINCT', 'ON',
+  'COUNT', 'SUM', 'AVG', 'MAX', 'MIN',
+  'INT', 'VARCHAR', 'DATE', 'DATETIME', 'TEXT',
+]
+
 export const SQL_PACK = {
   // 상용구 폴더 이름. 코드블록 언어 이름(```sql)과 같게 해 두었다.
   folder: 'SQL',
   description: 'SQL(MySQL) 키워드 — 문·절·조건·제약·자료형·함수',
-  entries: Object.values(GROUPS).flat(),
+  entries: ENTRIES,
+  // 추천 순서: 자주 쓰는 것 먼저, 나머지는 묶음 순서대로. 모든 키워드가 정확히 한 번씩 들어 있다.
+  order: [...COMMON_FIRST, ...ENTRIES.filter((title) => !COMMON_FIRST.includes(title))],
 }

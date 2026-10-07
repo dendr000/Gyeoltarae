@@ -220,9 +220,9 @@ function nearestMatchIndex(matches, cursorPos) {
 }
 
 // 상용구 자동완성(추천 팝업) — 규칙은 lib/snippetMatch.js. 선택 영역이 있으면 찾지 않는다.
-function detectSnippetQuery(textarea, snippetEntries) {
+function detectSnippetQuery(textarea, snippetEntries, options) {
   if (textarea.selectionStart !== textarea.selectionEnd) return null
-  return findSnippetQuery(textarea.value, textarea.selectionStart, snippetEntries)
+  return findSnippetQuery(textarea.value, textarea.selectionStart, snippetEntries, options)
 }
 
 // Mirrors the textarea's own text (same font/padding/wrapping) into an
@@ -663,7 +663,8 @@ export function EditorPane({ text, onChange, disabled }) {
       setSnippetSuggest(null)
       return
     }
-    const ctx = detectSnippetQuery(textarea, activeSnippets)
+    // 코드블록 안에서는 단어 중간(NAME 의 끝 E)부터 시작하는 글자로는 후보를 찾지 않는다.
+    const ctx = detectSnippetQuery(textarea, activeSnippets, { wordStartOnly: inCodeBlock })
     if (!ctx) {
       setSnippetSuggest(null)
       return

@@ -23,6 +23,7 @@ import {
   ensureDataEntry,
   SNIPPETS_DIR_NAME,
   scanSnippets,
+  readSnippetOrders,
   ensureSnippet,
   DICT_DIR_NAME,
   readDictFile,
@@ -436,6 +437,10 @@ ipcMain.handle('data:ensure', (_event, workspacePath, type, name) => {
 
 ipcMain.handle('snippets:scan', (_event, workspacePath) => {
   return scanSnippets(workspacePath)
+})
+
+ipcMain.handle('snippets:readOrders', (_event, workspacePath) => {
+  return readSnippetOrders(workspacePath)
 })
 
 ipcMain.handle('snippets:ensure', (_event, workspacePath, category, title) => {

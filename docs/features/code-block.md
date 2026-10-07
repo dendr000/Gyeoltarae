@@ -52,6 +52,8 @@ sel|     ← 여기서 추천 팝업이 뜬다 ("selx" 상용구 → SELECT * FR
 - **내장 키워드 추천은 없다.** `SELECT`, `FROM` 같은 언어 키워드를 알아서 추천해 주는 게 아니라, **등록해 둔 상용구**만 추천한다. SQL 키워드 147개는 묶음으로 한꺼번에 만들어 둘 수 있다(`docs/features/snippet-packs.md`, `node scripts/install-snippet-pack.mjs sql`).
 - **Enter 는 후보를 확정하지 않는다.** 코드블록 안에서 추천 팝업이 떠 있을 때 Enter 는 줄바꿈이다(`NOT NULL`+Enter 에서 `NULLIF` 가 확정되는 일을 막으려는 것). 후보는 **Tab** 으로 확정하거나, 방향키(↑↓)로 고른 뒤 Enter 로 확정한다. 코드블록 밖은 예전과 같다.
 - 이미 친 글자와 똑같이 되는 후보는 뜨지 않는다(`SELECT` 를 대문자로 다 쳤으면 `SELECT` 후보는 없음).
+- 코드블록 안에서는 **단어를 새로 시작하는 자리부터만** 후보를 찾는다. `NAME` 을 쳤을 때 끝의 `E` 로 `END` 등이 추천되던 문제를 막으려는 것이다(`user_name` 같은 이어진 글자의 중간에서도 안 뜸).
+- 후보 순서는 폴더의 `_순서.txt` 로 정할 수 있다(`docs/features/snippet-packs.md` 의 "후보 순서").
 
 ## 글자 강조 (언어 이름)
 

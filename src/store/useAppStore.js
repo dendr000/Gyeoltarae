@@ -14,6 +14,7 @@ import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose } from '../lib/snippetScope.js'
 import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
+import { parseSnippetOrder } from '../lib/snippetOrder.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -664,6 +665,10 @@ export const useAppStore = create((set, get) => ({
     // 상용구 — same shape as 자료 above, keyed by "카테고리/제목" (a title
     // can legitimately repeat across different categories).
     const snippetItems = await api.scanSnippets(workspacePath)
+    // 폴더별 순서 목록(_순서.txt, lib/snippetOrder.js)을 한 번에 받아 폴더마다 해석해 둔다. 후보에
+    // rank(목록에서의 위치, 작을수록 위)를 붙여 추천 팝업이 SELECT 를 SET 보다 위에 올리게 하는 데 쓴다.
+    const snippetOrderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
+    const snippetOrders = {}
     const snippetIndex = {}
     for (const item of snippetItems) {
       let content = ''
@@ -672,11 +677,13 @@ export const useAppStore = create((set, get) => ({
       } catch {
         continue
       }
+      snippetOrders[item.category] ??= parseSnippetOrder(snippetOrderTexts[item.category])
       snippetIndex[`${item.category}/${item.title}`] = {
         category: item.category,
         title: item.title,
         path: item.path,
         content,
+        rank: snippetOrders[item.category].get(item.title),
       }
     }
 

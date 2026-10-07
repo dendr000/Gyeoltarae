@@ -34,7 +34,10 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/store/folderDocTemplate.test.js` | 따즈아 폴더에서 새 문서를 만들 때 기본 내용, 글양식 우선, 가져온 파일은 제외, 작품 폴더 안의 따즈아 | mockApi |
 | `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |
 | `tests/lib/smartQuotes.test.js` | 뷰어의 둥근 따옴표(열림/닫힘 판단, 태그·블록 경계, 코드·속성은 그대로, 두 번 적용해도 같음)와 실제 파서 출력(굵게·표·목록·각주·접기·스타일 상자, 목차 데이터 불변) | 순수 함수 |
-| `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외), 코드블록 안 Enter 규칙 | 순수 함수 |
+| `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
+| `tests/lib/snippetOrder.test.js` | 폴더의 순서 목록 파일(`_순서.txt`) 해석(빈 줄·# 설명 건너뛰기, CRLF·BOM, 중복, 대소문자) | 순수 함수 |
+| `tests/electron/snippetOrders.test.js` | 메인이 폴더별 순서 목록 파일을 읽어 주는지(없는 폴더, 상용구로 안 섞임) | **진짜 디스크**(임시 폴더) |
+| `tests/store/snippetOrder.test.js` | 순서 목록이 상용구 후보의 순서(rank)로 붙고 추천에서 SELECT 가 SET 보다 위로 오는지 | mockApi |
 | `tests/scripts/snippetPack.test.js` | SQL 키워드 묶음 데이터(중복·파일 이름 글자·대문자·개수)와 설치(전부 만들기, 미리보기는 아무것도 안 씀, 두 번 실행해도 안전, 기존 상용구 덮어쓰지 않음, 대소문자만 다른 폴더) | **진짜 디스크**(임시 폴더) |
 | `tests/electron/snippetCase.test.js` | `MYSQL`/`mysql` 처럼 대소문자만 다른 상용구가 서로 덮어쓰지 않는지, 인코딩된 파일 이름 복원 | **진짜 디스크**(Windows 에서만 충돌이 재현됨) |
 | `tests/lib/codeCopy.test.js` | 복사 버튼 동작(본문 읽기, "복사됨" 표시와 되돌리기, 실패 표시, 클립보드가 응답 없을 때 옛 방식으로 전환) | 가짜 버튼·가짜 클립보드 |

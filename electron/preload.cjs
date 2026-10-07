@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
   ensureDataEntry: (workspacePath, type, name) => ipcRenderer.invoke('data:ensure', workspacePath, type, name),
 
   scanSnippets: (workspacePath) => ipcRenderer.invoke('snippets:scan', workspacePath),
+  readSnippetOrders: (workspacePath) => ipcRenderer.invoke('snippets:readOrders', workspacePath),
   ensureSnippet: (workspacePath, category, title) => ipcRenderer.invoke('snippets:ensure', workspacePath, category, title),
 
   readDict: (workspacePath) => ipcRenderer.invoke('dict:read', workspacePath),

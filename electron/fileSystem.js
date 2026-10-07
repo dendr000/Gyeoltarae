@@ -307,6 +307,24 @@ export function scanSnippets(workspacePath) {
   return entries
 }
 
+// 각 상용구 폴더의 순서 목록 파일(추천 팝업의 후보 순서를 정함)의 내용 — { 폴더 이름: 글 }. 파일이 없는
+// 폴더는 키가 없다. 규칙과 해석은 src/lib/snippetOrder.js(파일 이름도 같아야 하며 시험이 확인한다).
+// 여기서는 읽기만 한다: 렌더러가 없는 파일을 읽으려 하면 IPC 오류가 쌓이므로 존재를 확인하고 읽는 건
+// 메인 쪽이 맡는다. 패키징된 앱에는 src 가 들어가지 않아서 해석 코드를 가져다 쓸 수 없는 것도 이유.
+export const SNIPPET_ORDER_FILE_NAME = '_순서.txt'
+
+export function readSnippetOrders(workspacePath) {
+  const root = snippetsDirPath(workspacePath)
+  const orders = {}
+  if (!fs.existsSync(root)) return orders
+  for (const catEntry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!catEntry.isDirectory()) continue
+    const orderPath = path.join(root, catEntry.name, SNIPPET_ORDER_FILE_NAME)
+    if (fs.existsSync(orderPath)) orders[catEntry.name] = fs.readFileSync(orderPath, 'utf-8')
+  }
+  return orders
+}
+
 // 상용구는 "단축어 = 파일 이름"이라 단축어에 Windows 파일 이름에 못 쓰는 글자
 // (* ? : / \ " < > | 와 제어 문자)가 들어갈 수 있다 — 예: "*" 를 "※" 로 바꾸는 상용구. 다른
 // 이름들처럼 그 글자를 "_" 로 바꿔 저장하면(sanitizeFileName) 읽을 때 되돌릴 방법이 없어서

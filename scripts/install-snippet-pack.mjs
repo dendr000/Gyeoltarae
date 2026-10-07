@@ -11,7 +11,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { ensureSnippet, scanSnippets } from '../electron/fileSystem.js'
+import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath } from '../electron/fileSystem.js'
 import { SQL_PACK } from './snippet-packs/sql.js'
 
 const PACKS = { sql: SQL_PACK }
@@ -22,8 +22,12 @@ function normalizeEntry(entry) {
 }
 
 // 묶음을 워크스페이스에 설치한다. dryRun 이면 디스크에 아무것도 쓰지 않고 결과만 계산한다.
-// 돌려주는 값: { created: [제목...], skipped: [제목...] } (skipped = 이미 있어서 건너뜀)
-export function installSnippetPack({ workspacePath, folder, entries, dryRun = false }) {
+// order(선택): 추천 팝업에서의 후보 순서(제목 목록, 자주 쓰는 순). 주어지면 폴더에 순서 목록 파일
+// (_순서.txt, 규칙은 src/lib/snippetOrder.js)을 만든다 — 이미 있으면 사용자가 고쳤을 수 있으니 건드리지 않는다.
+// 돌려주는 값: { created, skipped, orderFile }
+//   created/skipped = 만든/이미 있어서 건너뛴 제목 목록
+//   orderFile = 'created'(새로 씀) | 'kept'(이미 있어서 그대로 둠) | 'none'(order 없음) | 'dry-run'(만들 예정)
+export function installSnippetPack({ workspacePath, folder, entries, order, dryRun = false }) {
   // 폴더 이름은 Windows 에서 대소문자 구분이 없으므로("SQL" 과 "sql" 은 같은 폴더) 비교도 구분 없이.
   const folderKey = folder.toLowerCase()
   const existing = new Set(
@@ -47,7 +51,20 @@ export function installSnippetPack({ workspacePath, folder, entries, dryRun = fa
     existing.add(title)
     created.push(title)
   }
-  return { created, skipped }
+  return { created, skipped, orderFile: writeOrderFile({ workspacePath, folder, order, dryRun }) }
+}
+
+// 순서 목록 파일을 쓴다(이미 있으면 그대로 둔다). 결과 표시는 installSnippetPack 설명 참고.
+function writeOrderFile({ workspacePath, folder, order, dryRun }) {
+  if (!order || order.length === 0) return 'none'
+  // 폴더가 아직 없을 수 있다(상용구를 전부 건너뛴 경우는 이미 있음). 있는 폴더는 대소문자가 달라도 그걸 쓴다.
+  const dir = path.join(snippetsDirPath(workspacePath), folder)
+  const orderPath = path.join(dir, SNIPPET_ORDER_FILE_NAME)
+  if (fs.existsSync(orderPath)) return 'kept'
+  if (dryRun) return 'dry-run'
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(orderPath, `# 추천 팝업에서 위에 보일 순서 (자주 쓰는 것부터 한 줄에 하나). 메모장으로 고쳐도 됩니다.\n${order.join('\n')}\n`, 'utf-8')
+  return 'created'
 }
 
 // 앱이 마지막으로 연 워크스페이스(앱 설정 파일에 저장돼 있음). 없으면 null.
@@ -81,11 +98,20 @@ function main(argv) {
     return
   }
 
-  const { created, skipped } = installSnippetPack({ workspacePath, folder: pack.folder, entries: pack.entries, dryRun })
+  const { created, skipped, orderFile } = installSnippetPack({
+    workspacePath,
+    folder: pack.folder,
+    entries: pack.entries,
+    order: pack.order,
+    dryRun,
+  })
+  const orderNote = { created: '새로 씀', kept: '이미 있어서 그대로 둠', 'dry-run': '만들 예정', none: '없음' }[orderFile]
   console.log(`${dryRun ? '[미리보기: 아무것도 만들지 않음] ' : ''}${pack.description}`)
   console.log(`워크스페이스: ${workspacePath}`)
   console.log(`폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 이미 있어서 건너뜀 ${skipped.length}개`)
-  if (skipped.length > 0) console.log(`건너뛴 것: ${skipped.join(', ')}`)
+  console.log(`순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
+  // 건너뛴 게 많으면(보통 두 번째 실행) 개수만 보여 준다. 몇 개 안 될 때만 이름을 나열.
+  if (skipped.length > 0 && skipped.length <= 10) console.log(`건너뛴 것: ${skipped.join(', ')}`)
 }
 
 // 직접 실행했을 때만 동작(시험에서 import 할 때는 실행되지 않게).

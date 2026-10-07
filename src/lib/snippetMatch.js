@@ -16,7 +16,15 @@
 // 쪽이 먼저 뜨도록.
 export const SNIPPET_LOOKBACK = 30
 
-export function findSnippetQuery(value, pos, entries) {
+// 글자·숫자·밑줄 — 코드에서 한 단어를 이루는 글자(한글 포함).
+const WORD_CHAR_RE = /[\p{L}\p{N}_]/u
+
+// options.wordStartOnly: 단어 "중간"에서 시작하는 글자로는 찾지 않는다. 코드블록 안에서 켠다 — 이 검색은
+// 줄 끝의 모든 접미사를 시험하므로(고정 트리거 글자가 없어서), 끄면 `NAME` 을 칠 때 끝의 "E" 한 글자를
+// 새 단어로 보고 END·ERD·ELSE ... 를 추천한다. 단어의 시작이란 줄 맨 앞이거나 바로 앞이 단어 글자가
+// 아닌 자리(공백·괄호·점·쉼표 등)이다. 기호로 시작하는 접미사(->)는 글자 바로 뒤여도 시작으로 인정한다.
+// 글(문단)에서는 켜지 않는다: 한국어는 조사가 붙어서 단어 중간에서 단축어가 시작되는 일이 흔하다.
+export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } = {}) {
   if (entries.length === 0) return null
   const lineStart = value.lastIndexOf('\n', pos - 1) + 1
   const upToCursor = value.slice(lineStart, pos)
@@ -24,6 +32,9 @@ export function findSnippetQuery(value, pos, entries) {
 
   const checkLimit = Math.max(0, upToCursor.length - SNIPPET_LOOKBACK)
   for (let start = checkLimit; start < upToCursor.length; start += 1) {
+    if (wordStartOnly && start > 0 && WORD_CHAR_RE.test(upToCursor[start - 1]) && WORD_CHAR_RE.test(upToCursor[start])) {
+      continue
+    }
     const suffix = upToCursor.slice(start)
     const lowerSuffix = suffix.toLowerCase()
     const prefixMatches = entries.filter((entry) => entry.title.toLowerCase().startsWith(lowerSuffix))
@@ -34,8 +45,9 @@ export function findSnippetQuery(value, pos, entries) {
     // 후보를 찾지 않고 팝업을 닫는다 — "NOT NULL" 을 다 쳤는데 끝의 "NULL" 로 "NULLIF" 를 찾으면 안 되므로.
     const matches = prefixMatches.filter((entry) => entry.content !== suffix)
     if (matches.length === 0) return null
-    // 대소문자까지 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 제목이 짧은 순 —
-    // 뒤의 두 기준은 Galpi와 동일.
+    // 대소문자까지 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 순서 목록(_순서.txt)의 순서
+    // (entry.rank, 작을수록 위 — 목록에 없으면 맨 뒤), 그다음 제목이 짧은 순 — 정확 일치와 짧은 순은
+    // Galpi와 동일. 순서 목록이 없으면 예전 정렬과 똑같다.
     matches.sort((a, b) => {
       const aCase = a.title.startsWith(suffix) ? 0 : 1
       const bCase = b.title.startsWith(suffix) ? 0 : 1
@@ -43,6 +55,9 @@ export function findSnippetQuery(value, pos, entries) {
       const aExact = a.title.length === suffix.length ? 0 : 1
       const bExact = b.title.length === suffix.length ? 0 : 1
       if (aExact !== bExact) return aExact - bExact
+      const aRank = a.rank ?? Infinity
+      const bRank = b.rank ?? Infinity
+      if (aRank !== bRank) return aRank < bRank ? -1 : 1
       if (a.title.length !== b.title.length) return a.title.length - b.title.length
       return a.title.localeCompare(b.title, 'ko') || a.category.localeCompare(b.category, 'ko')
     })

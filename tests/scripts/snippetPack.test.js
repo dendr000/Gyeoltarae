@@ -2,9 +2,10 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { scanSnippets, snippetsDirPath } from '../../electron/fileSystem.js'
+import { SNIPPET_ORDER_FILE_NAME, scanSnippets, snippetsDirPath } from '../../electron/fileSystem.js'
 import { installSnippetPack } from '../../scripts/install-snippet-pack.mjs'
 import { SQL_PACK } from '../../scripts/snippet-packs/sql.js'
+import { parseSnippetOrder } from '../../src/lib/snippetOrder.js'
 
 describe('SQL 키워드 묶음 데이터', () => {
   const titles = SQL_PACK.entries
@@ -31,10 +32,12 @@ describe('SQL 키워드 묶음 데이터', () => {
   })
 
   it('제목은 비어 있지 않고 앞뒤 공백이 없고 Windows 파일 이름에 못 쓰는 글자가 없다', () => {
+    // 못 쓰는 글자: < > : " / \ | ? * 와 제어 문자(코드 32 미만). 정규식 대신 글자별로 검사한다.
+    const illegal = (ch) => ch.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(ch)
     for (const title of titles) {
       expect(title.length, title).toBeGreaterThan(0)
       expect(title, title).toBe(title.trim())
-      expect(title, title).not.toMatch(/[<>:"/\\|?*\x00-\x1f]/)
+      expect([...title].filter(illegal), title).toEqual([])
       expect(title, title).not.toMatch(/[. ]$/)
     }
   })
@@ -53,6 +56,26 @@ describe('SQL 키워드 묶음 데이터', () => {
   })
 })
 
+describe('SQL 키워드 묶음의 추천 순서(order)', () => {
+  const { order, entries } = SQL_PACK
+
+  it('모든 키워드가 정확히 한 번씩 들어 있고 모르는 제목은 없다', () => {
+    expect([...order].sort()).toEqual([...entries].sort())
+  })
+
+  it('SELECT 가 맨 위고 SET 보다 위다 (s 를 쳤을 때 SELECT 가 먼저 뜨게)', () => {
+    expect(order[0]).toBe('SELECT')
+    expect(order.indexOf('SELECT')).toBeLessThan(order.indexOf('SET'))
+    expect(order.indexOf('SELECT')).toBeLessThan(order.indexOf('SUM'))
+  })
+
+  it('FROM, WHERE 같은 기본 절이 앞쪽에 있다', () => {
+    for (const keyword of ['FROM', 'WHERE', 'INSERT INTO', 'UPDATE']) {
+      expect(order.indexOf(keyword), keyword).toBeLessThan(10)
+    }
+  })
+})
+
 describe('installSnippetPack (설치)', () => {
   let root
 
@@ -65,7 +88,14 @@ describe('installSnippetPack (설치)', () => {
   })
 
   const install = (options = {}) =>
-    installSnippetPack({ workspacePath: root, folder: SQL_PACK.folder, entries: SQL_PACK.entries, ...options })
+    installSnippetPack({
+      workspacePath: root,
+      folder: SQL_PACK.folder,
+      entries: SQL_PACK.entries,
+      order: SQL_PACK.order,
+      ...options,
+    })
+  const orderPath = () => path.join(snippetsDirPath(root), 'SQL', SNIPPET_ORDER_FILE_NAME)
 
   // 설치된 SQL 폴더의 { 제목: 본문 }
   function installed(folder = 'SQL') {
@@ -144,6 +174,56 @@ describe('installSnippetPack (설치)', () => {
     install()
 
     expect(installed('영어')).toEqual({ MYSQL: 'MySQL' , sql: 'SQL' })
+  })
+
+  it('폴더에 순서 목록 파일(_순서.txt)을 만들고, 읽으면 SELECT 가 0번이다', () => {
+    const { orderFile } = install()
+
+    expect(orderFile).toBe('created')
+    const order = parseSnippetOrder(fs.readFileSync(orderPath(), 'utf-8'))
+    expect(order.get('SELECT')).toBe(0)
+    expect(order.get('SELECT')).toBeLessThan(order.get('SET'))
+    expect(order.size).toBe(SQL_PACK.entries.length)
+  })
+
+  it('순서 목록 파일은 상용구 목록에 상용구로 나타나지 않는다', () => {
+    install()
+
+    expect(scanSnippets(root)).toHaveLength(SQL_PACK.entries.length)
+  })
+
+  it('이미 있는 순서 목록 파일은 덮어쓰지 않는다 (사용자가 고친 순서가 남는다)', () => {
+    install()
+    fs.writeFileSync(orderPath(), 'SET\nSELECT\n', 'utf-8')
+
+    const second = install()
+
+    expect(second.orderFile).toBe('kept')
+    expect(fs.readFileSync(orderPath(), 'utf-8')).toBe('SET\nSELECT\n')
+  })
+
+  it('미리보기(dryRun)에서는 순서 목록 파일도 만들지 않는다', () => {
+    const { orderFile } = install({ dryRun: true })
+
+    expect(orderFile).toBe('dry-run')
+    expect(fs.existsSync(snippetsDirPath(root))).toBe(false)
+  })
+
+  it('order 를 안 주면 순서 목록 파일을 만들지 않는다', () => {
+    const { orderFile } = install({ order: undefined })
+
+    expect(orderFile).toBe('none')
+    expect(fs.existsSync(orderPath())).toBe(false)
+  })
+
+  it('상용구를 전부 건너뛰는 두 번째 실행에서 순서 목록 파일이 없으면 새로 만든다', () => {
+    install({ order: undefined })
+
+    const second = install()
+
+    expect(second.created).toEqual([])
+    expect(second.orderFile).toBe('created')
+    expect(fs.existsSync(orderPath())).toBe(true)
   })
 
   it('{ title, content } 형태의 항목은 본문을 그대로 쓴다', () => {
