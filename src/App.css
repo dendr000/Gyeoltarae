@@ -895,6 +895,11 @@
   mask-image: url('./assets/icons/check.svg');
 }
 
+/* 글 속의 연속 공백(2칸 이상)을 화면에서도 그대로 보여 준다 — lib/preserveSpaces.js 가 감싼다. */
+.wiki-spaces {
+  white-space: pre;
+}
+
 .wiki-code {
   margin: 0;
   padding: 10px 14px;

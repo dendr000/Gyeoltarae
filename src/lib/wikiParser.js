@@ -5,6 +5,7 @@ import { tokenizeIfExpr, parseIfExpr, evalIfStatements, isFalsy, toDisplayString
 import { matchCodeFenceOpen, isCodeFenceClose } from './codeFence.js'
 import { resolveCodeLanguage, highlightCode } from './codeHighlight.js'
 import { applySmartQuotes } from './smartQuotes.js'
+import { preserveSpaces } from './preserveSpaces.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -1697,7 +1698,7 @@ export function parseWikiText(
 
   // 화면에 그릴 때만 따옴표를 둥근 것으로 바꾼다(원문은 그대로) — lib/smartQuotes.js. 목차 데이터(toc)의
   // 제목 글은 [[#제목]] 이동이 원문 제목과 맞춰 보는 값이라 바꾸지 않는다.
-  return { html: applySmartQuotes(html), footnotes, tags: [...tags], toc, categories }
+  return { html: preserveSpaces(applySmartQuotes(html)), footnotes, tags: [...tags], toc, categories }
 }
 
 const CHOSEONG = [

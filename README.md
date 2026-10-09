@@ -107,6 +107,8 @@ node node_modules/electron/cli.js scripts/make-icon.cjs
 뷰어(오른쪽 렌더링 화면)는 글 속의 곧은 따옴표(`'` `"`)를 열림/닫힘이 구분되는 둥근 따옴표(‘ ’ “ ”)로 바꿔 보여 줍니다
 (`"안녕"` → “안녕”, `it's` → it’s). 원문과 편집창은 그대로이고, 코드블록·인라인 코드·태그 속성은 바꾸지 않습니다.
 이유와 규칙, 한계: [`docs/features/smart-quotes.md`](docs/features/smart-quotes.md).
+- **뷰어의 연속 공백 보존**: 편집창에서 2칸 이상 띄운 공백이 뷰어에서도 그 칸 수 그대로 보임(코드블록·표 제외, 복사하면 일반 공백).
+  [`docs/features/viewer-spaces.md`](docs/features/viewer-spaces.md)
 
 ## 글양식 (새 문서 기본 양식)
 
