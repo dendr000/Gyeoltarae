@@ -39,6 +39,10 @@ import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
 import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
+import { moveToLineEdge } from '../lib/lineEdge.js'
+import { indentLinesEdit } from '../lib/lineIndent.js'
+import { INDENT } from '../lib/indentUnit.js'
+import { listContinueEdit } from '../lib/listContinue.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -1026,6 +1030,23 @@ export function EditorPane({ text, onChange, disabled }) {
       wrapSelection(textarea, '__', '__', onChange)
       return
     }
+    // Alt+←/→ — 줄 처음/끝으로 이동(Home/End 키가 없는 노트북용), Alt+Shift+←/→ 는 거기까지 선택.
+    // 이 키는 창 "뒤로 가기" 로도 쓰일 수 있어서 항상 기본 동작을 막는다. 규칙은 lib/lineEdge.js.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      const r = moveToLineEdge(
+        textarea.value,
+        textarea.selectionStart,
+        textarea.selectionEnd,
+        textarea.selectionDirection,
+        e.key === 'ArrowLeft' ? 'start' : 'end',
+        e.shiftKey,
+      )
+      textarea.setSelectionRange(r.start, r.end, r.direction)
+      updateFileSuggest()
+      updateSnippetSuggest()
+      return
+    }
     // Ctrl+D — 코드블록(```) 안에서 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL
     // Workbench 의 줄 복제와 같다. 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
     // 코드블록 밖이거나 ``` 줄이면 duplicateLinesEdit 이 null 을 줘서 아무것도 안 하고 지나간다.
@@ -1048,9 +1069,23 @@ export function EditorPane({ text, onChange, disabled }) {
       wrapSelection(textarea, '~~', '~~', onChange)
       return
     }
+    // Tab — 여러 줄을 선택했으면 걸친 줄 전체를 들여쓰고, Shift+Tab 은 내어쓴다(선택이 없어도 현재 줄).
+    // 그 밖에는 커서 자리에 공백 4칸. 규칙은 lib/lineIndent.js.
     if (e.key === 'Tab') {
       e.preventDefault()
-      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, '    ', onChange)
+      const direction = textarea.selectionDirection
+      const edit = indentLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, e.shiftKey)
+      if (edit) {
+        if (edit.insert !== textarea.value.slice(edit.from, edit.to)) {
+          replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        }
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd, direction)
+        })
+        return
+      }
+      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, INDENT, onChange)
       return
     }
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && isInsideWikiLink(textarea)) {
@@ -1066,6 +1101,20 @@ export function EditorPane({ text, onChange, disabled }) {
       updateFileSuggest()
       updateSnippetSuggest()
       return
+    }
+    // `* 항목` 줄에서 Enter — 아래 줄에 `* ` 를 이어 만들고, 빈 `* ` 줄에서 Enter 하면 그 `* ` 를 지운다.
+    // 한글 조합 중 Enter(글자 확정)는 건드리지 않는다. 규칙은 lib/listContinue.js.
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.nativeEvent.isComposing) {
+      const edit = listContinueEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      if (edit) {
+        e.preventDefault()
+        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.caret, edit.caret)
+        })
+        return
+      }
     }
     if (!e.ctrlKey && !e.metaKey && !e.altKey) {
       const { selectionStart, selectionEnd, value } = textarea

@@ -145,6 +145,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   완벽하진 않음(같은 구간에 같은 단어가 여러 번 있으면 첫 번째로 감)
 - **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **줄 단위 키**: Alt+←/→ = 줄 처음/끝으로 이동(Alt+Shift 는 선택), 여러 줄 선택 후 Tab / Shift+Tab = 들여쓰기 / 내어쓰기,
+  `* ` 목록 줄에서 Enter = 다음 `* ` 자동 생성(빈 `* ` 에서 Enter 하면 목록 끝).
+  [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
 - **툴바 휠 스크롤**: 편집 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤됨(스크롤바를 잡지 않아도 됨).
   [`docs/features/toolbar-wheel-scroll.md`](docs/features/toolbar-wheel-scroll.md)
 - **표 편집기의 셀 키**: Tab = 오른쪽 셀(행의 끝이면 아래 행의 첫 번째 셀), Shift+Tab = 그 반대, Enter = 바로 아래 셀(없으면
