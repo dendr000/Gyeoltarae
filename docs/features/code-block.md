@@ -71,6 +71,7 @@ sel|     ← 여기서 추천 팝업이 뜬다 ("selx" 상용구 → SELECT * FR
 | MSSQL | `mssql`, `sqlserver`, `tsql` | 공통 SQL |
 | Oracle | `oracle`, `오라클`, `plsql`, `PL/SQL` | 공통 SQL |
 | SQLite | `sqlite` | 공통 SQL |
+| DBeaver | `dbeaver`, `디비버` | 공통 SQL (DBeaver 는 언어가 아니라 SQL 편집 도구라서 SQL 색으로 칠함) |
 | PostgreSQL | `postgresql`, `postgres`, `psql` | PostgreSQL 전용 |
 | MongoDB | `mongodb`, `mongo`, `몽고디비` | JavaScript |
 | NoSQL | `nosql`, `No-SQL` | JavaScript |

@@ -51,6 +51,8 @@ const LANGUAGES = [
   { label: 'MSSQL', grammar: 'sql', aliases: ['mssql', 'sqlserver', 'tsql', 'transactsql'] },
   { label: 'Oracle', grammar: 'sql', aliases: ['oracle', '오라클', 'plsql'] },
   { label: 'SQLite', grammar: 'sql', aliases: ['sqlite', 'sqlite3'] },
+  // DBeaver 는 언어가 아니라 여러 DBMS 를 다루는 SQL 편집 도구다 — 거기서 쓰는 SQL 이니 공통 SQL 로 칠한다.
+  { label: 'DBeaver', grammar: 'sql', aliases: ['dbeaver', '디비버'] },
   { label: 'PostgreSQL', grammar: 'pgsql', aliases: ['postgresql', 'postgres', 'pgsql', 'psql', '포스트그레sql', '포스트그레스'] },
   { label: 'MongoDB', grammar: 'javascript', aliases: ['mongodb', 'mongo', 'mongosh', '몽고디비'] },
   { label: 'NoSQL', grammar: 'javascript', aliases: ['nosql'] },

@@ -36,8 +36,14 @@ describe('resolveCodeLanguage (언어 이름 해석)', () => {
 
   it('PostgreSQL 만 전용 문법표(pgsql)이고 나머지 SQL 계열은 공통 sql 이다', () => {
     expect(resolveCodeLanguage('PostgreSQL')?.grammar).toBe('pgsql')
-    for (const name of ['MySQL', 'MariaDB', 'MSSQL', 'Oracle', 'SQLite', 'SQL']) {
+    for (const name of ['MySQL', 'MariaDB', 'MSSQL', 'Oracle', 'SQLite', 'DBeaver', 'SQL']) {
       expect(resolveCodeLanguage(name)?.grammar, name).toBe('sql')
+    }
+  })
+
+  it('DBeaver 는 SQL 도구라서 공통 SQL 문법으로 칠하고, 대소문자·한글 이름도 받는다', () => {
+    for (const name of ['DBeaver', 'dbeaver', 'DBEAVER', 'D-Beaver', '디비버']) {
+      expect(resolveCodeLanguage(name), name).toEqual({ label: 'DBeaver', grammar: 'sql' })
     }
   })
 
