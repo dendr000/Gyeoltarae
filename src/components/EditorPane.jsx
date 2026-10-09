@@ -39,6 +39,7 @@ import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
 import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
+import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
 import { INDENT } from '../lib/indentUnit.js'
@@ -1046,6 +1047,22 @@ export function EditorPane({ text, onChange, disabled }) {
       updateFileSuggest()
       updateSnippetSuggest()
       return
+    }
+    // Ctrl+/ — 코드블록(```) 안에서 현재 줄(선택했으면 걸친 줄 전체)을 주석 처리하고, 이미 주석이면 푼다.
+    // 주석 기호는 코드블록의 언어(```sql -> --, ```js -> //)를 따른다(규칙은 lib/codeComment.js). 슬래시는
+    // 키보드 배열에 따라 e.key 가 다를 수 있어 물리 키(e.code)도 본다. 코드블록 밖이면 null 이라 지나간다.
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '/' || e.code === 'Slash' || e.code === 'NumpadDivide')) {
+      const direction = textarea.selectionDirection
+      const edit = toggleCommentEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      if (edit) {
+        e.preventDefault()
+        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd, direction)
+        })
+        return
+      }
     }
     // Ctrl+D — 코드블록(```) 안에서 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL
     // Workbench 의 줄 복제와 같다. 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.

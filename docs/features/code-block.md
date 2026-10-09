@@ -41,6 +41,27 @@ name VARCHAR(10)
 
 코드블록 안에서 **Ctrl+D** 를 누르면 현재 줄이 바로 아래에 복제된다(MySQL Workbench 와 같음). 코드블록 밖에서는 동작하지 않는다. 자세히: `docs/features/code-line-duplicate.md`.
 
+### Ctrl+/ — 주석 토글
+
+코드블록 안에서 **Ctrl+/** 를 누르면 현재 줄이 주석 처리되고, 이미 주석이면 풀린다(VS Code·DBeaver 와 같음). **여러 줄을 선택하고 누르면 걸친 줄 전체**가 같이 처리된다.
+
+| 코드블록 언어 | 주석 기호 |
+|---|---|
+| SQL 계열(SQL, MySQL, MariaDB, MSSQL, Oracle, SQLite, PostgreSQL, DBeaver) | `-- ` |
+| JavaScript, TypeScript, Java, C, C++, C#, Go, Kotlin, PHP, Rust, Swift (MongoDB·NoSQL 포함) | `// ` |
+| Python, Bash, Ruby, YAML, INI, Dockerfile | `# ` |
+| CSS | 줄마다 `/* ... */` |
+| HTML, XML | 줄마다 `<!-- ... -->` |
+| JSON, Markdown, Diff | 주석이 없어 아무 일도 없음 |
+| 언어를 안 적었거나 모르는 이름 | `-- ` (이 앱의 코드블록은 주로 SQL 이라서) |
+
+- **주석 기호의 위치**: 선택한 줄들 중 들여쓰기가 가장 얕은 칸에 넣는다. 그래서 들여쓰기가 다른 줄들도 기호 열이 가지런하다. 풀 때는 기호와 그 뒤 공백 하나만 지우고 들여쓰기는 남긴다.
+- **섞여 있을 때**: 선택한 줄 중 주석이 아닌 줄이 하나라도 있으면 전부 주석 처리한다(이미 주석인 줄은 한 번 더 감싸진다). 모든 줄이 주석이면 전부 푼다.
+- **빈 줄은 건드리지 않는다.** 선택이 다음 줄 맨 앞에서 끝나면 그 다음 줄은 포함하지 않는다.
+- **Ctrl+Z 한 번**으로 되돌아간다. 선택은 같은 글자를 계속 선택하고, 커서만 있으면 같은 글자 뒤에 남는다.
+- **동작하지 않는 곳**: 코드블록 밖, 그리고 선택이 ``` 줄에 걸칠 때.
+- 규칙: `src/lib/codeComment.js`, 시험: `tests/lib/codeComment.test.js`.
+
 ### 코드블록 안에서는 상용구 추천이 자동으로 켜진다
 
 ````text

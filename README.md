@@ -143,6 +143,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Shift+더블클릭**: 뷰어(왼쪽 렌더링 결과)에서 단어를 Shift+더블클릭하면 에디터의 그
   위치로 커서가 이동 — 가장 가까운 앞쪽 제목부터 그 단어를 원문에서 찾아가는 방식이라
   완벽하진 않음(같은 구간에 같은 단어가 여러 번 있으면 첫 번째로 감)
+- **Ctrl+/ (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 주석 처리/해제 — 코드블록의 언어에 맞는 기호(`--`, `//`, `#` 등)를
+  씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
 - **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
 - **줄 단위 키**: Alt+←/→ = 줄 처음/끝으로 이동(Alt+Shift 는 선택), 여러 줄 선택 후 Tab / Shift+Tab = 들여쓰기 / 내어쓰기,
