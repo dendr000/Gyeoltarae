@@ -17,10 +17,12 @@
 const DDAZUA_SECTION = '=  =\n==  ==\n* \n\n==  ==\n* \n'
 const DDAZUA_TEMPLATE = `[[분류:ddazua]]\n[[분류:]]\n[[분류:]]\n[목차]\n\n${[DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION].join('\n\n')}`
 
-// 따즈아/02 배워서 바로 써먹는 DBMS: 큰 제목(=  =) 아래에 DBeaver 코드블록이 하나씩 있는 묶음 셋.
-// 분류·목차 줄은 없다(자동 분류가 설정돼 있으면 그 분류가 맨 끝에 붙는다).
+// 따즈아/02 배워서 바로 써먹는 DBMS: 맨 위에 분류 세 줄(ddazua, DBMS, 뒤를 직접 이어 쓰는 DBMS/), [목차],
+// [clearfix] 가 있고, 그 아래에 큰 제목(=  =) + DBeaver 코드블록 묶음 셋. 비어 있는 [[분류:]] 칸은 없어서
+// 폴더의 "자동 분류"가 찾은 분류는 맨 위 분류 줄들 바로 뒤에 붙고, 작품 폴더 자동 분류는 맨 끝에 붙는다.
+const PRACTICE_HEADER = '[[분류:ddazua]]\n[[분류:DBMS]]\n[[분류:DBMS/]]\n[목차]\n[clearfix]\n'
 const PRACTICE_SECTION = '=  =\n```DBeaver\n```\n'
-const PRACTICE_TEMPLATE = [PRACTICE_SECTION, PRACTICE_SECTION, PRACTICE_SECTION].join('\n')
+const PRACTICE_TEMPLATE = [PRACTICE_HEADER, PRACTICE_SECTION, PRACTICE_SECTION, PRACTICE_SECTION].join('\n')
 
 // 따즈아 폴더 자신과 여기에 적지 않은 하위 폴더는 틀이 없다(기본 빈 분류 줄로 시작).
 const FOLDER_DOC_TEMPLATES = [

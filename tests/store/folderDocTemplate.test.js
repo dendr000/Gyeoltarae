@@ -95,7 +95,24 @@ describe('새 문서 만들기 — 따즈아 하위 폴더별 기본 내용', ()
     expect(rest).toEqual(DDAZUA_TEMPLATE.split('\n').slice(2))
   })
 
-  it('02 폴더가 작품 폴더 안에 있으면 분류 칸이 없는 내용이라 자동 분류 줄은 맨 끝에 붙는다', async () => {
+  it('02 폴더에 자동 분류(읽어들일 글자)가 있으면 찾은 분류가 맨 위 분류 줄들 바로 뒤에 붙는다', async () => {
+    await ctx.state().saveAutoCategory(dir, ['DBMS', '외래키'])
+
+    await ctx.state().createDoc(sub02, '04 외래키와 Join')
+
+    const lines = (await read(`${sub02}/04 외래키와 Join.md`)).split('\n')
+    // DBMS 는 이미 적혀 있어 다시 넣지 않고, 새로 찾은 외래키만 분류 줄들 뒤에 들어간다.
+    expect(lines.slice(0, 6)).toEqual([
+      '[[분류:ddazua]]',
+      '[[분류:DBMS]]',
+      '[[분류:DBMS/]]',
+      '[[분류:외래키]]',
+      '[목차]',
+      '[clearfix]',
+    ])
+  })
+
+  it('02 폴더가 작품 폴더 안에 있으면 비어 있는 분류 칸이 없어서 작품 자동 분류 줄은 맨 끝에 붙는다', async () => {
     await ctx.state().createFolder(`${ROOT}/소설/작품`, '따즈아')
     await ctx.state().createFolder(`${ROOT}/소설/작품/따즈아`, FOLDER_02)
 

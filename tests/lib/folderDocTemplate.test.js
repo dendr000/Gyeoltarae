@@ -115,8 +115,21 @@ describe('02 배워서 바로 써먹는 폴더의 기본 내용', () => {
     expect(text.endsWith('```\n')).toBe(true)
   })
 
-  it('분류·목차 줄은 없다', () => {
-    expect(text).not.toContain('[[분류:')
-    expect(text).not.toContain('[목차]')
+  it('맨 위에 분류 세 줄(ddazua, DBMS, DBMS/), [목차], [clearfix] 가 이 순서로 있다', () => {
+    expect(text.split('\n').slice(0, 5)).toEqual([
+      '[[분류:ddazua]]',
+      '[[분류:DBMS]]',
+      '[[분류:DBMS/]]',
+      '[목차]',
+      '[clearfix]',
+    ])
+  })
+
+  it('맨 위 줄들과 첫 큰 제목 사이에는 빈 줄이 하나 있다', () => {
+    expect(text).toContain('[clearfix]\n\n=  =\n```DBeaver\n```\n')
+  })
+
+  it('비어 있는 [[분류:]] 칸은 없다 (DBMS/ 는 뒤를 직접 이어 쓰는 줄이다)', () => {
+    expect(text).not.toContain('[[분류:]]')
   })
 })
