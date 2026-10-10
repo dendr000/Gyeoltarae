@@ -1,27 +1,46 @@
 // Copyright (c) dendr000. MIT License.
 
 // 특정 폴더 밑에서 새 문서를 만들 때 자동으로 채워 넣는 기본 내용(폴더별 새 문서 틀).
-// 폴더 이름으로 찾는다 — 그 폴더 자신이나 그 아래 어느 깊이의 폴더에서 만들어도 적용된다.
+// 폴더 이름으로 찾는다 — 그 폴더 자신이나 그 아래 어느 깊이의 폴더에서 만들어도 적용된다. 틀마다 "부모
+// 폴더 이름"(parentName)을 같이 정할 수 있어서, 같은 부모 아래의 폴더마다 다른 틀을 줄 수 있다.
 // (작품 폴더의 자동 [[분류:...]] 규칙은 store/useAppStore.js 의 findWorkFolderContext 가 따로
 // 맡는다. 이 틀은 그와 별개로, 작품 폴더가 아닌 곳의 새 문서 모양을 정하는 용도.)
 //
 // 내용에 `[[분류:]]`(이름이 빈 줄)를 두면 그 자리는 사용자가 채울 칸이다. 이 문서가 작품 폴더 밑에
-// 있으면 그 빈 칸이 자동 분류 태그로 채워진다(applyAutoCategoryTags).
-// 따즈아: 큰 제목(=  =) 네 묶음, 묶음마다 작은 제목(==  ==) 둘과 빈 목록 항목(* )이 있는 강의 노트 뼈대.
-// 분류는 ddazua 와 비워 둔 칸 둘 — 빈 칸은 폴더의 "자동 분류"(lib/autoCategory.js)가 폴더·문서 이름에서
-// 찾은 글자로 채운다(없으면 비어 있는 채로 남아 직접 쓰면 된다). 줄 끝의 공백("* ")도 그대로 둔다.
+// 있으면 그 빈 칸이 자동 분류 태그로 채워진다(applyAutoCategoryTags). 빈 칸이 없는 내용이면 자동 분류
+// 태그는 맨 끝에 붙는다.
+//
+// 따즈아/01 올인원 DBMS!! 설계부터 운영까지!!: 큰 제목(=  =) 네 묶음, 묶음마다 작은 제목(==  ==) 둘과 빈 목록
+// 항목(* )이 있는 강의 노트 뼈대. 분류는 ddazua 와 비워 둔 칸 둘 — 빈 칸은 폴더의 "자동 분류"
+// (lib/autoCategory.js)가 폴더·문서 이름에서 찾은 글자로 채운다(없으면 비어 있는 채로 남아 직접 쓰면 된다).
+// 줄 끝의 공백("* ")도 그대로 둔다.
 const DDAZUA_SECTION = '=  =\n==  ==\n* \n\n==  ==\n* \n'
 const DDAZUA_TEMPLATE = `[[분류:ddazua]]\n[[분류:]]\n[[분류:]]\n[목차]\n\n${[DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION, DDAZUA_SECTION].join('\n\n')}`
 
-const FOLDER_DOC_TEMPLATES = [{ folderName: '따즈아', content: DDAZUA_TEMPLATE }]
+// 따즈아/02 배워서 바로 써먹는 DBMS: 큰 제목(=  =) 아래에 DBeaver 코드블록이 하나씩 있는 묶음 셋.
+// 분류·목차 줄은 없다(자동 분류가 설정돼 있으면 그 분류가 맨 끝에 붙는다).
+const PRACTICE_SECTION = '=  =\n```DBeaver\n```\n'
+const PRACTICE_TEMPLATE = [PRACTICE_SECTION, PRACTICE_SECTION, PRACTICE_SECTION].join('\n')
+
+// 따즈아 폴더 자신과 여기에 적지 않은 하위 폴더는 틀이 없다(기본 빈 분류 줄로 시작).
+const FOLDER_DOC_TEMPLATES = [
+  { parentName: '따즈아', folderName: '01 올인원 DBMS!! 설계부터 운영까지!!', content: DDAZUA_TEMPLATE },
+  { parentName: '따즈아', folderName: '02 배워서 바로 써먹는 DBMS', content: PRACTICE_TEMPLATE },
+]
+
+// 폴더 이름 비교용: 한글을 자모로 풀어 쓴 이름(NFD)과 합쳐 쓴 이름(NFC)을 같게 본다.
+const normalize = (name) => name.normalize('NFC')
 
 // dirPath(새 문서를 만들 폴더 경로) 위쪽 어딘가에 틀이 정해진 폴더가 있으면 그 틀의 내용,
-// 없으면 null. 경로 구분자는 / 와 \ 둘 다 받는다. 이름은 폴더 이름 전체가 같아야 한다
-// ("따즈아 (1)" 같은 이름은 해당하지 않음). 틀이 여러 개 걸리면 가장 안쪽 폴더의 것을 쓴다.
+// 없으면 null. 경로 구분자는 / 와 \ 둘 다 받는다. 이름은 폴더 이름 전체가 같아야 하고
+// ("01 올인원" 처럼 앞부분만 같은 이름은 해당하지 않음), 틀에 부모 폴더가 적혀 있으면 바로 위 폴더도
+// 그 이름이어야 한다. 틀이 여러 개 걸리면 가장 안쪽 폴더의 것을 쓴다.
 export function findFolderDocTemplate(dirPath) {
-  const segments = dirPath.split(/[\\/]/)
+  const segments = dirPath.split(/[\\/]/).map(normalize)
   for (let i = segments.length - 1; i >= 0; i -= 1) {
-    const found = FOLDER_DOC_TEMPLATES.find((t) => t.folderName === segments[i])
+    const found = FOLDER_DOC_TEMPLATES.find(
+      (t) => normalize(t.folderName) === segments[i] && (!t.parentName || normalize(t.parentName) === segments[i - 1]),
+    )
     if (found) return found.content
   }
   return null
