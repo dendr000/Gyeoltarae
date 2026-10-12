@@ -2609,6 +2609,12 @@
   font-size: 12px;
 }
 
+.snippet-word-section {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .snippet-folder-hint {
   margin: 10px 0 0;
   white-space: normal;

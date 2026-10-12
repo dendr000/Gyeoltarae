@@ -149,6 +149,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
 - **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **폴더 범위 영어 단어 추천**: 문서에 써 온 영어 단어를 같은 범위(두 번째 단계 폴더, 설정하면 최상위 폴더 전체)의 다른 문서를 쓸 때
+  추천 팝업에 올림(상용구 뒤, 많이 쓴 순). 상용구 모달 "폴더별 사용" 탭에서 켜고 끔.
+  [`docs/features/scope-word-suggest.md`](docs/features/scope-word-suggest.md)
 - **굵게·들여쓰기 한 덩어리**: Ctrl+B 로 글을 감싸면 커서가 닫는 `'''` 바깥에 놓이고, `'''` 와 줄 앞 들여쓰기(공백 4칸)는 ←/→ 로 한 번에
   건너뛰고 Backspace/Delete 로 한 번에 지움(코드블록 안 `'''` 와 한글 조합 중은 제외).
   [`docs/features/bold-and-indent-keys.md`](docs/features/bold-and-indent-keys.md)

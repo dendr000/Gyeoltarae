@@ -238,3 +238,44 @@ describe('findSnippetQuery (타이핑 중 추천 팝업)', () => {
     expect(findSnippetQuery('mys', 3, [])).toBeNull()
   })
 })
+
+// 폴더 범위 영어 단어(lib/scopeWords.js)는 상용구 후보와 같은 모양에 word: true, freq 가 붙어서 같은 추천 팝업에 섞인다.
+describe('findSnippetQuery — 폴더 범위 단어 후보 (word: true)', () => {
+  const word = (title, freq = 1) => ({ category: '단어(강의/따즈아)', title, content: title, path: null, word: true, freq })
+  const titles = (result) => result.matches.map((m) => m.title)
+
+  it('한 글자만 쳐도 단어 후보가 뜬다 (C -> CREATE)', () => {
+    expect(titles(findSnippetQuery('C', 1, [word('CREATE'), word('INSERT')]))).toEqual(['CREATE'])
+  })
+
+  it('소문자로 쳐도 찾는다 (대소문자 구분 없음)', () => {
+    expect(titles(findSnippetQuery('cre', 3, [word('CREATE')]))).toEqual(['CREATE'])
+  })
+
+  it('상용구가 단어보다 먼저 나온다 — 단어가 더 짧거나 대소문자가 맞아도', () => {
+    const entries = [word('CREATE', 99), { category: '공통', title: 'CREATE TABLE', content: 'CREATE TABLE' }]
+    expect(titles(findSnippetQuery('CRE', 3, entries))).toEqual(['CREATE TABLE', 'CREATE'])
+  })
+
+  it('순서 목록(rank)에 있는 상용구는 단어보다도, 목록에 없는 상용구보다도 먼저', () => {
+    const entries = [
+      word('CREATE', 99),
+      { category: '공통', title: 'CREATE VIEW', content: 'CREATE VIEW' },
+      { category: '공통', title: 'CREATE TABLE', content: 'CREATE TABLE', rank: 5 },
+    ]
+    expect(titles(findSnippetQuery('CRE', 3, entries))).toEqual(['CREATE TABLE', 'CREATE VIEW', 'CREATE'])
+  })
+
+  it('단어끼리는 대소문자가 친 글자와 같은 것, 그다음 많이 쓴 것이 먼저', () => {
+    const entries = [word('cRead', 50), word('CREAM', 2), word('CREATE', 9), word('CRESTA', 9)]
+    expect(titles(findSnippetQuery('CRE', 3, entries))).toEqual(['CREATE', 'CRESTA', 'CREAM', 'cRead'])
+  })
+
+  it('이미 다 친 단어는 후보로 내지 않는다 (확정해도 아무것도 안 바뀌므로)', () => {
+    expect(findSnippetQuery('CREATE', 6, [word('CREATE')])).toBeNull()
+  })
+
+  it('코드블록 안(wordStartOnly)에서는 단어 중간에서 시작하는 글자로 찾지 않는다', () => {
+    expect(findSnippetQuery('NAME', 4, [word('END')], { wordStartOnly: true })).toBeNull()
+  })
+})

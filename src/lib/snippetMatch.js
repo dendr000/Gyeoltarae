@@ -54,6 +54,10 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } 
       const aListed = Number.isFinite(a.rank) ? 0 : 1
       const bListed = Number.isFinite(b.rank) ? 0 : 1
       if (aListed !== bListed) return aListed - bListed
+      // 폴더 범위 영어 단어(word: true, lib/scopeWords.js)는 상용구보다 뒤에 둔다 — 직접 등록한 것이 우선.
+      const aWord = a.word ? 1 : 0
+      const bWord = b.word ? 1 : 0
+      if (aWord !== bWord) return aWord - bWord
       const aCase = a.title.startsWith(suffix) ? 0 : 1
       const bCase = b.title.startsWith(suffix) ? 0 : 1
       if (aCase !== bCase) return aCase - bCase
@@ -63,6 +67,10 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } 
       const aRank = a.rank ?? Infinity
       const bRank = b.rank ?? Infinity
       if (aRank !== bRank) return aRank < bRank ? -1 : 1
+      // 단어끼리는 많이 쓴 것(freq)이 먼저. 상용구에는 freq 가 없어 영향이 없다.
+      const aFreq = a.freq ?? 0
+      const bFreq = b.freq ?? 0
+      if (aFreq !== bFreq) return bFreq - aFreq
       if (a.title.length !== b.title.length) return a.title.length - b.title.length
       return a.title.localeCompare(b.title, 'ko') || a.category.localeCompare(b.category, 'ko')
     })

@@ -14,6 +14,7 @@ import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose, withFolderEnabled } from '../lib/snippetScope.js'
 import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
+import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 
@@ -175,6 +176,28 @@ const SNIPPET_DISABLED_FOLDERS_STORAGE_KEY = 'wikidesk-snippet-disabled-folders'
 function loadDisabledSnippetFolders() {
   try {
     const parsed = JSON.parse(localStorage.getItem(SNIPPET_DISABLED_FOLDERS_STORAGE_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.filter((name) => typeof name === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+// 폴더 범위 영어 단어 추천(lib/scopeWords.js): 켜짐/꺼짐(기본 켜짐)과, "전체 문서에서 모으기"를 켠 최상위 폴더 이름
+// 목록(기본 비어 있음 = 모든 폴더에서 두 번째 단계 폴더 안만). 이 PC 의 화면 설정이라 localStorage 에 둔다.
+const SCOPE_WORD_SUGGEST_STORAGE_KEY = 'wikidesk-scope-word-suggest'
+const SCOPE_WORD_WHOLE_TOPS_STORAGE_KEY = 'wikidesk-scope-word-whole-tops'
+
+function loadScopeWordSuggestEnabled() {
+  try {
+    return localStorage.getItem(SCOPE_WORD_SUGGEST_STORAGE_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function loadWholeScopeTopFolders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SCOPE_WORD_WHOLE_TOPS_STORAGE_KEY) || '[]')
     return Array.isArray(parsed) ? parsed.filter((name) => typeof name === 'string') : []
   } catch {
     return []
@@ -399,6 +422,10 @@ export const useAppStore = create((set, get) => ({
   activeSnippetFolder: loadActiveSnippetFolder(),
   snippetResetFolderOnClose: loadSnippetResetFolderOnClose(),
   disabledSnippetFolders: loadDisabledSnippetFolders(),
+  // 폴더 범위 영어 단어 추천. scopeWordIndex 는 rebuildIndexes 가 searchIndex 에서 만든다(추천이 꺼져 있으면 null).
+  scopeWordSuggestEnabled: loadScopeWordSuggestEnabled(),
+  wholeScopeTopFolders: loadWholeScopeTopFolders(),
+  scopeWordIndex: null,
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
   dictText: '',
@@ -473,6 +500,31 @@ export const useAppStore = create((set, get) => ({
       /* localStorage unavailable; 재시작하면 전부 사용으로 돌아갈 뿐 */
     }
     set({ disabledSnippetFolders: next })
+  },
+
+  // 켤 때는 지금 색인에서 바로 단어 색인을 만들고, 끄면 비워서 저장할 때마다 드는 계산을 없앤다.
+  setScopeWordSuggestEnabled(enabled) {
+    try {
+      localStorage.setItem(SCOPE_WORD_SUGGEST_STORAGE_KEY, String(enabled))
+    } catch {
+      /* localStorage unavailable; 재시작하면 켜짐으로 돌아갈 뿐 */
+    }
+    const { workspacePath, searchIndex } = get()
+    set({
+      scopeWordSuggestEnabled: enabled,
+      scopeWordIndex: enabled && workspacePath ? buildScopeWordIndex(searchIndex, workspacePath) : null,
+    })
+  },
+
+  // 최상위 폴더 하나의 "전체 문서에서 단어 모으기" 체크를 켜거나 끈다.
+  setWholeScopeTopFolder(name, whole) {
+    const next = withWholeTop(get().wholeScopeTopFolders, name, whole)
+    try {
+      localStorage.setItem(SCOPE_WORD_WHOLE_TOPS_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      /* localStorage unavailable; 재시작하면 모두 꺼짐으로 돌아갈 뿐 */
+    }
+    set({ wholeScopeTopFolders: next })
   },
 
   setSnippetFolderEnabled(folder, enabled) {
@@ -744,7 +796,9 @@ export const useAppStore = create((set, get) => ({
       imageIndex[item.name] = item
     }
 
-    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, snippetIndex, dictText, dictMap })
+    // 폴더 범위 영어 단어 색인 — 추천이 켜져 있을 때만 만든다(문서 전체를 한 번 훑는 계산이라서).
+    const scopeWordIndex = get().scopeWordSuggestEnabled ? buildScopeWordIndex(searchIndex, workspacePath) : null
+    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, snippetIndex, dictText, dictMap, scopeWordIndex })
   },
 
   // Opens a category: loads its page for editing if one already exists,

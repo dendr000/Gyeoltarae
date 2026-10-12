@@ -45,6 +45,7 @@ import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
+import { wordCandidates } from '../lib/scopeWords.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -532,6 +533,22 @@ export function EditorPane({ text, onChange, disabled }) {
   const dictMap = useAppStore((s) => s.dictMap)
   const importImage = useAppStore((s) => s.importImage)
   const openPath = useAppStore((s) => s.openPath)
+  // 폴더 범위 영어 단어(lib/scopeWords.js) — 같은 범위(두 번째 단계 폴더, 설정에 따라 최상위 폴더 전체)의 다른 문서에서 쓴
+  // 영어 단어를 상용구 추천 팝업 후보에 "단어" 항목으로 더한다. 추천 팝업에만 쓰고 스페이스바 치환·Alt+Enter 는 상용구만 쓴다.
+  const scopeWordIndex = useAppStore((s) => s.scopeWordIndex)
+  const wholeScopeTopFolders = useAppStore((s) => s.wholeScopeTopFolders)
+  const workspacePath = useAppStore((s) => s.workspacePath)
+  const suggestEntries = useMemo(() => {
+    if (!scopeWordIndex || !openPath || !workspacePath) return activeSnippets
+    const excludeLower = new Set(activeSnippets.map((entry) => entry.title.toLowerCase()))
+    const words = wordCandidates(scopeWordIndex, {
+      currentPath: openPath,
+      root: workspacePath,
+      wholeTops: wholeScopeTopFolders,
+      excludeLower,
+    })
+    return words.length === 0 ? activeSnippets : [...activeSnippets, ...words]
+  }, [scopeWordIndex, openPath, workspacePath, wholeScopeTopFolders, activeSnippets])
   const editorJumpOffset = useAppStore((s) => s.editorJumpOffset)
   const clearEditorJump = useAppStore((s) => s.clearEditorJump)
   const openDictModal = useAppStore((s) => s.openDictModal)
@@ -684,7 +701,7 @@ export function EditorPane({ text, onChange, disabled }) {
       return
     }
     // 코드블록 안에서는 단어 중간(NAME 의 끝 E)부터 시작하는 글자로는 후보를 찾지 않는다.
-    const ctx = detectSnippetQuery(textarea, activeSnippets, { wordStartOnly: inCodeBlock })
+    const ctx = detectSnippetQuery(textarea, suggestEntries, { wordStartOnly: inCodeBlock })
     if (!ctx) {
       setSnippetSuggest(null)
       return

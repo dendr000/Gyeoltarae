@@ -11,6 +11,22 @@ export function SnippetFolderTab() {
   const disabledFolders = useAppStore((s) => s.disabledSnippetFolders)
   const setFolderEnabled = useAppStore((s) => s.setSnippetFolderEnabled)
   const setDisabledFolders = useAppStore((s) => s.setDisabledSnippetFolders)
+  // 폴더 범위 영어 단어 추천(lib/scopeWords.js) 설정.
+  const tree = useAppStore((s) => s.tree)
+  const workspacePath = useAppStore((s) => s.workspacePath)
+  const wordSuggestEnabled = useAppStore((s) => s.scopeWordSuggestEnabled)
+  const wholeTopFolders = useAppStore((s) => s.wholeScopeTopFolders)
+  const setWordSuggestEnabled = useAppStore((s) => s.setScopeWordSuggestEnabled)
+  const setWholeTopFolder = useAppStore((s) => s.setWholeScopeTopFolder)
+
+  // 워크스페이스 바로 아래 폴더(최상위 폴더) 이름 — 숨김 폴더(.으로 시작)는 뺀다.
+  const topFolders = useMemo(() => {
+    const root = (tree ?? []).find((node) => node.path === workspacePath)
+    return (root?.children ?? [])
+      .filter((node) => node.type === 'dir' && !node.name.startsWith('.'))
+      .map((node) => node.name)
+      .sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [tree, workspacePath])
 
   // 폴더별 상용구 개수(가나다순). 상용구가 하나도 없는 폴더는 목록에 나오지 않는다.
   const folders = useMemo(() => {
@@ -68,6 +84,36 @@ export function SnippetFolderTab() {
             </div>
           ))
         )}
+      </div>
+      <div className="snippet-word-section">
+        <label className="snippet-folder-row-label">
+          <input type="checkbox" checked={wordSuggestEnabled} onChange={(e) => setWordSuggestEnabled(e.target.checked)} />
+          <span className="snippet-folder-row-name">문서에서 쓴 영어 단어도 추천에 올리기</span>
+        </label>
+        <p className="snippet-folder-hint">
+          같은 범위의 다른 문서에서 쓴 영어 단어(예: CREATE)를 추천 팝업에 단어 항목으로 보여 줍니다. 범위는 기본으로
+          <b> 두 번째 단계 폴더</b>(예: 강의/따즈아)입니다. 상용구가 먼저 나오고 단어는 그 뒤에 많이 쓴 순서로 나옵니다.
+        </p>
+        {wordSuggestEnabled &&
+          (topFolders.length === 0 ? (
+            <div className="dict-modal-empty">워크스페이스에 폴더가 없습니다.</div>
+          ) : (
+            <div className="snippet-folder-list">
+              {topFolders.map((name) => (
+                <div key={name} className="snippet-folder-row">
+                  <label className="snippet-folder-row-label">
+                    <input
+                      type="checkbox"
+                      checked={wholeTopFolders.includes(name)}
+                      onChange={(e) => setWholeTopFolder(name, e.target.checked)}
+                    />
+                    <span className="snippet-folder-row-name">{name}</span>
+                    <span className="snippet-folder-row-count">전체 문서에서 단어 모으기</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          ))}
       </div>
       <p className="snippet-folder-hint">
         체크를 푼 폴더의 상용구는 글을 쓰다가 뜨는 추천 팝업, 스페이스바 자동 치환, Alt+Enter 에서 빠집니다. 툴바의
