@@ -38,6 +38,26 @@ describe('폴더의 자동 분류 — 새 문서에 폴더·문서 이름의 글
     ])
   })
 
+  it('글자>분류이름 항목은 분류를 다른 이름으로 넣는다 (외래키>DBMS/외래키, DBMS 는 그대로)', async () => {
+    await ctx.state().saveAutoCategory(TOP, ['DBMS', '외래키>DBMS/외래키'])
+
+    await ctx.state().createDoc(SUB, '04 외래키와 Join')
+
+    expect(await firstLines(`${SUB}/04 외래키와 Join.md`, 4)).toEqual([
+      '[[분류:ddazua]]',
+      '[[분류:DBMS]]',
+      '[[분류:DBMS/외래키]]',
+      '[목차]',
+    ])
+  })
+
+  it('저장할 때 글자>분류이름 항목이 그대로 보존되고 입력의 공백만 정리된다', async () => {
+    const { parseKeywordInput } = await import('../../src/lib/autoCategory.js')
+    await ctx.state().saveAutoCategory(TOP, parseKeywordInput('DBMS\n보안 > DBMS/보안'))
+
+    expect((await ctx.api.readAutoCategory(ROOT, TOP, true)).keywords).toEqual(['DBMS', '보안>DBMS/보안'])
+  })
+
   it('문서 이름에 읽을 글자가 없으면 폴더에서 찾은 것만 넣고 둘째 빈 칸은 남긴다', async () => {
     await ctx.state().saveAutoCategory(TOP, ['DBMS', '외래키'])
 

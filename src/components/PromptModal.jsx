@@ -50,7 +50,8 @@ export function PromptModal({ title, fields, confirmLabel = '확인', onConfirm,
             value: values[field.key] ?? '',
             onChange: (e) => setValues((v) => ({ ...v, [field.key]: e.target.value })),
             onKeyDown: (e) => {
-              if (e.key === 'Enter') {
+              // 여러 줄 칸(multiline)에서는 Enter 가 줄바꿈이고, 확인은 Ctrl+Enter 이다.
+              if (e.key === 'Enter' && (!field.multiline || e.ctrlKey || e.metaKey)) {
                 e.preventDefault()
                 handleConfirm()
               } else if (e.key === 'Escape') {
@@ -70,6 +71,9 @@ export function PromptModal({ title, fields, confirmLabel = '확인', onConfirm,
                     </option>
                   ))}
                 </select>
+              ) : field.multiline ? (
+                // multiline 이면 한 줄 입력칸 대신 여러 줄 칸 — 항목이 많은 목록을 한 줄에 하나씩 보고 고치게 한다.
+                <textarea rows={field.rows ?? 8} placeholder={field.placeholder} {...common} />
               ) : (
                 <input type="text" placeholder={field.placeholder} {...common} />
               )}

@@ -16,7 +16,7 @@ import { EditorPane } from './components/EditorPane.jsx'
 import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
-import { formatKeywordInput, parseKeywordInput } from './lib/autoCategory.js'
+import { formatKeywordLines, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
 import './App.css'
 
@@ -240,10 +240,12 @@ export default function App() {
       fields: [
         {
           key: 'keywords',
-          label: `읽어들일 글자 (쉼표로 구분, 비우면 해제) — 이 폴더 아래에서 새 문서를 만들 때 아래 폴더·문서 이름에 이 글자가 있으면 [[분류:글자]]로 자동으로 들어갑니다${inheritedNote}`,
-          placeholder: '예: DBMS, 외래키, Join',
-          defaultValue: formatKeywordInput(own?.keywords),
+          label: `읽어들일 글자 (한 줄에 하나, 비우면 해제, 확인은 Ctrl+Enter) — 이 폴더 아래에서 새 문서를 만들 때 아래 폴더·문서 이름에 이 글자가 있으면 [[분류:글자]]로 자동으로 들어갑니다. 분류 이름을 다르게 하려면 글자>분류이름 으로 적습니다(예: 보안>DBMS/보안)${inheritedNote}`,
+          placeholder: '예:\nDBMS\n외래키>DBMS/외래키\nJoin',
+          defaultValue: formatKeywordLines(own?.keywords),
           required: false,
+          multiline: true,
+          rows: 12,
         },
       ],
     })

@@ -124,9 +124,10 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 적용되지 않음. 자세히: [`docs/features/folder-default-template.md`](docs/features/folder-default-template.md).
 (옛 내장 방식 기록: [`docs/features/folder-doc-template.md`](docs/features/folder-doc-template.md))
 
-**폴더별 자동 분류**: 폴더를 우클릭 → "자동 분류 설정…"에서 "읽어들일 글자"(예: `DBMS, 외래키`)를 쉼표로 적어 두면,
-그 폴더 아래에서 새 문서를 만들 때 아래 폴더 이름과 문서 이름에서 그 글자를 찾아 비어 있는 `[[분류:]]` 칸에
-`[[분류:글자]]` 로 자동으로 넣음(예: 폴더 `01 올인원 DBMS!! …`, 문서 `04 외래키와 Join` → `ddazua`, `DBMS`, `외래키`).
+**폴더별 자동 분류**: 폴더를 우클릭 → "자동 분류 설정…"에서 "읽어들일 글자"(예: `DBMS`, `외래키>DBMS/외래키` — 한 줄에 하나, Ctrl+Enter 로 저장)를
+적어 두면, 그 폴더 아래에서 새 문서를 만들 때 아래 폴더 이름과 문서 이름에서 그 글자를 찾아 비어 있는 `[[분류:]]` 칸에
+`[[분류:글자]]` 로 자동으로 넣음. `글자>분류이름` 으로 적으면 분류를 다른 이름으로 넣음(예: 폴더 `01 올인원 DBMS!! …`, 문서
+`04 외래키와 Join` → `ddazua`, `DBMS`, `DBMS/외래키`).
 어느 폴더에든 설정할 수 있고 비우면 해제됨. 설정은 그 폴더 안의 숨김 파일에 저장되어 폴더를 옮겨도 따라감. 자세히:
 [`docs/features/auto-category.md`](docs/features/auto-category.md).
 

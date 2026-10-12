@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   AUTO_CATEGORY_FILE,
   fillCategoryTags,
-  formatKeywordInput,
+  formatKeywordLines,
   matchKeywords,
+  parseKeywordEntry,
   parseKeywordInput,
   relativeSegments,
 } from '../../src/lib/autoCategory.js'
@@ -34,22 +35,6 @@ describe('parseKeywordInput (입력칸의 글 → 읽어들일 글자 목록)', 
     expect(parseKeywordInput('')).toEqual([])
     expect(parseKeywordInput('  \n , ; ')).toEqual([])
     expect(parseKeywordInput(undefined)).toEqual([])
-  })
-})
-
-describe('formatKeywordInput (목록 → 입력칸의 글)', () => {
-  it('쉼표와 공백으로 이어 붙인다', () => {
-    expect(formatKeywordInput(['DBMS', '외래키'])).toBe('DBMS, 외래키')
-  })
-
-  it('parse 와 format 이 서로 되돌린다', () => {
-    const keywords = ['DBMS', '외래키', 'Group by']
-    expect(parseKeywordInput(formatKeywordInput(keywords))).toEqual(keywords)
-  })
-
-  it('빈 목록·없음은 빈 글', () => {
-    expect(formatKeywordInput([])).toBe('')
-    expect(formatKeywordInput(undefined)).toBe('')
   })
 })
 
@@ -117,6 +102,99 @@ describe('matchKeywords (이름에서 읽어들일 글자 찾기)', () => {
   it('읽을 글자가 없거나 이름이 없으면 빈 목록', () => {
     expect(matchKeywords([], [FOLDER, DOC])).toEqual([])
     expect(matchKeywords(['DBMS'], [])).toEqual([])
+  })
+})
+
+// "글자>분류이름" — 글자를 찾으면 분류는 다른 이름(예: 보안>DBMS/보안)으로 넣는다. 글자만 적은 항목은 예전과 같다.
+describe('parseKeywordEntry (항목 하나의 해석)', () => {
+  it('글자만 있으면 글자가 곧 분류 이름', () => {
+    expect(parseKeywordEntry('외래키')).toEqual({ term: '외래키', category: '외래키' })
+  })
+
+  it('글자>분류이름 이면 찾을 글자와 넣을 분류를 나눈다', () => {
+    expect(parseKeywordEntry('보안>DBMS/보안')).toEqual({ term: '보안', category: 'DBMS/보안' })
+  })
+
+  it('> 양옆 공백은 지우고 글자 안의 공백은 둔다', () => {
+    expect(parseKeywordEntry('  부속 질의  >  DBMS/부속 질의 ')).toEqual({ term: '부속 질의', category: 'DBMS/부속 질의' })
+  })
+
+  it('분류 이름이 비었으면 글자를 그대로 쓴다 (보안>)', () => {
+    expect(parseKeywordEntry('보안>')).toEqual({ term: '보안', category: '보안' })
+  })
+
+  it('찾을 글자가 비었으면 쓸 수 없는 항목(null)', () => {
+    expect(parseKeywordEntry('>DBMS/보안')).toBeNull()
+    expect(parseKeywordEntry('  ')).toBeNull()
+    expect(parseKeywordEntry('')).toBeNull()
+  })
+
+  it('첫 > 만 나누는 표시로 본다 (분류 이름 안의 >는 그대로)', () => {
+    expect(parseKeywordEntry('a>b>c')).toEqual({ term: 'a', category: 'b>c' })
+  })
+})
+
+describe('parseKeywordInput — 글자>분류이름 항목', () => {
+  it('> 양옆 공백을 정리해서 저장 모양(보안>DBMS/보안)으로 만든다', () => {
+    expect(parseKeywordInput('보안 > DBMS/보안, DBMS')).toEqual(['보안>DBMS/보안', 'DBMS'])
+  })
+
+  it('줄바꿈으로 한 줄에 하나씩 적어도 된다', () => {
+    expect(parseKeywordInput('DBMS\n보안>DBMS/보안\n함수>DBMS/함수')).toEqual(['DBMS', '보안>DBMS/보안', '함수>DBMS/함수'])
+  })
+
+  it('찾을 글자가 빈 항목(>분류)은 버리고, 분류 이름이 빈 항목(보안>)은 글자만 남긴다', () => {
+    expect(parseKeywordInput('>DBMS/보안, 보안>')).toEqual(['보안'])
+  })
+
+  it('똑같은 항목은 한 번만. 같은 글자가 다른 분류를 가리키는 항목은 둘 다 둔다', () => {
+    expect(parseKeywordInput('보안>A, 보안>A, 보안>B')).toEqual(['보안>A', '보안>B'])
+  })
+})
+
+describe('formatKeywordLines (목록 → 한 줄에 하나씩 보여 주는 글)', () => {
+  it('항목마다 한 줄', () => {
+    expect(formatKeywordLines(['DBMS', '보안>DBMS/보안'])).toBe('DBMS\n보안>DBMS/보안')
+  })
+
+  it('parseKeywordInput 이 그대로 되돌린다', () => {
+    const keywords = ['DBMS', '보안>DBMS/보안', 'Group by']
+    expect(parseKeywordInput(formatKeywordLines(keywords))).toEqual(keywords)
+  })
+
+  it('빈 목록·없음은 빈 글', () => {
+    expect(formatKeywordLines([])).toBe('')
+    expect(formatKeywordLines(undefined)).toBe('')
+  })
+})
+
+describe('matchKeywords — 글자>분류이름', () => {
+  it('글자를 찾으면 분류 이름으로 돌려준다 (이름에는 글자가 있고, 분류에는 DBMS/보안)', () => {
+    expect(matchKeywords(['DBMS', '보안>DBMS/보안'], ['11 DBMS 보안과 관리'])).toEqual(['DBMS', 'DBMS/보안'])
+  })
+
+  it('글자만 적은 항목과 섞어 써도 각자 규칙대로', () => {
+    expect(matchKeywords(['DBMS', '외래키>DBMS/외래키', 'Join'], [FOLDER, DOC])).toEqual(['DBMS', 'DBMS/외래키', 'Join'])
+  })
+
+  it('찾는 글자는 대소문자를 가리지 않고 분류 이름은 적은 그대로', () => {
+    expect(matchKeywords(['dbms>DBMS'], [FOLDER])).toEqual(['DBMS'])
+  })
+
+  it('서로 다른 글자가 같은 분류를 가리켜도 분류는 한 번만', () => {
+    expect(matchKeywords(['외래키>DBMS/키', 'Join>DBMS/키'], [DOC])).toEqual(['DBMS/키'])
+  })
+
+  it('같은 글자에서 걸린 두 분류(보안>A, 보안>B)는 둘 다', () => {
+    expect(matchKeywords(['보안>A', '보안>B'], ['11 DBMS 보안과 관리'])).toEqual(['A', 'B'])
+  })
+
+  it('찾을 글자가 이름에 없으면 분류도 없다', () => {
+    expect(matchKeywords(['보안>DBMS/보안'], [FOLDER, DOC])).toEqual([])
+  })
+
+  it('쓸 수 없는 항목(>분류)은 무시한다', () => {
+    expect(matchKeywords(['>DBMS/보안', 'DBMS'], [FOLDER])).toEqual(['DBMS'])
   })
 })
 
