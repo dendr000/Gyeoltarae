@@ -118,11 +118,11 @@ node node_modules/electron/cli.js scripts/make-icon.cjs
 MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 복사해 쓰는 것과 같은 방식으로, 별도
 저장 공간 없이 기존 틀 문서를 재사용함.
 
-**폴더별 기본 내용**: 특정 폴더 밑에서 새 문서를 만들 때 자동으로 채워 넣는 내용이 있음(현재 `따즈아` 아래의
-폴더마다 따로: `01 올인원 DBMS!! 설계부터 운영까지!!` 는 분류 세 줄(`[[분류:ddazua]]` + 빈 칸 둘), `[목차]`, 큰 제목(`=  =`)
-네 묶음 — 묶음마다 작은 제목 둘과 빈 목록 항목, `02 배워서 바로 써먹는 DBMS` 는 분류 세 줄(`ddazua`, `DBMS`, `DBMS/`), `[목차]`, `[clearfix]` 아래에 큰 제목 + ` ```DBeaver ` 코드블록 세 묶음). 직접 고른 글양식이 있으면 글양식이 우선이고, 파일을 끌어다 놓아 가져온 문서에는 적용되지 않음.
-폴더를 추가하려면 `src/lib/folderDocTemplate.js` 목록에 항목을 넣음. 자세히:
-[`docs/features/folder-doc-template.md`](docs/features/folder-doc-template.md).
+**폴더별 기본 내용(= 폴더 기본 틀)**: 폴더 우클릭 "기본 틀 설정…"으로 글양식(틀)을 지정해 두면 그 폴더(와 아래 폴더)에서 새 문서를
+만들 때 자동으로 채워 넣음. 예전에 코드에 내장돼 있던 따즈아 `01 올인원`·`02 배워서` 폴더의 내용도 이제 틀(`따즈아 01 올인원 DBMS`,
+`따즈아 02 배워서 바로 써먹는 DBMS`)로 옮겨져 있음. 직접 고른 글양식이 있으면 글양식이 우선이고, 파일을 끌어다 놓아 가져온 문서에는
+적용되지 않음. 자세히: [`docs/features/folder-default-template.md`](docs/features/folder-default-template.md).
+(옛 내장 방식 기록: [`docs/features/folder-doc-template.md`](docs/features/folder-doc-template.md))
 
 **폴더별 자동 분류**: 폴더를 우클릭 → "자동 분류 설정…"에서 "읽어들일 글자"(예: `DBMS, 외래키`)를 쉼표로 적어 두면,
 그 폴더 아래에서 새 문서를 만들 때 아래 폴더 이름과 문서 이름에서 그 글자를 찾아 비어 있는 `[[분류:]]` 칸에

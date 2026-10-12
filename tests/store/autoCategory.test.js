@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DDAZUA_TEMPLATE } from '../helpers/ddazuaTemplate.js'
 import { ROOT, freshStore } from '../helpers/store.js'
 
 const TOP = `${ROOT}/강의/따즈아`
@@ -7,12 +8,17 @@ const SUB = `${TOP}/${FOLDER_NAME}`
 
 let ctx
 
-// 워크스페이스 밑에 강의/따즈아/01 올인원 DBMS!! ... 폴더를 만든다 (실제 워크스페이스와 같은 모양).
+// 워크스페이스 밑에 강의/따즈아/01 올인원 DBMS!! ... 폴더를 만들고(실제 워크스페이스와 같은 모양), 그 폴더에 강의 노트 틀을
+// 기본 틀로 지정해 둔다 — 새 문서가 분류 칸([[분류:]] 둘)이 있는 이 틀로 시작해야 자동 분류를 시험할 수 있다.
 beforeEach(async () => {
   ctx = await freshStore()
   await ctx.state().createFolder(ROOT, '강의')
   await ctx.state().createFolder(`${ROOT}/강의`, '따즈아')
   await ctx.state().createFolder(TOP, FOLDER_NAME)
+  const templatePath = await ctx.api.ensureTemplate(ROOT, '따즈아 틀')
+  await ctx.api.writeFile(templatePath, DDAZUA_TEMPLATE)
+  await ctx.state().rebuildIndexes()
+  await ctx.state().saveDefaultTemplate(SUB, '따즈아 틀')
 })
 
 const read = (filePath) => ctx.api.readFile(filePath)

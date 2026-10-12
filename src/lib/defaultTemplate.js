@@ -12,8 +12,8 @@ export const NO_TEMPLATE = '__none__'
 // 새 문서의 시작 내용으로 쓸 글양식을 정한다. 우선순위:
 //   1. 사용자가 입력창에서 직접 고른 틀(explicit)
 //   2. 폴더 기본 틀 설정(folderDefaultName — 가장 가까운 윗 폴더의 설정)
-//   3. 그 밖(내장 폴더 기본 내용 → 예전 기본 내용)은 호출한 쪽이 이어서 정한다
-// explicit 이 NO_TEMPLATE 이면 폴더 설정도 내장 기본 내용도 건너뛰고 빈 문서로 시작한다.
+//   3. 그 밖(예전 기본 내용 `[[분류:]]` 한 줄)은 호출한 쪽이 이어서 정한다
+// explicit 이 NO_TEMPLATE 이면 폴더 설정도 건너뛰고 빈 문서로 시작한다.
 // 이름의 틀이 없어졌거나 내용이 비어 있으면(지우거나 이름을 바꾼 뒤) 그 단계는 건너뛰고 다음으로 간다.
 // 돌려주는 값: { source: 'none' | 'explicit' | 'folder' | 'fallback', template }
 export function chooseStartTemplate({ explicit, folderDefaultName, templateIndex }) {

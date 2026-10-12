@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NO_TEMPLATE } from '../../src/lib/defaultTemplate.js'
-import { DDAZUA_TEMPLATE, FOLDER_01 } from '../helpers/ddazuaTemplate.js'
 import { ROOT, freshStore } from '../helpers/store.js'
 
 let ctx
@@ -125,39 +124,34 @@ describe('폴더 기본 틀 — 새 문서를 만들 때 자동으로 고른다'
   })
 })
 
-describe('폴더 기본 틀과 내장 폴더 기본 내용(따즈아 01·02)의 우선순위', () => {
-  it('01 올인원 폴더는 기본 틀 설정이 없으면 내장 기본 내용을 쓴다', async () => {
-    await ctx.state().createFolder(dir, FOLDER_01)
+describe('폴더 기본 틀 — 다른 길과의 관계', () => {
+  it('파일을 끌어다 놓아 가져온 문서는 가져온 내용 그대로이고 기본 틀이 끼어들지 않는다', async () => {
+    await makeTemplate('강의 틀', '틀 본문\n')
+    await ctx.state().saveDefaultTemplate(lecture, '강의 틀')
 
-    await ctx.state().createDoc(`${dir}/${FOLDER_01}`, '문서')
+    await ctx.state().importFiles(lecture, [{ name: '가져온', content: '가져온 본문\n' }])
 
-    expect(await read(`${dir}/${FOLDER_01}/문서.md`)).toBe(DDAZUA_TEMPLATE)
+    expect(await read(`${lecture}/가져온.md`)).toBe('가져온 본문\n')
   })
 
-  it('같은 폴더에 기본 틀을 정하면 내장 기본 내용보다 그 틀이 우선한다', async () => {
-    await makeTemplate('내 틀', '내 틀 본문\n')
-    await ctx.state().createFolder(dir, FOLDER_01)
-    await ctx.state().saveDefaultTemplate(`${dir}/${FOLDER_01}`, '내 틀')
+  it('폴더가 작품 폴더(소설 밑) 안에 있으면 틀의 빈 [[분류:]] 칸이 그 작품의 자동 분류로 채워진다', async () => {
+    await makeTemplate('분류 틀', '[[분류:]]\n[[분류:]]\n본문\n')
+    await ctx.state().createFolder(`${ROOT}/소설`, '작품')
+    await ctx.state().saveDefaultTemplate(`${ROOT}/소설/작품`, '분류 틀')
 
-    await ctx.state().createDoc(`${dir}/${FOLDER_01}`, '문서')
+    await ctx.state().createDoc(`${ROOT}/소설/작품`, '안쪽 문서')
 
-    expect(await read(`${dir}/${FOLDER_01}/문서.md`)).toBe('내 틀 본문\n')
+    // 첫 번째 빈 칸이 작품 자동 분류로 바뀌고, 둘째 빈 칸은 그대로 남는다.
+    expect(await read(`${ROOT}/소설/작품/안쪽 문서.md`)).toBe('[[분류:작품]]\n[[분류:]]\n본문\n')
   })
 
-  it('"틀을 쓰지 않음"은 내장 기본 내용도 건너뛴다', async () => {
-    await ctx.state().createFolder(dir, FOLDER_01)
+  it('기본 틀로 시작한 문서는 열려서 편집창에 같은 내용이 보인다', async () => {
+    await makeTemplate('강의 틀', '틀 본문\n')
+    await ctx.state().saveDefaultTemplate(lecture, '강의 틀')
 
-    await ctx.state().createDoc(`${dir}/${FOLDER_01}`, '문서', NO_TEMPLATE)
+    await ctx.state().createDoc(lecture, '열리는 문서')
 
-    expect(await read(`${dir}/${FOLDER_01}/문서.md`)).toBe('[[분류:]]\n')
-  })
-
-  it('정해 둔 틀이 지워지면 내장 기본 내용으로 돌아간다', async () => {
-    await ctx.state().createFolder(dir, FOLDER_01)
-    await ctx.state().saveDefaultTemplate(`${dir}/${FOLDER_01}`, '지워진 틀')
-
-    await ctx.state().createDoc(`${dir}/${FOLDER_01}`, '문서')
-
-    expect(await read(`${dir}/${FOLDER_01}/문서.md`)).toBe(DDAZUA_TEMPLATE)
+    expect(ctx.state().openPath).toBe(`${lecture}/열리는 문서.md`)
+    expect(ctx.state().rawText).toBe('틀 본문\n')
   })
 })

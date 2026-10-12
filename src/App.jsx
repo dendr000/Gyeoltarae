@@ -18,7 +18,6 @@ import { PromptModal } from './components/PromptModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordInput, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
-import { findFolderDocTemplate } from './lib/folderDocTemplate.js'
 import './App.css'
 
 // Pokémon-specific, so kept separate from useAppStore.js's general
@@ -135,17 +134,16 @@ export default function App() {
       })
     }
     // 글양식(틀) 고르는 칸 — 목록에서 고른다. 맨 위 "자동"은 폴더 기본 틀(폴더 우클릭 "기본 틀 설정…")이 있으면 그 틀,
-    // 없으면 이 폴더의 내장 기본 내용, 그것도 없으면 빈 문서다. 기본 틀이 있는 폴더에서는 맨 아래에 "틀을 쓰지 않음"이 더 있다.
+    // 없으면 빈 문서다. 기본 틀이 있는 폴더에서는 맨 아래에 "틀을 쓰지 않음"이 더 있다.
     const folderDefault = await getApi().readDefaultTemplate?.(workspacePath, dirPath)
     const defaultName = folderDefault && templateIndex[folderDefault.template]?.rawText ? folderDefault.template : null
-    const hasBuiltin = !defaultName && findFolderDocTemplate(dirPath) !== null
-    if (availableSkeletons.length > 0 || defaultName || hasBuiltin) {
-      const autoLabel = defaultName ? `${defaultName} (이 폴더의 기본 틀)` : hasBuiltin ? '이 폴더의 기본 내용' : '빈 문서'
+    if (availableSkeletons.length > 0 || defaultName) {
+      const autoLabel = defaultName ? `${defaultName} (이 폴더의 기본 틀)` : '빈 문서'
       const options = [
         { value: '', label: autoLabel },
         ...availableSkeletons.filter((n) => n !== defaultName).map((n) => ({ value: n, label: n })),
       ]
-      if (defaultName || hasBuiltin) options.push({ value: NO_TEMPLATE, label: '빈 문서 (틀을 쓰지 않음)' })
+      if (defaultName) options.push({ value: NO_TEMPLATE, label: '빈 문서 (틀을 쓰지 않음)' })
       fields.push({ key: 'skeleton', label: '글양식(틀)', options, required: false })
     }
     const result = await requestPrompt({ title: '새 문서', fields })

@@ -25,6 +25,12 @@
   --hl-tag: light-dark(#be185d, #f78fb3);
   --hl-meta: light-dark(#475569, #9aa5b1);
 
+  /* 표 편집기 칸 색. 칸이 모달 바탕과 구분되어 보이도록 테두리·바탕을 일반 --border/--bg 보다 또렷하게 둔다(라이트/다크 한 곳). */
+  --grid-line: light-dark(#a3a3b2, #707080);
+  --grid-cell: light-dark(#f4f4f9, #2c2c35);
+  --grid-head: light-dark(rgba(108, 78, 227, 0.2), rgba(156, 133, 240, 0.32));
+  --grid-range: light-dark(rgba(108, 78, 227, 0.2), rgba(156, 133, 240, 0.3));
+
   font: 14px/1.6 var(--sans);
   color-scheme: light dark;
   color: var(--text);

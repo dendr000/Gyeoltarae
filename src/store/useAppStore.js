@@ -13,7 +13,6 @@ import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose, withFolderEnabled } from '../lib/snippetScope.js'
-import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
 import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
@@ -1361,8 +1360,8 @@ export const useAppStore = create((set, get) => ({
     const api = getApi()
     const filePath = await api.createFile(dirPath, name)
     // 시작 내용 우선순위: 사용자가 고른 글양식 > 폴더 기본 틀 설정(폴더 우클릭 "기본 틀 설정…", 가장 가까운 윗 폴더) >
-    // 내장 폴더 기본 내용(lib/folderDocTemplate.js) > 기본 빈 분류 줄. 입력창에서 "틀을 쓰지 않음"(NO_TEMPLATE)을 고르면
-    // 폴더 설정과 내장 기본 내용을 건너뛰고 빈 분류 줄로 시작한다(규칙은 lib/defaultTemplate.js).
+    // 기본 빈 분류 줄. 입력창에서 "틀을 쓰지 않음"(NO_TEMPLATE)을 고르면 폴더 설정을 건너뛰고 빈 분류 줄로 시작한다
+    // (규칙은 lib/defaultTemplate.js).
     // 그 위에 ① 작품 폴더의 구조 기반 자동 분류 ② 폴더의 "자동 분류"(읽어들일 글자, lib/autoCategory.js)를 차례로
     // 얹는다. 기본 내용 그대로면(바뀐 게 없으면) 다시 쓰지 않는다.
     const { workspacePath, templateIndex } = get()
@@ -1373,14 +1372,11 @@ export const useAppStore = create((set, get) => ({
       folderDefaultName: folderDefault?.template,
       templateIndex,
     })
-    const folderTemplate = choice.source === 'none' ? null : findFolderDocTemplate(dirPath)
     const workFolderNames = buildAutoCategoryNames(dirPath)
     let initial // 기본 빈 분류 줄일 때만: 만들자마자 들어 있던 내용(바뀌었는지 비교용)
     let content
     if (choice.template) {
       content = applyAutoCategoryTags(expandTemplateBody(choice.template.rawText, {}), workFolderNames)
-    } else if (folderTemplate) {
-      content = applyAutoCategoryTags(folderTemplate, workFolderNames)
     } else {
       initial = await api.readFile(filePath)
       content = applyAutoCategoryTags(initial, workFolderNames)

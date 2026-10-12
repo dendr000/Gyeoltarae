@@ -1,8 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
-// 따즈아 폴더의 새 문서 기본 내용 — 사용자가 요청한 본문을 줄 단위로 그대로 옮겨 적은 기대값이다.
-// 구현(src/lib/folderDocTemplate.js)과 따로 적어서, 구현이 바뀌면 이 기대값과 어긋나 시험이 실패한다.
-// 줄 끝의 공백("* ")도 요청 그대로다.
+// 따즈아 강의 노트 틀(분류 세 줄, 목차, 큰 제목 네 묶음)의 본문 예시 — 자동 분류가 빈 [[분류:]] 칸을 채우는 시험(tests/lib/autoCategory.test.js)이
+// 실제와 같은 모양의 글로 확인하려고 쓴다. (예전에는 코드에 내장된 기본 내용이었고 지금은 워크스페이스의 틀이다.) 줄 끝의 공백("* ")도 그대로다.
 export const DDAZUA_TEMPLATE_LINES = [
   '[[분류:ddazua]]',
   '[[분류:]]',
@@ -44,29 +43,3 @@ export const DDAZUA_TEMPLATE_LINES = [
 
 export const DDAZUA_TEMPLATE = DDAZUA_TEMPLATE_LINES.join('\n')
 
-// 따즈아/01 올인원 DBMS!! 설계부터 운영까지!! 폴더의 이름(규칙이 이 이름 전체로 찾는다).
-export const FOLDER_01 = '01 올인원 DBMS!! 설계부터 운영까지!!'
-// 따즈아/02 배워서 바로 써먹는 DBMS 폴더의 새 문서 기본 내용 — 사용자가 요청한 본문(---------- 안쪽)을 줄 단위로
-// 그대로 옮겨 적은 기대값이다. 구현과 따로 적어서 어긋나면 시험이 실패한다. 큰 제목 줄은 "=  =" (= 사이 공백 둘).
-export const FOLDER_02 = '02 배워서 바로 써먹는 DBMS'
-export const PRACTICE_TEMPLATE_LINES = [
-  '[[분류:ddazua]]',
-  '[[분류:DBMS]]',
-  '[[분류:DBMS/]]',
-  '[목차]',
-  '[clearfix]',
-  '',
-  '=  =',
-  '```DBeaver',
-  '```',
-  '',
-  '=  =',
-  '```DBeaver',
-  '```',
-  '',
-  '=  =',
-  '```DBeaver',
-  '```',
-  '',
-]
-export const PRACTICE_TEMPLATE = PRACTICE_TEMPLATE_LINES.join('\n')
