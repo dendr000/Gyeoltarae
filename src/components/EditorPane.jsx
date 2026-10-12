@@ -37,8 +37,9 @@ import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope.js'
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
-import { fenceAutoCloseEdit, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
+import { fenceAutoCloseEdit, isInCodeFenceAt, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
+import { atomicDeleteRange, atomicStep } from '../lib/atomicTokens.js'
 import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
@@ -64,13 +65,20 @@ function replaceRange(textarea, start, end, insertText, onChange) {
   return { start, end: start + insertText.length }
 }
 
-function wrapSelection(textarea, before, after, onChange) {
+// caretAfter: 선택한 글을 감쌌으면 커서를 닫는 표시 바로 오른쪽 바깥에 둔다(이어서 다음 글을 바로 쓸 수 있게).
+// 아니면(기본) 안쪽 글을 그대로 선택해 둔다. 선택이 없으면 어느 쪽이든 여는 표시와 닫는 표시 사이에 커서를 둔다.
+function wrapSelection(textarea, before, after, onChange, { caretAfter = false } = {}) {
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selected = textarea.value.slice(start, end)
   replaceRange(textarea, start, end, `${before}${selected}${after}`, onChange)
   requestAnimationFrame(() => {
     textarea.focus()
+    if (caretAfter && selected !== '') {
+      const pos = start + before.length + selected.length + after.length
+      textarea.setSelectionRange(pos, pos)
+      return
+    }
     textarea.setSelectionRange(start + before.length, start + before.length + selected.length)
   })
 }
@@ -1023,7 +1031,9 @@ export function EditorPane({ text, onChange, disabled }) {
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
       e.preventDefault()
-      wrapSelection(textarea, "'''", "'''", onChange)
+      // 굵게 — 글을 선택했으면 감싼 뒤 커서는 닫는 ''' 바깥 오른쪽에 둔다. 선택이 없으면 '''|''' 가운데(글을 써야
+      // 하므로). 닫는 ''' 앞에서 → 키를 누르면 ''' 를 한 번에 건너뛴다(아래 atomicStep).
+      wrapSelection(textarea, "'''", "'''", onChange, { caretAfter: true })
       return
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') {
@@ -1047,6 +1057,39 @@ export function EditorPane({ text, onChange, disabled }) {
       updateFileSuggest()
       updateSnippetSuggest()
       return
+    }
+    // ←/→, Shift+←/→, Backspace, Delete — 굵게 표시 ''' 와 줄 맨 앞 들여쓰기(공백 4칸)를 한 덩어리로 움직이고 지운다.
+    // 한글 조합 중에는 건드리지 않는다. 마우스 클릭으로 ''' 사이에 커서를 놓는 것은 막을 수 없다. 규칙은 lib/atomicTokens.js.
+    if (!e.ctrlKey && !e.altKey && !e.metaKey && !e.nativeEvent.isComposing) {
+      const { value, selectionStart, selectionEnd, selectionDirection } = textarea
+      const hasSelection = selectionStart !== selectionEnd
+      const arrow = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0
+      const erase = e.shiftKey ? 0 : e.key === 'Backspace' ? -1 : e.key === 'Delete' ? 1 : 0
+      if (arrow !== 0 && (e.shiftKey || !hasSelection)) {
+        const backward = hasSelection && selectionDirection === 'backward'
+        const focus = hasSelection && !backward ? selectionEnd : selectionStart
+        const anchor = hasSelection && !backward ? selectionStart : hasSelection ? selectionEnd : selectionStart
+        const target = atomicStep(value, focus, arrow, { tokens: !isInCodeFenceAt(value, focus) })
+        if (target !== null) {
+          e.preventDefault()
+          if (e.shiftKey) {
+            textarea.setSelectionRange(Math.min(anchor, target), Math.max(anchor, target), target < anchor ? 'backward' : 'forward')
+          } else {
+            textarea.setSelectionRange(target, target)
+          }
+          updateFileSuggest()
+          updateSnippetSuggest()
+          return
+        }
+      }
+      if (erase !== 0 && !hasSelection) {
+        const range = atomicDeleteRange(value, selectionStart, erase, { tokens: !isInCodeFenceAt(value, selectionStart) })
+        if (range) {
+          e.preventDefault()
+          replaceRange(textarea, range.from, range.to, '', onChange)
+          return
+        }
+      }
     }
     // Ctrl+/ — 코드블록(```) 안에서 현재 줄(선택했으면 걸친 줄 전체)을 주석 처리하고, 이미 주석이면 푼다.
     // 주석 기호는 코드블록의 언어(```sql -> --, ```js -> //)를 따른다(규칙은 lib/codeComment.js). 슬래시는

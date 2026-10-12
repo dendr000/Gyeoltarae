@@ -2,7 +2,8 @@
 
 - 작성일: 2026-10-08
 - 성격: 계획서. 구현은 항목별로 따로 요청할 때 진행한다.
-- **진행 상황 (2026-10-09)**: 항목 3(Alt+←/→), 4(여러 줄 Tab), 1(목록 이어쓰기)을 **0.78.0 에서 구현 완료** — 문서: [editor-line-keys.md](../features/editor-line-keys.md). 항목 2·5·6 은 미구현.
+- **진행 상황 (2026-10-09)**: 항목 3(Alt+←/→), 4(여러 줄 Tab), 1(목록 이어쓰기)을 **0.78.0 에서 구현 완료** — 문서: [editor-line-keys.md](../features/editor-line-keys.md). 항목 5·6-2 는 미구현.
+- **진행 상황 (2026-10-12, 이어서)**: 항목 2(Ctrl+B 커서 바깥, `'''` 와 줄 앞 공백 4칸 한 덩어리)를 **0.84.0 에서 구현 완료** — 문서: [bold-and-indent-keys.md](../features/bold-and-indent-keys.md).
 - **진행 상황 (2026-10-12)**: 항목 6-1(제목 강조 어긋남)을 **0.83.1 에서 해결** — 원인은 입력칸의 스크롤바 폭 차이로 긴 줄이 다르게 접힌 것과 소수 줄 높이였다([troubleshooting.md](../troubleshooting.md) 2026-10-12). 6-2(줄 번호·점 토글 줄 여백)는 이제 같은 방식으로 줄 위치를 믿고 만들 수 있다. 글꼴/열 맞춤 논의는 [font-and-column-alignment.md](font-and-column-alignment.md) 에 따로 기록했다.
 - 근거: 현재 코드(`src/components/EditorPane.jsx`, `src/App.css`, `src/store/useAppStore.js`, `src/lib/*`)를 읽고 판단했다. 직접 실행해서 확인하지 못한 것은 "가설" 또는 "구현 전 확인"으로 표시했다.
 - 한도가 빠듯할 때를 위해 **구현이 쉬운 순서와 한도 표시**(맨 아래)를 정해 두었다.
