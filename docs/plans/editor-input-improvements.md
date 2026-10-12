@@ -2,7 +2,8 @@
 
 - 작성일: 2026-10-08
 - 성격: 계획서. 구현은 항목별로 따로 요청할 때 진행한다.
-- **진행 상황 (2026-10-09)**: 항목 3(Alt+←/→), 4(여러 줄 Tab), 1(목록 이어쓰기)을 **0.78.0 에서 구현 완료** — 문서: [editor-line-keys.md](../features/editor-line-keys.md). 항목 6-2 는 미구현.
+- **진행 상황 (2026-10-09)**: 항목 3(Alt+←/→), 4(여러 줄 Tab), 1(목록 이어쓰기)을 **0.78.0 에서 구현 완료** — 문서: [editor-line-keys.md](../features/editor-line-keys.md). 모든 항목 구현 완료.
+- **진행 상황 (2026-10-12, 이어서)**: 항목 6-2(줄 번호·점 토글 줄 여백)를 **0.86.0 에서 구현 완료** — 문서: [editor-gutter.md](../features/editor-gutter.md). 줄 번호 옆 점을 누르는 영역은 입력칸 왼쪽 56px 이다. 6-3(편집기 교체)은 하지 않았다.
 - **진행 상황 (2026-10-12, 이어서)**: 항목 5(폴더 범위 영어 단어 추천)를 **0.85.0 에서 구현 완료** — 문서: [scope-word-suggest.md](../features/scope-word-suggest.md).
 - **진행 상황 (2026-10-12, 이어서)**: 항목 2(Ctrl+B 커서 바깥, `'''` 와 줄 앞 공백 4칸 한 덩어리)를 **0.84.0 에서 구현 완료** — 문서: [bold-and-indent-keys.md](../features/bold-and-indent-keys.md).
 - **진행 상황 (2026-10-12)**: 항목 6-1(제목 강조 어긋남)을 **0.83.1 에서 해결** — 원인은 입력칸의 스크롤바 폭 차이로 긴 줄이 다르게 접힌 것과 소수 줄 높이였다([troubleshooting.md](../troubleshooting.md) 2026-10-12). 6-2(줄 번호·점 토글 줄 여백)는 이제 같은 방식으로 줄 위치를 믿고 만들 수 있다. 글꼴/열 맞춤 논의는 [font-and-column-alignment.md](font-and-column-alignment.md) 에 따로 기록했다.

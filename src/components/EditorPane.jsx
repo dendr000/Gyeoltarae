@@ -24,6 +24,7 @@ import {
   Zap,
   WandSparkles,
   BookmarkPlus,
+  ListOrdered,
 } from 'lucide-react'
 import { TableEditorModal } from './TableEditorModal.jsx'
 import { GradientEditorModal } from './GradientEditorModal.jsx'
@@ -46,6 +47,7 @@ import { indentLinesEdit } from '../lib/lineIndent.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
+import { lineIndexAt } from '../lib/lineMarks.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -266,6 +268,10 @@ function withCaretMirror(textarea, position, fn) {
   div.style.whiteSpace = 'pre-wrap'
   div.style.wordWrap = 'break-word'
   for (const prop of CARET_MIRROR_STYLE_PROPS) div.style[prop] = computed[prop]
+  // computed.width 는 스크롤바 자리까지 포함한 폭이라, 그대로 쓰면 거울의 글 영역이 입력칸보다 스크롤바 폭(약 15px)만큼
+  // 넓어서 긴 줄이 다른 곳에서 접혀 커서 위치(추천 팝업, [편집] 점프)가 몇 줄씩 어긋난다. 입력칸이 실제로 글을 그리는 폭
+  // (clientWidth, 스크롤바 제외 + 테두리)으로 맞춘다. 배경판과 같은 문제였다(docs/troubleshooting.md 2026-10-12).
+  div.style.width = `${textarea.clientWidth + parseFloat(computed.borderLeftWidth) + parseFloat(computed.borderRightWidth)}px`
   div.textContent = textarea.value.slice(0, position)
   const span = document.createElement('span')
   span.textContent = textarea.value.slice(position) || '.'
@@ -464,33 +470,32 @@ const FOLDING_TEMPLATE = `{{{#!folding 더 보기
 // 함, 실행취소/IME 등 기존 동작이 전부 걸려 있어 위험도가 큼), 실제 글자는 여전히 진짜
 // textarea가 그대로 그리고, 그 뒤에 깔린 이 배경만 흉내냄(withCaretMirror와 같은 기법 —
 // 보이지 않는 거울 텍스트 뒤에 하이라이트 막대만 살아남게).
+const NO_MARKS = []
+
+// 줄 여백(점·줄 번호)이 차지하는 왼쪽 폭(px) — 이 안을 누르면 글 커서 대신 줄 강조를 켜고 끈다. App.css 의 --editor-pad-left 보다 작아야 한다.
+const GUTTER_WIDTH = 56
+
 const HEADING_LINE_RE = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/
 
-// 제목 줄 span은 'editor-heading-highlight-line'의 display:block으로 한 줄 전체 너비를
-// 채움 — block 요소는 그 앞뒤로 자동으로 줄바꿈 경계가 생기므로(일반 span들의 흐름 속에
-// 섞여 있어도) 그 자체로 이미 "한 줄 전체"를 차지한다. 여기에 줄 끝 '\n'을 span **안에**
-// 같이 넣으면(white-space: pre-wrap 아래에서) 그 한 글자가 block 박스 안에 "내용 뒤에 남는
-// 빈 줄"을 하나 더 만들어 제목 span이 실제로는 2줄 높이가 되고(제목 자체 1줄 + 빈 줄 1줄),
-// 이게 제목이 많은 문서일수록 뒤쪽 배경판 전체 높이가 textarea보다 계속 더 쌓여서, 스크롤을
-// 내릴수록 강조 배경이 실제 제목 줄보다 점점 더 아래(본문 줄들)에 겹쳐 보이는 원인이었음
-// — 유령처럼 쌓이는 한 줄짜리 어긋남이라 스크롤 위치를 아무리 맞춰도(위 useLayoutEffect)
-// 고쳐지지 않음(애초에 두 배경판의 총 높이 자체가 다르므로). 일반(제목이 아닌) 줄은 span이
-// inline이라 같은 문제가 없음 — 그 줄바꿈은 이어지는 다음 줄 내용과 같은 흐름을 공유해서
-// "남는 빈 줄"이 생기지 않음. 그래서 제목 줄만 '\n'을 span 밖으로 빼서(block 자체의 자동
-// 줄바꿈에 맡김) 정확히 1줄 높이가 되게 함.
-function renderHighlightLines(text) {
-  return text.split('\n').map((line, i) =>
-    HEADING_LINE_RE.test(line) ? (
-      <span key={i} className="editor-heading-highlight-line">
-        {line}
-      </span>
-    ) : (
-      <span key={i}>
-        {line}
-        {'\n'}
-      </span>
-    ),
-  )
+// 입력칸(textarea) 뒤에 같은 글을 보이지 않게 겹쳐 그리는 "배경판"의 내용. 글 한 줄(논리 줄)마다 block 하나(div.eline)를
+// 만든다 — 줄바꿈 문자를 따로 넣지 않으므로(block 은 앞뒤가 자동으로 줄 경계) 이전에 제목 span 안의 줄바꿈 문자가 빈 줄을
+// 하나 더 만들어 높이가 어긋나던 문제(docs/troubleshooting.md 2026-10-02)가 생기지 않는다. 줄마다 block 이면
+// 줄 번호(CSS counter)를 그 줄의 첫 화면 줄 옆에 붙이고, 줄 위치(offsetTop)를 바로 읽어 점 클릭의 줄을 찾을 수 있다.
+// 입력칸과 같은 폭·글꼴·줄 높이·여백이어야 줄 위치가 맞는다(App.css 의 .editor-highlight-backdrop 와
+// tests/components/editorLayers.test.js 참고).
+function renderHighlightLines(text, marks) {
+  const marked = new Set(marks)
+  return text.split('\n').map((line, i) => {
+    const heading = HEADING_LINE_RE.test(line)
+    // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
+    const className = heading ? 'eline eline-on eline-heading' : marked.has(i) ? 'eline eline-on' : 'eline'
+    // 빈 줄은 <br> 로 한 줄 높이를 만든다(내용이 없으면 block 의 높이가 0 이 되어 입력칸과 줄 수가 어긋난다).
+    return (
+      <div key={i} className={className}>
+        {line === '' ? <br /> : line}
+      </div>
+    )
+  })
 }
 
 function ToolbarButton({ icon: Icon, label, title, onClick, active = false }) {
@@ -508,7 +513,13 @@ export function EditorPane({ text, onChange, disabled }) {
   // 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤(스크롤바를 잡지 않아도 됨).
   const toolbarRef = useRef(null)
   useHorizontalWheelScroll(toolbarRef, !disabled)
-  const highlightLines = useMemo(() => renderHighlightLines(text), [text])
+  // 줄 여백: 줄 번호 표시 여부, 이 문서에서 점을 눌러 강조해 둔 줄(lib/lineMarks.js 규칙, 스토어가 줄 수 변화를 따라 옮겨 줌).
+  const editorLineNumbers = useAppStore((s) => s.editorLineNumbers)
+  const setEditorLineNumbers = useAppStore((s) => s.setEditorLineNumbers)
+  const toggleLineMark = useAppStore((s) => s.toggleLineMark)
+  const lineMarks = useAppStore((s) => (s.openPath ? s.lineMarks[s.openPath] : undefined) ?? NO_MARKS)
+  const [gutterHover, setGutterHover] = useState(null) // { line, top, on } — 점이 보일 줄
+  const highlightLines = useMemo(() => renderHighlightLines(text, lineMarks), [text, lineMarks])
   const [tableModal, setTableModal] = useState(null)
   const [gradientModal, setGradientModal] = useState(null)
   const [fileSuggest, setFileSuggest] = useState(null)
@@ -685,6 +696,28 @@ export function EditorPane({ text, onChange, disabled }) {
   // updateFileSuggest, but [[파일: context always wins when both would
   // otherwise apply (rare overlap, but unambiguous priority beats a
   // flickering choice between two popups).
+  // 마우스가 줄 여백 위에 있으면 그 줄의 { line, top, heading, on }, 아니면 null. 줄 위치는 배경판의 줄 block 에서 읽는다.
+  function gutterHit(event) {
+    const textarea = textareaRef.current
+    const backdrop = backdropRef.current
+    if (!editorLineNumbers || !textarea || !backdrop) return null
+    const rect = textarea.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    if (x < 0 || x >= GUTTER_WIDTH) return null
+    const y = event.clientY - rect.top + textarea.scrollTop
+    const blocks = backdrop.children
+    const line = lineIndexAt(blocks.length, (i) => blocks[i].offsetTop, y)
+    if (line === null) return null
+    const block = blocks[line]
+    if (y >= block.offsetTop + block.offsetHeight) return null // 마지막 줄 아래의 빈 곳
+    return {
+      line,
+      top: block.offsetTop - textarea.scrollTop,
+      heading: block.classList.contains('eline-heading'),
+      on: block.classList.contains('eline-on'),
+    }
+  }
+
   function updateSnippetSuggest() {
     const textarea = textareaRef.current
     if (!textarea) return
@@ -1449,16 +1482,27 @@ export function EditorPane({ text, onChange, disabled }) {
               }
               onClick={toggleSnippetSuggest}
             />
+            <ToolbarButton
+              icon={ListOrdered}
+              label="줄 번호"
+              active={editorLineNumbers}
+              title={
+                editorLineNumbers
+                  ? '줄 번호와 줄 강조 점 켜짐 (클릭하면 꺼짐) — 줄 왼쪽의 점을 누르면 그 줄이 강조됩니다'
+                  : '줄 번호와 줄 강조 점 꺼짐 (클릭하면 켜짐)'
+              }
+              onClick={() => setEditorLineNumbers(!editorLineNumbers)}
+            />
           </div>
         </div>
       )}
-      <div className="editor-text-wrap">
+      <div className={`editor-text-wrap${editorLineNumbers ? ' with-gutter' : ''}`}>
         <div ref={backdropRef} className="editor-highlight-backdrop" aria-hidden="true">
           {highlightLines}
         </div>
         <textarea
           ref={textareaRef}
-          className="editor-textarea"
+          className={`editor-textarea${gutterHover ? ' in-gutter' : ''}`}
           value={text}
           disabled={disabled}
           placeholder={
@@ -1473,6 +1517,24 @@ export function EditorPane({ text, onChange, disabled }) {
             updateSnippetSuggest()
           }}
           onKeyDown={handleKeyDown}
+          onMouseMove={(e) => {
+            const hit = gutterHit(e)
+            setGutterHover((prev) => {
+              if (!hit) return prev === null ? prev : null
+              return prev && prev.line === hit.line && prev.top === hit.top && prev.on === hit.on ? prev : hit
+            })
+          }}
+          onMouseLeave={() => setGutterHover(null)}
+          onMouseDown={(e) => {
+            // 줄 여백의 점을 누르면 그 줄 강조를 켜고 끈다(제목 줄은 항상 켜져 있어서 바뀌지 않는다). 글 커서는 옮기지 않는다.
+            const hit = gutterHit(e)
+            if (!hit) return
+            e.preventDefault()
+            if (!hit.heading) {
+              toggleLineMark(hit.line)
+              setGutterHover({ ...hit, on: !hit.on }) // 눌러서 켜졌으면 빈 점 대신 채워진 점이 보이게(마우스를 움직이기 전에도)
+            }
+          }}
           onClick={() => {
             updateFileSuggest()
             updateSnippetSuggest()
@@ -1489,10 +1551,14 @@ export function EditorPane({ text, onChange, disabled }) {
           }}
           onScroll={(e) => {
             setEditorScroll(activeTabId, e.target.scrollTop)
+            setGutterHover(null)
             if (backdropRef.current) backdropRef.current.scrollTop = e.target.scrollTop
           }}
           spellCheck={false}
         />
+        {editorLineNumbers && gutterHover && !gutterHover.on && (
+          <div className="editor-gutter-dot" style={{ top: gutterHover.top + 9 }} aria-hidden="true" />
+        )}
       </div>
       {findBar && (
         <FindReplaceBar

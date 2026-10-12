@@ -15,6 +15,7 @@ import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, nextFolderAfterClose, withFolderEnabled } from '../lib/snippetScope.js'
 import { findFolderDocTemplate } from '../lib/folderDocTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
+import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 
@@ -201,6 +202,17 @@ function loadWholeScopeTopFolders() {
     return Array.isArray(parsed) ? parsed.filter((name) => typeof name === 'string') : []
   } catch {
     return []
+  }
+}
+
+// 편집기 줄 번호 표시(기본 켜짐). 이 PC 의 화면 설정이라 localStorage 에 둔다.
+const EDITOR_LINE_NUMBERS_STORAGE_KEY = 'wikidesk-editor-line-numbers'
+
+function loadEditorLineNumbers() {
+  try {
+    return localStorage.getItem(EDITOR_LINE_NUMBERS_STORAGE_KEY) !== 'false'
+  } catch {
+    return true
   }
 }
 
@@ -426,6 +438,10 @@ export const useAppStore = create((set, get) => ({
   scopeWordSuggestEnabled: loadScopeWordSuggestEnabled(),
   wholeScopeTopFolders: loadWholeScopeTopFolders(),
   scopeWordIndex: null,
+  // 편집기 줄 여백: 줄 번호 표시 여부(저장)와, 문서마다 점을 눌러 강조해 둔 줄 번호(0부터)의 목록 { [경로]: number[] }
+  // — 강조 표시는 앱을 켜 둔 동안만 유지한다(파일에 저장하지 않음). 규칙은 lib/lineMarks.js.
+  editorLineNumbers: loadEditorLineNumbers(),
+  lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
   dictText: '',
@@ -525,6 +541,22 @@ export const useAppStore = create((set, get) => ({
       /* localStorage unavailable; 재시작하면 모두 꺼짐으로 돌아갈 뿐 */
     }
     set({ wholeScopeTopFolders: next })
+  },
+
+  setEditorLineNumbers(enabled) {
+    try {
+      localStorage.setItem(EDITOR_LINE_NUMBERS_STORAGE_KEY, String(enabled))
+    } catch {
+      /* localStorage unavailable; 재시작하면 켜짐으로 돌아갈 뿐 */
+    }
+    set({ editorLineNumbers: enabled })
+  },
+
+  // 지금 열린 문서의 line(0부터)번째 줄의 강조 표시를 켜거나 끈다.
+  toggleLineMark(line) {
+    const { openPath, lineMarks } = get()
+    if (!openPath) return
+    set({ lineMarks: { ...lineMarks, [openPath]: toggleMark(lineMarks[openPath] ?? [], line) } })
   },
 
   setSnippetFolderEnabled(folder, enabled) {
@@ -1207,7 +1239,12 @@ export const useAppStore = create((set, get) => ({
   },
 
   updateText(text) {
-    set({ rawText: text, isDirty: true, saveStatus: 'idle' })
+    // 줄이 늘거나 줄면 이 문서의 강조 표시를 같은 글에 붙어 있도록 옮긴다(lib/lineMarks.js).
+    const { openPath, rawText, lineMarks } = get()
+    const marks = openPath ? lineMarks[openPath] : undefined
+    const patch = { rawText: text, isDirty: true, saveStatus: 'idle' }
+    if (marks?.length) patch.lineMarks = { ...lineMarks, [openPath]: shiftMarks(marks, rawText, text) }
+    set(patch)
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
       get().saveOpenFile()

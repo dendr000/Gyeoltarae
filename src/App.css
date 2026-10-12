@@ -1306,6 +1306,12 @@
      이 값이면 끝까지 스크롤했을 때 마지막 줄이 화면 맨 위 줄 자리까지 올라온다.
      textarea 와 배경판의 여백이 같아야 스크롤 위치가 어긋나지 않으므로 둘 다 이 값을 쓴다. */
   --editor-tail: calc(100cqh - 24px - 1px);
+  /* 글 왼쪽 여백. 줄 여백(줄 번호·점)이 켜져 있으면 그만큼 넓힌다. 입력칸과 배경판이 같은 값을 써야 한다. */
+  --editor-pad-left: 32px;
+}
+
+.editor-text-wrap.with-gutter {
+  --editor-pad-left: 64px;
 }
 
 .editor-highlight-backdrop {
@@ -1315,7 +1321,7 @@
   overflow: hidden;
   box-sizing: border-box;
   /* 아래 여백은 .editor-text-wrap 의 --editor-tail (마지막 줄을 화면 위쪽에 두고 쓸 수 있게). */
-  padding: 24px 32px var(--editor-tail);
+  padding: 24px 32px var(--editor-tail) var(--editor-pad-left);
   /* 줄 높이는 소수(14*1.7=23.8px)가 아니라 정수 px — 소수면 줄 수가 많을수록 두 요소의 위치가 1~3px 씩
      어긋나 쌓인다. textarea 와 같은 값이어야 한다. */
   font: 14px/24px var(--mono);
@@ -1328,12 +1334,66 @@
   pointer-events: none;
 }
 
-.editor-heading-highlight-line {
+/* 배경판의 줄 하나(div.eline). 음수 가로 여백 + 같은 크기의 안쪽 여백으로 글 자리는 그대로 두고 강조 막대만
+   양옆으로 6px 넓힌다. 이 값은 강조가 없는 줄에도 똑같이 줘야 줄 번호·점의 가로 위치가 줄마다 같다. */
+.eline {
+  position: relative;
   display: block;
   margin: 0 -6px;
   padding: 0 6px;
   border-radius: 4px;
+  counter-increment: eline;
+}
+
+/* 강조가 켜진 줄: 제목(=) 줄은 자동, 그 밖의 줄은 줄 여백의 점을 눌러 켠 줄. */
+.eline-on {
   background: var(--accent-bg);
+}
+
+/* 줄 여백(줄 번호·점) — 배경판의 padding-left 안쪽(글 왼쪽)에 그린다. 줄 번호는 CSS counter 로 줄마다 붙이고 그 줄의
+   첫 화면 줄 옆에 놓인다(긴 줄이 접혀도 번호는 한 번만). 좌표는 .eline 의 안쪽 여백 왼쪽 끝(= 글 시작 - 6px) 기준이다. */
+.editor-highlight-backdrop {
+  counter-reset: eline;
+}
+
+.editor-text-wrap.with-gutter .eline::before {
+  content: counter(eline);
+  position: absolute;
+  left: -40px;
+  width: 32px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.38;
+  user-select: none;
+}
+
+/* 강조가 켜진 줄의 점(채움) — 제목 줄은 자동으로 켜진 상태. */
+.editor-text-wrap.with-gutter .eline-on::after {
+  content: '';
+  position: absolute;
+  left: -52px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* 마우스를 올린 줄의 점(빈 동그라미) — 눌러서 그 줄을 강조한다. EditorPane.jsx 가 위치(top)를 정한다. */
+.editor-gutter-dot {
+  position: absolute;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.editor-textarea.in-gutter {
+  cursor: pointer;
 }
 
 .editor-textarea {
@@ -1343,7 +1403,7 @@
   border: none;
   outline: none;
   resize: none;
-  padding: 24px 32px var(--editor-tail); /* 배경판(.editor-highlight-backdrop)과 같은 값 */
+  padding: 24px 32px var(--editor-tail) var(--editor-pad-left); /* 배경판(.editor-highlight-backdrop)과 같은 값 */
   background: transparent;
   color: var(--text-h);
   font: 14px/24px var(--mono); /* 배경판과 같은 값 (줄 높이는 정수 px) */

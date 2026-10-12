@@ -149,6 +149,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
 - **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **편집기 줄 번호와 줄 강조 점**: 편집 모드 글 왼쪽에 줄 번호가 옅게 보이고, 줄에 마우스를 올리면 나오는 점을 눌러 그 줄을 강조함(제목 줄은
+  자동). 툴바 "줄 번호" 버튼으로 켜고 끔. 강조는 앱을 켜 둔 동안만 유지.
+  [`docs/features/editor-gutter.md`](docs/features/editor-gutter.md)
 - **폴더 범위 영어 단어 추천**: 문서에 써 온 영어 단어를 같은 범위(두 번째 단계 폴더, 설정하면 최상위 폴더 전체)의 다른 문서를 쓸 때
   추천 팝업에 올림(상용구 뒤, 많이 쓴 순). 상용구 모달 "폴더별 사용" 탭에서 켜고 끔.
   [`docs/features/scope-word-suggest.md`](docs/features/scope-word-suggest.md)
