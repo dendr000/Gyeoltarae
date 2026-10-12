@@ -24,7 +24,7 @@ const backdrop = ruleBody('.editor-highlight-backdrop')
 const textarea = ruleBody('.editor-textarea')
 
 describe('편집기 입력칸과 제목 강조 배경판의 배치 값', () => {
-  for (const property of ['font', 'padding', 'scrollbar-gutter']) {
+  for (const property of ['font', 'padding', 'scrollbar-gutter', 'tab-size']) {
     it(`${property} 가 두 요소에서 같고 비어 있지 않다`, () => {
       const a = declaration(backdrop, property)
       const b = declaration(textarea, property)

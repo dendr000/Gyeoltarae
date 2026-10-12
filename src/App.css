@@ -905,6 +905,7 @@
   padding: 10px 14px;
   overflow-x: auto;
   font: 13px/1.6 var(--mono);
+  tab-size: var(--tab-size);
   white-space: pre;
 }
 
@@ -1325,6 +1326,7 @@
   /* 줄 높이는 소수(14*1.7=23.8px)가 아니라 정수 px — 소수면 줄 수가 많을수록 두 요소의 위치가 1~3px 씩
      어긋나 쌓인다. textarea 와 같은 값이어야 한다. */
   font: 14px/24px var(--mono);
+  tab-size: var(--tab-size); /* 입력칸과 같은 값 */
   /* textarea 는 세로 스크롤바 때문에 글 영역이 그만큼 좁다. 배경판도 같은 자리를 비워 둬야 긴 줄이 같은
      곳에서 접힌다(안 그러면 제목 강조가 문서 아래로 갈수록 몇 줄씩 어긋난다). */
   scrollbar-gutter: stable;
@@ -1407,6 +1409,7 @@
   background: transparent;
   color: var(--text-h);
   font: 14px/24px var(--mono); /* 배경판과 같은 값 (줄 높이는 정수 px) */
+  tab-size: var(--tab-size); /* 붙여넣은 탭 문자를 4칸으로 (배경판과 같은 값) */
   scrollbar-gutter: stable; /* 배경판과 같은 값 */
 }
 
