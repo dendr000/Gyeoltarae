@@ -146,6 +146,16 @@ function refocusMainWindow() {
   mainWindow.webContents.focus()
 }
 
+// 클릭만으로 문서·탭·사이드바 항목을 여는 경우의 가벼운 포커스 맞춤. refocusMainWindow 와 달리 blur() 를 하지 않는다 —
+// blur() 는 Windows 에서 z-순서상 다음 창(예: 뒤에 있는 클로드 앱)을 잠깐 활성화했다가 되돌려서, 클릭할 때마다
+// 뒤의 다른 앱이 깜빡이며 비쳐 보이는 원인이었다. 클릭했다는 것 자체가 이 창이 이미 활성이라는 뜻이라 OS 포커스를
+// 다시 맞출 필요가 없고, 모달이 닫힌 직후 새 문서를 자동 포커스하는 경우(실제로 키 입력이 끊기던 때)는 기존
+// refocusMainWindow 를 그대로 쓴다.
+function softRefocusMainWindow() {
+  if (!mainWindow) return
+  mainWindow.webContents.focus()
+}
+
 // Deleting/renaming a directory the watcher is actively watching can fail
 // on Windows (ENOTEMPTY from a recursive fs.rm racing the watcher's own
 // directory handles, or shell.trashItem's Recycle-Bin move rejecting
@@ -523,6 +533,10 @@ ipcMain.handle('images:importData', (_event, workspacePath, fileName, base64Data
 
 // Called by the renderer right before it shows anything that autofocuses an
 // input (new document/folder prompt, rename field) — see refocusMainWindow.
+ipcMain.handle('window:softRefocus', () => {
+  softRefocusMainWindow()
+})
+
 ipcMain.handle('window:refocus', () => {
   refocusMainWindow()
 })

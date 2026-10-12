@@ -51,7 +51,7 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
                   key={`${entry.category}/${entry.title}`}
                   className={`data-sidebar-row ${isActive ? 'active' : ''}`}
                   onClick={() => {
-                    getApi().refocusWindow?.()
+                    getApi().softRefocusWindow?.()
                     onOpenSnippet(entry.category, entry.title)
                   }}
                   title="클릭해서 본문 편집 — 문서 편집 중 이 단축어를 타이핑하면 자동완성됨"
@@ -80,7 +80,7 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
           onClose={closeSnippetModal}
           onOpenInEditor={(category, title) => {
             closeSnippetModal()
-            getApi().refocusWindow?.()
+            getApi().softRefocusWindow?.()
             onOpenSnippet(category, title)
           }}
         />

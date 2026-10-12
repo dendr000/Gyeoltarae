@@ -28,7 +28,7 @@ export function TabBar() {
             title={tab.title}
             onClick={() => {
               if (isActive) return
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               switchTab(tab.id)
             }}
           >

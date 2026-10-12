@@ -90,7 +90,7 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
             title="더블클릭 또는 F2로 이름 변경, 우클릭으로 메뉴"
             tabIndex={0}
             onClick={() => {
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               setExpanded((v) => {
                 const next = !v
                 setFolderCollapsed(node.path, !next)
@@ -186,7 +186,7 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
       title="더블클릭 또는 F2로 이름 변경, 우클릭으로 메뉴"
       tabIndex={0}
       onClick={() => {
-        getApi().refocusWindow?.()
+        getApi().softRefocusWindow?.()
         onOpenFile(node.path, node.name)
       }}
       onDoubleClick={() => beginRename()}

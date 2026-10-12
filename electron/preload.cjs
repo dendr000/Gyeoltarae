@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('images:importData', workspacePath, fileName, base64Data),
 
   refocusWindow: () => ipcRenderer.invoke('window:refocus'),
+  softRefocusWindow: () => ipcRenderer.invoke('window:softRefocus'),
 
   onWatchEvent: (callback) => {
     const listener = (_event, payload) => callback(payload)

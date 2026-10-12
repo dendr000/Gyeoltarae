@@ -40,7 +40,7 @@ export function TemplateSidebar({ templateIndex, activeTemplate, onOpenTemplate,
               key={name}
               className={`template-sidebar-row ${activeTemplate === name ? 'active' : ''} ${!entry.path ? 'template-sidebar-row-missing' : ''}`}
               onClick={() => {
-                getApi().refocusWindow?.()
+                getApi().softRefocusWindow?.()
                 onOpenTemplate(name)
               }}
               title={entry.path ? undefined : '아직 만들어지지 않은 틀 (참조만 있음)'}

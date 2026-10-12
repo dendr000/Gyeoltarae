@@ -58,7 +58,7 @@ export function DataSidebar({ dataIndex, activeEntry, onOpenEntry, onDeleteEntry
                   key={`${entry.type}/${entry.name}`}
                   className={`data-sidebar-row ${isActive ? 'active' : ''} ${!entry.path ? 'data-sidebar-row-missing' : ''}`}
                   onClick={() => {
-                    getApi().refocusWindow?.()
+                    getApi().softRefocusWindow?.()
                     onOpenEntry(entry.type, entry.name)
                   }}
                   title={entry.path ? undefined : '아직 만들어지지 않은 자료 (참조만 있음)'}

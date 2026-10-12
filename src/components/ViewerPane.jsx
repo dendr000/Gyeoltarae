@@ -35,54 +35,54 @@ function handleWikiContentClick(
   const editHeadingLink = e.target.closest('.wiki-heading-edit-link')
   if (editHeadingLink && onEditHeading) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onEditHeading(Number(editHeadingLink.dataset.sourceOffset))
     return
   }
   const catLink = e.target.closest('.wiki-category-link')
   if (catLink) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onOpenCategory(catLink.dataset.category)
     return
   }
   const dataCard = e.target.closest('.data-card')
   if (dataCard) {
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onOpenDataEntry(dataCard.dataset.type, dataCard.dataset.name)
     return
   }
   const missingTemplate = e.target.closest('.template-missing')
   if (missingTemplate) {
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onOpenTemplate(missingTemplate.dataset.template)
     return
   }
   const anchorLink = e.target.closest('.wiki-anchor-link')
   if (anchorLink) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onAnchorLink(anchorLink.dataset.docPath || null, anchorLink.dataset.docName || null, anchorLink.dataset.anchorName)
     return
   }
   const wikiLink = e.target.closest('.wiki-link')
   if (wikiLink) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onOpenDoc(wikiLink.dataset.docPath, wikiLink.dataset.docName)
     return
   }
   const missingLink = e.target.closest('.wiki-link-missing')
   if (missingLink) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onCreateLinkedDoc(missingLink.dataset.docTarget)
     return
   }
   const ambiguousLink = e.target.closest('.wiki-link-ambiguous')
   if (ambiguousLink) {
     e.preventDefault()
-    getApi().refocusWindow?.()
+    getApi().softRefocusWindow?.()
     onAmbiguousLink(ambiguousLink.dataset.docTarget, e.clientX, e.clientY)
   }
 }
@@ -99,7 +99,7 @@ function CategoryBadges({ names, onOpenCategory, emptyHint }) {
           type="button"
           className="category-badge-btn"
           onClick={() => {
-            getApi().refocusWindow?.()
+            getApi().softRefocusWindow?.()
             onOpenCategory(name)
           }}
         >
@@ -187,7 +187,7 @@ function CategoryPageView({
             type="button"
             className="secondary-btn"
             onClick={() => {
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               onCreatePage(categoryName)
             }}
           >
@@ -220,7 +220,7 @@ function CategoryPageView({
                     type="button"
                     className="category-doc-link"
                     onClick={() => {
-                      getApi().refocusWindow?.()
+                      getApi().softRefocusWindow?.()
                       onOpenDoc(doc.path, doc.name)
                     }}
                   >
@@ -251,7 +251,7 @@ function UsedByList({ items, onOpenDoc, emptyHint }) {
             type="button"
             className="category-doc-link"
             onClick={() => {
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               onOpenDoc(doc.path, doc.name)
             }}
           >
@@ -323,7 +323,7 @@ function DataEntryView({
             type="button"
             className="secondary-btn"
             onClick={() => {
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               onCreateEntry(type, name)
             }}
           >
@@ -405,7 +405,7 @@ function TemplateView({
             type="button"
             className="secondary-btn"
             onClick={() => {
-              getApi().refocusWindow?.()
+              getApi().softRefocusWindow?.()
               onCreateTemplate(name)
             }}
           >
@@ -610,7 +610,7 @@ export function ViewerPane({ text, emptyHint }) {
       }
       const foundOffset = text.indexOf(word, searchStart)
       if (foundOffset !== -1) {
-        getApi().refocusWindow?.()
+        getApi().softRefocusWindow?.()
         requestEditorJump(foundOffset)
       }
     },

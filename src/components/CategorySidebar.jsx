@@ -15,7 +15,7 @@ export function CategorySidebar({ categoryIndex, activeCategory, onOpenCategory,
               key={name}
               className={`category-sidebar-row ${activeCategory === name ? 'active' : ''}`}
               onClick={() => {
-                getApi().refocusWindow?.()
+                getApi().softRefocusWindow?.()
                 onOpenCategory(name)
               }}
             >
