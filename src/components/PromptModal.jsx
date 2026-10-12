@@ -43,27 +43,39 @@ export function PromptModal({ title, fields, confirmLabel = '확인', onConfirm,
           </button>
         </div>
 
-        {fields.map((field, idx) => (
-          <label key={field.key} className="prompt-modal-field">
-            <span>{field.label}</span>
-            <input
-              type="text"
-              ref={idx === 0 ? firstInputRef : undefined}
-              autoFocus={idx === 0}
-              value={values[field.key] ?? ''}
-              placeholder={field.placeholder}
-              onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleConfirm()
-                } else if (e.key === 'Escape') {
-                  onCancel()
-                }
-              }}
-            />
-          </label>
-        ))}
+        {fields.map((field, idx) => {
+          const common = {
+            ref: idx === 0 ? firstInputRef : undefined,
+            autoFocus: idx === 0,
+            value: values[field.key] ?? '',
+            onChange: (e) => setValues((v) => ({ ...v, [field.key]: e.target.value })),
+            onKeyDown: (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleConfirm()
+              } else if (e.key === 'Escape') {
+                onCancel()
+              }
+            },
+          }
+          return (
+            <label key={field.key} className="prompt-modal-field">
+              <span>{field.label}</span>
+              {field.options ? (
+                // options([{ value, label }])가 있으면 글을 직접 치는 칸 대신 목록에서 고르는 칸이다.
+                <select {...common}>
+                  {field.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input type="text" placeholder={field.placeholder} {...common} />
+              )}
+            </label>
+          )
+        })}
 
         <div className="modal-actions">
           <button className="modal-cancel-btn" onClick={onCancel}>

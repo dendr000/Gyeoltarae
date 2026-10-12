@@ -17,6 +17,8 @@ import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordInput, parseKeywordInput } from './lib/autoCategory.js'
+import { NO_TEMPLATE } from './lib/defaultTemplate.js'
+import { findFolderDocTemplate } from './lib/folderDocTemplate.js'
 import './App.css'
 
 // Pokémon-specific, so kept separate from useAppStore.js's general
@@ -73,6 +75,7 @@ export default function App() {
     renameFile,
     moveFile,
     saveAutoCategory,
+    saveDefaultTemplate,
     importFiles,
     setMode,
     promptRequest,
@@ -131,13 +134,19 @@ export default function App() {
         required: false,
       })
     }
-    if (availableSkeletons.length > 0) {
-      fields.push({
-        key: 'skeleton',
-        label: '글양식(틀) — 선택',
-        placeholder: `비워두면 빈 문서 · 사용 가능: ${availableSkeletons.join(', ')}`,
-        required: false,
-      })
+    // 글양식(틀) 고르는 칸 — 목록에서 고른다. 맨 위 "자동"은 폴더 기본 틀(폴더 우클릭 "기본 틀 설정…")이 있으면 그 틀,
+    // 없으면 이 폴더의 내장 기본 내용, 그것도 없으면 빈 문서다. 기본 틀이 있는 폴더에서는 맨 아래에 "틀을 쓰지 않음"이 더 있다.
+    const folderDefault = await getApi().readDefaultTemplate?.(workspacePath, dirPath)
+    const defaultName = folderDefault && templateIndex[folderDefault.template]?.rawText ? folderDefault.template : null
+    const hasBuiltin = !defaultName && findFolderDocTemplate(dirPath) !== null
+    if (availableSkeletons.length > 0 || defaultName || hasBuiltin) {
+      const autoLabel = defaultName ? `${defaultName} (이 폴더의 기본 틀)` : hasBuiltin ? '이 폴더의 기본 내용' : '빈 문서'
+      const options = [
+        { value: '', label: autoLabel },
+        ...availableSkeletons.filter((n) => n !== defaultName).map((n) => ({ value: n, label: n })),
+      ]
+      if (defaultName || hasBuiltin) options.push({ value: NO_TEMPLATE, label: '빈 문서 (틀을 쓰지 않음)' })
+      fields.push({ key: 'skeleton', label: '글양식(틀)', options, required: false })
     }
     const result = await requestPrompt({ title: '새 문서', fields })
     if (!result?.name) return
@@ -152,6 +161,47 @@ export default function App() {
       await createDoc(dirPath, docName, result.skeleton || undefined)
     } catch (err) {
       window.alert(`문서를 만들지 못했습니다.\n\n${err.message}`)
+    }
+  }
+
+  // 폴더 우클릭 → "기본 틀 설정…": 이 폴더 아래에서 새 문서를 만들 때 자동으로 고를 글양식(틀)을 정한다(규칙은
+  // lib/defaultTemplate.js). 강의 폴더를 추가할 때마다 코드를 고치지 않고 폴더에서 바로 지정하려는 것이다. 새 문서 창에서는
+  // 그 틀이 처음부터 골라져 있고 다른 틀이나 빈 문서로 바꿀 수 있다. 이 폴더에 설정이 없고 윗 폴더 설정이 적용 중이면 안내한다.
+  const handleDefaultTemplate = async (folderPath, folderName) => {
+    const api = getApi()
+    const names = Object.keys(templateIndex)
+      .filter((n) => templateIndex[n].path)
+      .sort((a, b) => a.localeCompare(b, 'ko'))
+    if (names.length === 0) {
+      window.alert('아직 글양식(틀)이 없습니다.\n\n왼쪽 사이드바의 "틀"에서 먼저 틀을 만들어 주세요.')
+      return
+    }
+    const own = await api.readDefaultTemplate?.(workspacePath, folderPath, true)
+    const inherited = own ? null : await api.readDefaultTemplate?.(workspacePath, folderPath)
+    const inheritedNote = inherited
+      ? ` (지금은 윗 폴더 ${inherited.folderPath.split(/[\\/]/).pop()} 의 설정 "${inherited.template}" 이 적용 중이며, 여기에 정하면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다)`
+      : ''
+    const options = [{ value: '', label: '(설정 안 함)' }, ...names.map((n) => ({ value: n, label: n }))]
+    // 정해 둔 틀이 지워졌거나 이름이 바뀌었으면 목록에 없는 이름이라도 그대로 보여 준다(고르면 새로 정하는 것).
+    if (own && !names.includes(own.template)) options.push({ value: own.template, label: `${own.template} (없는 틀)` })
+    const result = await requestPrompt({
+      title: `기본 틀 — ${folderName}`,
+      confirmLabel: '저장',
+      fields: [
+        {
+          key: 'template',
+          label: `이 폴더 아래에서 새 문서를 만들 때 자동으로 고를 글양식(틀) — 새 문서 창에서 바꿀 수 있습니다${inheritedNote}`,
+          options,
+          defaultValue: own?.template ?? '',
+          required: false,
+        },
+      ],
+    })
+    if (!result) return
+    try {
+      await saveDefaultTemplate(folderPath, result.template)
+    } catch (err) {
+      window.alert(`기본 틀을 저장하지 못했습니다.\n\n${err.message}`)
     }
   }
 
@@ -280,6 +330,7 @@ export default function App() {
             onRename={handleRename}
             onMove={handleMove}
             onAutoCategory={handleAutoCategory}
+            onDefaultTemplate={handleDefaultTemplate}
             onImportFiles={importFiles}
             onImportImages={importImageFiles}
           />

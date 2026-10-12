@@ -222,6 +222,7 @@ export function FileTree({
   onRename,
   onMove,
   onAutoCategory,
+  onDefaultTemplate,
   onImportFiles,
   onImportImages,
 }) {
@@ -240,6 +241,7 @@ export function FileTree({
             { label: '새 폴더', onClick: () => onCreateFolder(node.path) },
             { label: '이름 바꾸기 (F2)', onClick: startRenaming },
             { label: '다른 위치로 이동…', onClick: () => setMoveTarget(node) },
+            { label: '기본 틀 설정…', onClick: () => onDefaultTemplate(node.path, node.name) },
             { label: '자동 분류 설정…', onClick: () => onAutoCategory(node.path, node.name) },
             { label: '삭제', danger: true, onClick: () => onDelete(node.path, node.type) },
           ]

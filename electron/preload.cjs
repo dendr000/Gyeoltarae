@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('api', {
   readAutoCategory: (workspacePath, dirPath, ownOnly) =>
     ipcRenderer.invoke('autocategory:read', workspacePath, dirPath, ownOnly),
   writeAutoCategory: (folderPath, keywords) => ipcRenderer.invoke('autocategory:write', folderPath, keywords),
+  readDefaultTemplate: (workspacePath, dirPath, ownOnly) =>
+    ipcRenderer.invoke('defaulttemplate:read', workspacePath, dirPath, ownOnly),
+  writeDefaultTemplate: (folderPath, templateName) =>
+    ipcRenderer.invoke('defaulttemplate:write', folderPath, templateName),
   ensureSnippet: (workspacePath, category, title) => ipcRenderer.invoke('snippets:ensure', workspacePath, category, title),
 
   readDict: (workspacePath) => ipcRenderer.invoke('dict:read', workspacePath),

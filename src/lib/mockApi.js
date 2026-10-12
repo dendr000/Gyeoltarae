@@ -127,6 +127,7 @@ const CATEGORIES_DIR_NAME = '.wikidesk-categories'
 const DATA_DIR_NAME = '.wikidesk-data'
 const SNIPPETS_DIR_NAME = '.wikidesk-snippets'
 const AUTO_CATEGORY_FILE = '.wikidesk-auto-category.json' // electron/fileSystem.js 의 AUTO_CATEGORY_FILE_NAME 과 같다
+const DEFAULT_TEMPLATE_FILE = '.wikidesk-default-template.json' // electron/fileSystem.js 의 DEFAULT_TEMPLATE_FILE_NAME 과 같다
 const DICT_DIR_NAME = '.wikidesk-dict'
 const TEMPLATES_DIR_NAME = '.wikidesk-templates'
 const IMAGES_DIR_NAME = '.wikidesk-images'
@@ -313,6 +314,36 @@ export function createMockApi() {
       const key = `${folderPath}/${AUTO_CATEGORY_FILE}`
       if (cleaned.length === 0) delete sampleDocs[key]
       else sampleDocs[key] = JSON.stringify({ keywords: cleaned })
+    },
+    // 폴더별 기본 틀 설정 — electron/fileSystem.js 의 readDefaultTemplate/writeDefaultTemplate 와 같은 규칙
+    // (폴더 안의 숨김 파일, 가장 가까운 윗 폴더의 설정, ownOnly 는 자기 폴더만, 빈 이름은 해제).
+    async readDefaultTemplate(workspacePath, dirPath, ownOnly = false) {
+      const templateOf = (folder) => {
+        try {
+          const data = JSON.parse(sampleDocs[`${folder}/${DEFAULT_TEMPLATE_FILE}`] ?? 'null')
+          return typeof data?.template === 'string' && data.template.trim() ? data.template.trim() : null
+        } catch {
+          return null
+        }
+      }
+      if (ownOnly) {
+        const template = templateOf(dirPath)
+        return template ? { folderPath: dirPath, template } : null
+      }
+      let current = dirPath
+      while (current === workspacePath || current.startsWith(`${workspacePath}/`)) {
+        const template = templateOf(current)
+        if (template) return { folderPath: current, template }
+        if (current === workspacePath) break
+        current = current.slice(0, current.lastIndexOf('/'))
+      }
+      return null
+    },
+    async writeDefaultTemplate(folderPath, templateName) {
+      const name = String(templateName ?? '').trim()
+      const key = `${folderPath}/${DEFAULT_TEMPLATE_FILE}`
+      if (!name) delete sampleDocs[key]
+      else sampleDocs[key] = JSON.stringify({ template: name })
     },
     // 폴더별 순서 목록 파일(_순서.txt) 내용 — electron/fileSystem.js 의 readSnippetOrders 와 같은 모양.
     async readSnippetOrders(workspacePath) {

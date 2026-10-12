@@ -26,6 +26,8 @@ import {
   readSnippetOrders,
   readAutoCategory,
   writeAutoCategory,
+  readDefaultTemplate,
+  writeDefaultTemplate,
   ensureSnippet,
   DICT_DIR_NAME,
   readDictFile,
@@ -451,6 +453,14 @@ ipcMain.handle('autocategory:read', (_event, workspacePath, dirPath, ownOnly) =>
 
 ipcMain.handle('autocategory:write', (_event, folderPath, keywords) => {
   writeAutoCategory(folderPath, keywords)
+})
+
+ipcMain.handle('defaulttemplate:read', (_event, workspacePath, dirPath, ownOnly) => {
+  return readDefaultTemplate(workspacePath, dirPath, ownOnly)
+})
+
+ipcMain.handle('defaulttemplate:write', (_event, folderPath, templateName) => {
+  writeDefaultTemplate(folderPath, templateName)
 })
 
 ipcMain.handle('snippets:ensure', (_event, workspacePath, category, title) => {

@@ -356,6 +356,55 @@ export function writeAutoCategory(folderPath, keywords) {
   fs.writeFileSync(file, `${JSON.stringify({ keywords: cleaned }, null, 2)}\n`, 'utf-8')
 }
 
+// 폴더별 "기본 틀" 설정 — 새 문서를 만들 때 자동으로 고를 글양식(틀) 이름. 그 폴더 안의 숨김 파일 하나에
+// { "template": "틀 이름" } 로 저장해서, 폴더를 옮기거나 이름을 바꿔도 설정이 같이 따라간다. 읽는 규칙(가장 가까운
+// 윗 폴더의 설정, 여러 겹이면 하나만)은 자동 분류와 같다. 우선순위와 이름은 src/lib/defaultTemplate.js(파일 이름도 같아야
+// 하며 시험이 확인한다).
+export const DEFAULT_TEMPLATE_FILE_NAME = '.wikidesk-default-template.json'
+
+// 폴더 하나의 설정 파일에서 틀 이름을 읽는다. 파일이 없거나 망가졌거나 모양이 틀리면 null.
+function readTemplateNameOf(folderPath) {
+  try {
+    const data = JSON.parse(fs.readFileSync(path.join(folderPath, DEFAULT_TEMPLATE_FILE_NAME), 'utf-8'))
+    return typeof data?.template === 'string' && data.template.trim() ? data.template.trim() : null
+  } catch {
+    return null
+  }
+}
+
+// 문서를 만들 폴더(dirPath)에서 위로 올라가며 기본 틀이 설정된 가장 가까운 폴더를 찾는다 — { folderPath, template }
+// 또는 null. 워크스페이스 밖으로는 올라가지 않는다. ownOnly 이면 올라가지 않고 그 폴더 자신의 설정만 본다.
+export function readDefaultTemplate(workspacePath, dirPath, ownOnly = false) {
+  if (ownOnly) {
+    const template = readTemplateNameOf(dirPath)
+    return template ? { folderPath: dirPath, template } : null
+  }
+  const root = path.resolve(workspacePath)
+  let current = path.resolve(dirPath)
+  for (;;) {
+    const rel = path.relative(root, current)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null
+    const template = readTemplateNameOf(current)
+    if (template) return { folderPath: current, template }
+    if (current === root) return null
+    const parent = path.dirname(current)
+    if (parent === current) return null
+    current = parent
+  }
+}
+
+// 설정을 쓴다. 이름이 비면(앞뒤 공백 제외) 설정 파일을 지워서 기본 틀을 해제한다.
+export function writeDefaultTemplate(folderPath, templateName) {
+  const name = String(templateName ?? '').trim()
+  const file = path.join(folderPath, DEFAULT_TEMPLATE_FILE_NAME)
+  if (!name) {
+    fs.rmSync(file, { force: true })
+    return
+  }
+  fs.writeFileSync(file, `${JSON.stringify({ template: name }, null, 2)}
+`, 'utf-8')
+}
+
 // 각 상용구 폴더의 순서 목록 파일(추천 팝업의 후보 순서를 정함)의 내용 — { 폴더 이름: 글 }. 파일이 없는
 // 폴더는 키가 없다. 규칙과 해석은 src/lib/snippetOrder.js(파일 이름도 같아야 하며 시험이 확인한다).
 // 여기서는 읽기만 한다: 렌더러가 없는 파일을 읽으려 하면 IPC 오류가 쌓이므로 존재를 확인하고 읽는 건

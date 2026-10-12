@@ -149,6 +149,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
 - **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
   밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **폴더 기본 틀**: 폴더 우클릭 "기본 틀 설정…"으로 글양식(틀)을 지정해 두면 그 폴더(와 아래 폴더)에서 새 문서를 만들 때 자동으로
+  선택됨(새 문서 창의 "글양식(틀)" 은 목록에서 고르는 칸이고, 직접 고른 틀이 우선, "틀을 쓰지 않음"도 고를 수 있음). 강의 폴더가 늘어도
+  코드를 고칠 필요가 없음. [`docs/features/folder-default-template.md`](docs/features/folder-default-template.md)
 - **편집기 줄 번호와 줄 강조 점**: 편집 모드 글 왼쪽에 줄 번호가 옅게 보이고, 줄에 마우스를 올리면 나오는 점을 눌러 그 줄을 강조함(제목 줄은
   자동). 툴바 "줄 번호" 버튼으로 켜고 끔. 강조는 앱을 켜 둔 동안만 유지.
   [`docs/features/editor-gutter.md`](docs/features/editor-gutter.md)
