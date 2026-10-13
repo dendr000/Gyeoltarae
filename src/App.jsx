@@ -18,6 +18,7 @@ import { PromptModal } from './components/PromptModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordLines, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
+import { buildMonoStack } from './lib/monoFont.js'
 import './App.css'
 
 // Pokémon-specific, so kept separate from useAppStore.js's general
@@ -31,6 +32,13 @@ function isUnderPokedexFolder(dirPath) {
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // 편집기·코드블록 글꼴: 고른 글꼴을 CSS 변수 --mono 에 넣는다(index.css 의 기본값을 덮어씀). 기본이면 index.css 의 값 그대로다.
+  const monoFont = useAppStore((s) => s.monoFont)
+  useEffect(() => {
+    const root = document.documentElement
+    if (monoFont === '') root.style.removeProperty('--mono')
+    else root.style.setProperty('--mono', buildMonoStack(monoFont))
+  }, [monoFont])
   const {
     workspacePath,
     tree,

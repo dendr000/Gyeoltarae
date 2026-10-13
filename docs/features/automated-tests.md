@@ -68,6 +68,8 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/tableConditionalSet.test.js` | 조건부 색 여러 조건(차례로 적용, 같은 항목은 뒤가 덮어씀, 건너뛰기 규칙, 지우기) | 순수 함수 |
 | `tests/lib/lineDuplicate.test.js` | 문서 어디서나 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, 코드블록 구조를 깨는 ``` 줄 제외, 블록 통째 복제) | 순수 함수 |
 | `tests/lib/pagecount.test.js` | `[pagecount]` 매크로(문서 수, 이름 두 가지로 색인된 문서는 한 번만, 코드블록·인자 형태는 그대로) | 순수 함수 |
+| `tests/lib/monoFont.test.js` | 글꼴 선택 규칙(이름 검증, 글꼴 목록 만들기, 설치 여부 판별) | 순수 함수 |
+| `tests/store/monoFont.test.js` | 고른 글꼴의 저장·복원(안전하지 않은 값은 기본으로, 기본을 고르면 저장 삭제) | 스토어(가짜 저장소) |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
 | `tests/lib/snippetOrder.test.js` | 폴더의 순서 목록 파일(`_순서.txt`) 해석(빈 줄·# 설명 건너뛰기, CRLF·BOM, 중복, 대소문자) | 순수 함수 |

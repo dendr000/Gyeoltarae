@@ -18,6 +18,7 @@ import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
+import { sanitizeFontFamily } from '../lib/monoFont.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -213,6 +214,17 @@ function loadEditorLineNumbers() {
     return localStorage.getItem(EDITOR_LINE_NUMBERS_STORAGE_KEY) !== 'false'
   } catch {
     return true
+  }
+}
+
+// 편집기·코드블록 글꼴(고정폭). 빈 글자는 기본(D2Coding). 이 PC 의 화면 설정이라 localStorage 에 둔다. 규칙은 lib/monoFont.js.
+const MONO_FONT_STORAGE_KEY = 'gyeoltarae-mono-font'
+
+function loadMonoFont() {
+  try {
+    return sanitizeFontFamily(localStorage.getItem(MONO_FONT_STORAGE_KEY)) ?? ''
+  } catch {
+    return ''
   }
 }
 
@@ -441,6 +453,7 @@ export const useAppStore = create((set, get) => ({
   // 편집기 줄 여백: 줄 번호 표시 여부(저장)와, 문서마다 점을 눌러 강조해 둔 줄 번호(0부터)의 목록 { [경로]: number[] }
   // — 강조 표시는 앱을 켜 둔 동안만 유지한다(파일에 저장하지 않음). 규칙은 lib/lineMarks.js.
   editorLineNumbers: loadEditorLineNumbers(),
+  monoFont: loadMonoFont(),
   lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
@@ -541,6 +554,18 @@ export const useAppStore = create((set, get) => ({
       /* localStorage unavailable; 재시작하면 모두 꺼짐으로 돌아갈 뿐 */
     }
     set({ wholeScopeTopFolders: next })
+  },
+
+  // 편집기·코드블록 글꼴을 정한다. 검증을 통과하지 못한 이름은 기본(빈 글자)으로 돌아간다. 실제 적용(--mono)은 App 이 한다.
+  setMonoFont(name) {
+    const clean = sanitizeFontFamily(name) ?? ''
+    try {
+      if (clean === '') localStorage.removeItem(MONO_FONT_STORAGE_KEY)
+      else localStorage.setItem(MONO_FONT_STORAGE_KEY, clean)
+    } catch {
+      /* localStorage unavailable; 재시작하면 기본 글꼴로 돌아갈 뿐 */
+    }
+    set({ monoFont: clean })
   },
 
   setEditorLineNumbers(enabled) {

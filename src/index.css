@@ -1,3 +1,22 @@
+/* 편집기·코드블록의 고정폭 글꼴 D2Coding(SIL Open Font License 1.1, 저작권 NHN Corporation — 전문은 THIRD_PARTY_NOTICES.md)을 앱에 넣어 둔다.
+   이 PC 에 설치돼 있으면 local() 로 그 글꼴을 쓰고, 없으면 번들한 파일을 쓴다. 어느 PC 에서나 한글이 영문 정확히 2칸 폭이라 열이 맞는다.
+   굵은 글씨는 설치돼 있을 때만 진짜 Bold 를 쓰고, 없으면 브라우저가 Regular 를 굵게 합성한다. */
+@font-face {
+  font-family: 'D2Coding';
+  src: local('D2Coding'), url('./assets/fonts/D2Coding-Ver1.3.2-20180524.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'D2Coding';
+  src: local('D2Coding Bold'), local('D2Coding-Bold');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --text: #3a3a3f;
   --text-h: #101014;

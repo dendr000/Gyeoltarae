@@ -151,6 +151,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
 - **목록·번호 목록·인용 이어쓰기**: `* 항목`, `1. 항목`, `> 인용` 줄 끝에서 Enter 하면 아래 줄에 `* `, 다음 번호(`2. `), `> ` 가 이어서 생기고, 표시만 있는 빈 줄에서 Enter 하면 목록·인용이 끝남.
   [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
+- **편집·코드 글꼴**: D2Coding 글꼴 파일이 앱에 들어 있어서 어느 PC 에서나 한글이 영문 2칸 폭으로 보이고(열 맞춤), 헤더의 "글꼴" 단추에서 다른 고정폭 글꼴로 바꿀 수 있음(설치된 글꼴만, 직접 입력 가능). 라이선스(OFL 1.1)는 `THIRD_PARTY_NOTICES.md`.
+  [`docs/features/mono-font.md`](docs/features/mono-font.md)
 - **Ctrl+D (줄 복제)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 문서 어디서나
   됨(문단·표 줄·목록·코드블록). 코드블록 구조를 깨는 줄(여는/닫는 ``` 줄만)은 복제하지 않음.
   자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)

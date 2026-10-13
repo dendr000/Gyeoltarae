@@ -3358,3 +3358,101 @@
   font-weight: 700;
   color: var(--accent);
 }
+
+/* 편집·코드 글꼴 설정(헤더의 "글꼴" 단추와 그 패널). */
+.font-settings {
+  position: relative;
+}
+
+.font-settings-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  width: 340px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-pane);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.font-settings-title {
+  margin-bottom: 4px;
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.font-settings-note {
+  margin: 4px 0 8px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.font-settings-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.font-settings-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+  cursor: pointer;
+}
+
+.font-settings-option.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.font-settings-sample {
+  font-size: 13px;
+}
+
+.font-settings-tag {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.font-settings-custom {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 12px;
+}
+
+.font-settings-apply {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.font-settings-preview {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-header);
+  font: 13px/1.6 var(--mono);
+  white-space: pre;
+}
+
+.font-settings-message {
+  margin-top: 6px;
+  color: var(--accent);
+}

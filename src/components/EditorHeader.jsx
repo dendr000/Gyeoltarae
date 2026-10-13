@@ -1,3 +1,5 @@
+import { FontSettings } from './FontSettings.jsx'
+
 const MODES = [
   { key: 'preview', label: '뷰어' },
   { key: 'dual', label: '듀얼' },
@@ -46,6 +48,7 @@ export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onT
       </div>
       <div className="editor-header-right">
         <span className={`save-status save-status-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
+        <FontSettings />
         <button
           className="theme-toggle-btn"
           onClick={nextTheme}
