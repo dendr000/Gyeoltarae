@@ -75,6 +75,13 @@ describe('학습용 이름 묶음 설치', () => {
   vi.setConfig({ testTimeout: 60000 })
   let root
 
+  // 설치 동작(덮어쓰지 않기, 두 번째 실행 건너뛰기, 순서 파일)은 이름이 몇 개든 같은 로직이라, 대소문자 짝(emp/EMP, student/STUDENT, name/NAME)을
+  // 포함한 일부로 시험한다. 1800개를 진짜 디스크에 쓰면 한 번에 6~11초가 걸려 시험 전체가 느려진다. 전체 설치는 첫 시험 하나만 한다.
+  const SMALL_PACK = {
+    ...SQL_PRACTICE_PACK,
+    entries: [...new Set(['student', 'STUDENT', 'emp', 'EMP', 'name', 'NAME', ...SQL_PRACTICE_PACK.entries.slice(0, 30)])],
+  }
+
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'gyeoltarae-practice-'))
   })
@@ -95,7 +102,7 @@ describe('학습용 이름 묶음 설치', () => {
     )
   }
 
-  it('소문자와 대문자 짝이 서로 덮어쓰지 않고 각각 저장되며, 본문은 제목과 같다', () => {
+  it('(전체 설치, 이 묶음에서 유일) 소문자와 대문자 짝이 서로 덮어쓰지 않고 각각 저장되며, 본문은 제목과 같다', () => {
     const { created, skipped } = installPack(SQL_PRACTICE_PACK)
 
     expect(created).toHaveLength(SQL_PRACTICE_PACK.entries.length)
@@ -107,27 +114,27 @@ describe('학습용 이름 묶음 설치', () => {
     expect(bodies.STUDENT).toBe('STUDENT')
   })
 
-  it('SQL 키워드 묶음 위에 설치해도 키워드는 그대로이고 두 번째 실행은 전부 건너뛴다', () => {
+  it('(일부) SQL 키워드 묶음 위에 설치해도 키워드는 그대로이고 두 번째 실행은 전부 건너뛴다', () => {
     installPack(SQL_PACK)
     const keywordsBefore = Object.fromEntries(Object.entries(installed()).filter(([title]) => SQL_PACK.entries.includes(title)))
 
-    const first = installPack(SQL_PRACTICE_PACK)
-    const second = installPack(SQL_PRACTICE_PACK)
+    const first = installPack(SMALL_PACK)
+    const second = installPack(SMALL_PACK)
 
-    expect(first.created).toHaveLength(SQL_PRACTICE_PACK.entries.length)
+    expect(first.created).toHaveLength(SMALL_PACK.entries.length)
     expect(second.created).toEqual([])
-    expect(second.skipped).toHaveLength(SQL_PRACTICE_PACK.entries.length)
+    expect(second.skipped).toHaveLength(SMALL_PACK.entries.length)
     const all = installed()
     for (const [title, body] of Object.entries(keywordsBefore)) expect(all[title], title).toBe(body)
-    expect(Object.keys(all)).toHaveLength(SQL_PACK.entries.length + SQL_PRACTICE_PACK.entries.length)
+    expect(Object.keys(all)).toHaveLength(SQL_PACK.entries.length + SMALL_PACK.entries.length)
   })
 
-  it('이미 사용자가 고쳐 둔 상용구(emp)는 덮어쓰지 않는다', () => {
+  it('(일부) 이미 사용자가 고쳐 둔 상용구(emp)는 덮어쓰지 않는다', () => {
     const dir = path.join(snippetsDirPath(root), 'SQL')
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(path.join(dir, 'emp.md'), '내 emp', 'utf-8')
 
-    const { skipped } = installPack(SQL_PRACTICE_PACK)
+    const { skipped } = installPack(SMALL_PACK)
 
     expect(skipped).toEqual(['emp'])
     const bodies = installed()
@@ -135,12 +142,12 @@ describe('학습용 이름 묶음 설치', () => {
     expect(bodies.EMP).toBe('EMP')
   })
 
-  it('순서 목록(_순서.txt)을 새로 만들지 않고, 이미 있는 것도 건드리지 않는다', () => {
+  it('(일부) 순서 목록(_순서.txt)을 새로 만들지 않고, 이미 있는 것도 건드리지 않는다', () => {
     installPack(SQL_PACK)
     const orderPath = path.join(snippetsDirPath(root), 'SQL', '_순서.txt')
     const before = fs.readFileSync(orderPath, 'utf-8')
 
-    const { orderFile } = installPack(SQL_PRACTICE_PACK)
+    const { orderFile } = installPack(SMALL_PACK)
 
     expect(orderFile).toBe('none')
     expect(fs.readFileSync(orderPath, 'utf-8')).toBe(before)

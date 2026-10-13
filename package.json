@@ -12,6 +12,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:changed": "vitest run --changed",
     "test:watch": "vitest",
     "preview": "vite preview",
     "electron": "electron .",
