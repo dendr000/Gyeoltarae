@@ -298,3 +298,11 @@ export function fillRight(grid, selection) {
   }
   return next
 }
+
+// r1..r2 행, c1..c2 열 영역에 병합된 칸(대표 칸이든 가려진 칸이든)이 하나라도 있는가. 영역이 표 밖으로 나가도 true(칸이 없으므로 막는 쪽).
+export function regionHasMerge(grid, r1, r2, c1, c2) {
+  for (let r = r1; r <= r2; r += 1) {
+    for (let c = c1; c <= c2; c += 1) if (hasMerge(grid[r]?.[c])) return true
+  }
+  return false
+}

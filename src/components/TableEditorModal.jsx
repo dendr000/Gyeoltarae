@@ -15,11 +15,12 @@ import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
 import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
-import { emptyCell } from '../lib/tableGrid.js'
+import { emptyCell, regionHasMerge } from '../lib/tableGrid.js'
 import { buildStructureOps } from './tableStructureOps.js'
 import { TableStructureToolbar } from './TableStructureToolbar.jsx'
 import { TableFindBar } from './TableFindBar.jsx'
 import { useTableFind } from './useTableFind.js'
+import { useAutoFillDrag } from './useAutoFillDrag.js'
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -241,6 +242,10 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // 찾아 바꾸기(Ctrl+F, 규칙은 lib/tableFind.js). 찾은 칸은 입력칸에 포커스를 주지 않고 "고른 칸"으로만 만들며, 화면에 보이게 스크롤한다.
   const scrollCellIntoView = (r, c) => inputRefs.current[`${r}:${c}`]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   const find = useTableFind({ grid, setGrid, range, isMultiCell, setAnchor, setFocusCell, scrollCellIntoView })
+
+  // 자동 채우기(채우기 핸들 끌기, 규칙은 lib/fillSeries.js·tableAutoFill.js): 고른 범위의 오른쪽 아래 칸에 핸들이 붙는다. 범위에 병합이 걸려 있으면 채울 수 없으므로 핸들을 숨긴다.
+  const fillDrag = useAutoFillDrag({ grid, setGrid, range, setAnchor, setFocusCell })
+  const showFillHandle = !regionHasMerge(grid, range.r1, range.r2, range.c1, range.c2)
 
   // Removing a row/column first splits any merge it would cut through (so
   // no cell is left with a dangling span), then remaps the mergedInto
@@ -563,8 +568,9 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         <div className="cell-style-hint">
           Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을 적용하거나 병합할 수
           있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V 로 셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서
-          붙여넣기도 가능), Ctrl+D 로 아래로 채우기, Ctrl+F 로 찾아 바꾸기를 할 수 있습니다. 둘째 줄 툴바는 행·열 삽입·이동·복제,
-          채우기, 정렬 단추입니다(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다).
+          붙여넣기도 가능), Ctrl+D 로 아래로 채우기, Ctrl+F 로 찾아 바꾸기를 할 수 있습니다. 고른 범위의 오른쪽 아래 모서리에 있는 작은
+          네모(핸들)를 아래·오른쪽으로 끌면 1, 2 → 3, 4…, 날짜, 요일 등을 이어서 자동으로 채웁니다. 둘째 줄 툴바는 행·열
+          삽입·이동·복제, 채우기, 정렬 단추입니다(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다).
         </div>
 
         {!isMultiCell && (
@@ -628,7 +634,8 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                         key={c}
                         colSpan={cell.colspan > 1 ? cell.colspan : undefined}
                         rowSpan={cell.rowspan > 1 ? cell.rowspan : undefined}
-                        className={inRange(r, c) ? 'cell-in-range' : ''}
+                        data-cell={`${r}:${c}`}
+                        className={[inRange(r, c) ? 'cell-in-range' : '', fillDrag.isPreviewCell(r, c) ? 'cell-fill-preview' : ''].filter(Boolean).join(' ') || undefined}
                         onMouseDown={(e) => {
                           if (e.shiftKey) {
                             e.preventDefault()
@@ -660,6 +667,17 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                           onKeyDown={(e) => handleCellKeyDown(e, r, c)}
                           placeholder={r === 0 && headerRow ? `헤더 ${c + 1}` : ''}
                         />
+                        {showFillHandle && r === range.r2 && c === range.c2 && (
+                          <span
+                            className="fill-handle"
+                            title="끌어서 자동 채우기 — 고른 범위가 씨앗이 되어 아래·오른쪽으로 이어 채웁니다 (Ctrl 을 누른 채 놓으면 복사↔이어 가기가 바뀝니다, Esc 로 취소)"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              fillDrag.start()
+                            }}
+                          />
+                        )}
                       </td>
                     )
                   })}

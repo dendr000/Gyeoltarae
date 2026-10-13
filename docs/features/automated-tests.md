@@ -43,6 +43,8 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/tableGridOps.test.js` | 표 편집기 행·열 이동·복제, 아래·오른쪽으로 채우기(헤더 행 보호, 병합 가리킴 갱신, 병합이 걸린 줄 거부) | 순수 함수 |
 | `tests/lib/tableSort.test.js` | 표 편집기 열 기준 정렬(숫자 → 글자 → 빈 칸, 영문 → 한글, 같은 값 순서 유지, 세로 병합 거부, 정렬 범위) | 순수 함수 |
 | `tests/lib/tableFind.test.js` | 표 편집기 찾아 바꾸기(대소문자 무시, 정규식 기호는 글자, 범위, 가려진 칸 제외, 한 곳·모두 바꾸기) | 순수 함수 |
+| `tests/lib/fillSeries.test.js` | 표 편집기 자동 채우기 규칙(숫자 등차, 글자 속 숫자, 날짜·달 단위·윤년, 요일·월 이름 순환, 반복, Ctrl 반전) | 순수 함수 |
+| `tests/lib/tableAutoFill.test.js` | 자동 채우기를 격자에 적용(끌기 방향·칸 수, 열/행마다 규칙, 서식 반복 복사, 병합·표 끝 거부) | 순수 함수 |
 | `tests/lib/lineDuplicate.test.js` | 문서 어디서나 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, 코드블록 구조를 깨는 ``` 줄 제외, 블록 통째 복제) | 순수 함수 |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
