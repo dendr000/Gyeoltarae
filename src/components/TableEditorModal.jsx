@@ -21,6 +21,7 @@ import { TableStructureToolbar } from './TableStructureToolbar.jsx'
 import { TableFindBar } from './TableFindBar.jsx'
 import { useTableFind } from './useTableFind.js'
 import { useAutoFillDrag } from './useAutoFillDrag.js'
+import { useGridHistory } from './useGridHistory.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
 import { useTableFormat } from './useTableFormat.js'
 
@@ -134,10 +135,15 @@ function normalizeRange(a, b) {
 }
 
 export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onConfirm }) {
-  const [grid, setGrid] = useState(() => initialRows ?? emptyGrid(2, 2))
-  const [headerRow, setHeaderRow] = useState(initialHeaderRow ?? true)
-  const [anchor, setAnchor] = useState({ r: 0, c: 0 })
-  const [focusCell, setFocusCell] = useState({ r: 0, c: 0 })
+  // 격자와 헤더 설정은 되돌리기·다시 실행 기록과 함께 든다(규칙은 lib/gridHistory.js, 훅은 useGridHistory.js).
+  const [seed] = useState(() => ({ grid: initialRows ?? emptyGrid(2, 2), headerRow: initialHeaderRow ?? true }))
+  const { grid, headerRow, setGrid, setHeaderRow, setGridAndHeader, undo, redo, canUndo, canRedo } = useGridHistory(seed.grid, seed.headerRow)
+  const [anchorRaw, setAnchor] = useState({ r: 0, c: 0 })
+  const [focusRaw, setFocusCell] = useState({ r: 0, c: 0 })
+  // 되돌리기로 표가 줄어들 수 있으므로 고른 칸은 항상 표 안으로 맞춘다.
+  const clampCell = (cell) => ({ r: Math.min(cell.r, grid.length - 1), c: Math.min(cell.c, (grid[0]?.length ?? 1) - 1) })
+  const anchor = clampCell(anchorRaw)
+  const focusCell = clampCell(focusRaw)
   const clipboardRef = useRef(null) // full-fidelity {text,bg,color,align} grid for in-app paste
 
   const range = normalizeRange(anchor, focusCell)
@@ -168,7 +174,8 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
 
   const updateCell = (r, c, patch) => {
-    setGrid((g) => g.map((row, ri) => (ri === r ? row.map((cell, ci) => (ci === c ? { ...cell, ...patch } : cell)) : row)))
+    // 같은 칸에 글자를 이어서 치는 것은 되돌리기 한 단계로 묶는다.
+    setGrid((g) => g.map((row, ri) => (ri === r ? row.map((cell, ci) => (ci === c ? { ...cell, ...patch } : cell)) : row)), { coalesce: patch.text === undefined ? undefined : `cell:${r}:${c}` })
   }
 
   const updateRange = (patch) => {
@@ -234,7 +241,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
   // 구조 작업(삽입·이동·복제·채우기·정렬): tableStructureOps.js 가 격자와 고른 범위를 보고 단추별 켜짐·안내 글·동작을 만든다.
-  const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow })
+  const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setGridAndHeader })
   // 단추·단축키로 동작을 실행하고, 동작이 돌려준 칸이 있으면 격자가 다시 그려진 뒤 그 입력칸에 포커스를 준다(위의 useEffect).
   const runOp = (op) => {
     const focusTarget = op.run()
@@ -344,7 +351,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         next = next.map((row) => [...row, ...Array.from({ length: cols - row.length }, emptyCell)])
       }
       return next
-    })
+    }, { coalesce: 'paste' })
   }
 
   async function handleCopy() {
@@ -398,7 +405,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         })
       })
       return next
-    })
+    }, { coalesce: 'paste' })
     setAnchor(target)
     setFocusCell({ r: target.r + cells.length - 1, c: target.c + (cells[0]?.length ?? 1) - 1 })
   }
@@ -430,8 +437,22 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
       find.openBar(picked.includes('\n') ? '' : picked)
       return
     }
-    // 찾기 바 안의 입력칸에서는 아래의 표 단축키(복사·붙여넣기·채우기)를 쓰지 않는다 — 글자 입력칸의 평소 동작이어야 한다.
-    if (e.target.closest?.('.table-find-bar')) return
+    // 찾기 바·서식 패널 안의 입력칸에서는 아래의 표 단축키(복사·붙여넣기·채우기·되돌리기)를 쓰지 않는다 — 글자 입력칸의 평소 동작이어야 한다.
+    if (e.target.closest?.('.table-find-bar, .table-format-panel')) return
+    // Ctrl+Z 되돌리기, Ctrl+Y / Ctrl+Shift+Z 다시 실행 — 칸에 치는 글자를 포함해 표 편집기 안의 변경을 기록으로 되돌린다(칸 입력창의 글자
+    // 자체 되돌리기 대신). 한글 자판이면 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
+    const isZ = e.key.toLowerCase() === 'z' || e.code === 'KeyZ'
+    const isY = e.key.toLowerCase() === 'y' || e.code === 'KeyY'
+    if (mod && isZ && !e.shiftKey) {
+      e.preventDefault()
+      undo()
+      return
+    }
+    if (mod && (isY || (isZ && e.shiftKey))) {
+      e.preventDefault()
+      redo()
+      return
+    }
     // Ctrl+D — 아래로 채우기(엑셀과 같음). 안 되는 상황이어도 브라우저의 기본 동작(북마크 등)은 막는다.
     if (mod && !e.shiftKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
       e.preventDefault()
@@ -568,7 +589,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
             <TableCellsSplit size={14} />
           </button>
         </div>
-        <TableStructureToolbar ops={ops} onRun={runOp} findOpen={find.open} onToggleFind={() => (find.open ? find.closeBar() : find.openBar())} />
+        <TableStructureToolbar ops={ops} onRun={runOp} history={{ undo, redo, canUndo, canRedo }} findOpen={find.open} onToggleFind={() => (find.open ? find.closeBar() : find.openBar())} />
         <TableFormatPanels format={format} />
         {find.open && <TableFindBar find={find} />}
         <div className="cell-style-hint">

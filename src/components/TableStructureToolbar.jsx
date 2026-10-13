@@ -13,8 +13,10 @@ import {
   BetweenVerticalStart,
   Columns3,
   FlipHorizontal2,
+  Redo2,
   Rows3,
   Search,
+  Undo2,
 } from 'lucide-react'
 
 // 표 편집기의 "구조" 툴바 — 행·열 삽입 / 이동 / 복제, 아래·오른쪽으로 채우기, 정렬, 찾아 바꾸기 단추. 단추의 켜짐·안내 글·동작은 모두
@@ -27,9 +29,17 @@ function OpButton({ op, onRun, children }) {
   )
 }
 
-export function TableStructureToolbar({ ops, onRun, findOpen, onToggleFind }) {
+export function TableStructureToolbar({ ops, onRun, history, findOpen, onToggleFind }) {
   return (
     <div className="cell-style-toolbar table-structure-toolbar">
+      <span className="cell-style-toolbar-sublabel">편집</span>
+      <button type="button" disabled={!history.canUndo} title="되돌리기 (Ctrl+Z) — 표 편집기 안에서 한 일을 한 단계씩 되돌립니다" onClick={history.undo}>
+        <Undo2 size={14} />
+      </button>
+      <button type="button" disabled={!history.canRedo} title="다시 실행 (Ctrl+Y 또는 Ctrl+Shift+Z)" onClick={history.redo}>
+        <Redo2 size={14} />
+      </button>
+      <span className="editor-toolbar-divider" />
       <span className="cell-style-toolbar-sublabel">삽입</span>
       <OpButton op={ops.insertAbove} onRun={onRun}>
         <BetweenHorizontalStart size={14} />

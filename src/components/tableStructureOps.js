@@ -4,7 +4,7 @@
 // lib/tableSort.js 에 있고, 여기서는 그 결과를 격자(grid)에 반영하고 고른 범위·입력칸 포커스를 정리하며, 단추마다 켜질 수 있는지(enabled)와
 // 안내 글(title)을 만든다. 모달(TableEditorModal.jsx)이 렌더링마다 부르는 순수한 함수이며 React 훅이 아니다.
 //
-// ctx: { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow }
+// ctx: { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setGridAndHeader }
 //   range      - 고른 범위({ r1, r2, c1, c2 }, 끝 포함)
 // 돌려주는 값: { insertAbove, insertBelow, insertLeft, insertRight, moveRowUp, moveRowDown, moveColumnLeft, moveColumnRight,
 //   duplicateRow, duplicateColumn, fillDown, fillRight, transpose, sortAscending, sortDescending } — 각각 { enabled, title, run }.
@@ -42,7 +42,7 @@ function op(enabled, title, run) {
 }
 
 export function buildStructureOps(ctx) {
-  const { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow } = ctx
+  const { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setGridAndHeader } = ctx
   const rowCount = grid.length
   const colCount = grid[0]?.length ?? 0
 
@@ -160,8 +160,11 @@ export function buildStructureOps(ctx) {
   // 굵어지므로, 지금의 헤더 행을 칸의 굵게로 바꿔 두고(굵은 첫 열이 된다) 체크는 끈다.
   function transposeTable() {
     const base = headerRow ? grid.map((row, r) => (r === 0 ? row.map((cell) => ({ ...cell, bold: true })) : row)) : grid
-    setHeaderRow(false)
-    return apply(transposeGrid(base), { r: 0, c: 0 }, { r: 0, c: 0 }, { followFocus: true })
+    const next = transposeGrid(base)
+    setGridAndHeader(next, false) // 되돌리기 한 단계로 격자와 헤더 체크를 함께 바꾼다
+    setAnchor({ r: 0, c: 0 })
+    setFocusCell({ r: 0, c: 0 })
+    return visibleCellAt(next, 0, 0)
   }
 
   const canMoveUp = canMoveRows(grid, range.r1, range.r2, -1, rowMin)
