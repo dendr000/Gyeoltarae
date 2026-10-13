@@ -148,8 +148,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   완벽하진 않음(같은 구간에 같은 단어가 여러 번 있으면 첫 번째로 감)
 - **Ctrl+/ (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 주석 처리/해제 — 코드블록의 언어에 맞는 기호(`--`, `//`, `#` 등)를
   씀. 자세히: [`docs/features/code-block.md`](docs/features/code-block.md)
-- **Ctrl+D (코드블록 안)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 코드블록
-  밖에서는 동작하지 않음. 자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
+- **Ctrl+D (줄 복제)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 문서 어디서나
+  됨(문단·표 줄·목록·코드블록). 코드블록 구조를 깨는 줄(여는/닫는 ``` 줄만)은 복제하지 않음.
+  자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)
 - **폴더 기본 틀**: 폴더 우클릭 "기본 틀 설정…"으로 글양식(틀)을 지정해 두면 그 폴더(와 아래 폴더)에서 새 문서를 만들 때 자동으로
   선택됨(새 문서 창의 "글양식(틀)" 은 목록에서 고르는 칸이고, 직접 고른 틀이 우선, "틀을 쓰지 않음"도 고를 수 있음). 강의 폴더가 늘어도
   코드를 고칠 필요가 없음. [`docs/features/folder-default-template.md`](docs/features/folder-default-template.md)
@@ -173,6 +174,10 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   보임(보기용, 문서에는 쓰지 않음). 값을 누르면 숫자만 복사됨. [`docs/features/table-editor-stats.md`](docs/features/table-editor-stats.md)
 - **표 편집기의 행·열 삽입**: 툴바의 삽입 단추로 고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼움. 병합 셀 한가운데에 끼우면 병합이
   한 칸 커짐(엑셀과 같음). [`docs/features/table-editor-insert.md`](docs/features/table-editor-insert.md)
+- **표 편집기의 행·열 이동·복제·채우기**: 둘째 줄 툴바에서 고른 행·열을 한 칸씩 이동, 바로 옆에 복제, 위 칸(왼쪽 칸) 내용으로 채우기
+  (아래로 채우기는 Ctrl+D). 병합이 걸림돌이면 단추가 꺼지고 이유가 보임. [`docs/features/table-editor-structure.md`](docs/features/table-editor-structure.md)
+- **표 편집기의 찾아 바꾸기(Ctrl+F)**: 칸 안의 글자를 찾아 한 곳씩/모두 바꿈. 여러 칸을 고르고 열면 그 범위 안에서만. 문서 본문의 찾기는
+  편집 모드의 Ctrl+F / Ctrl+Shift+F. [`docs/features/table-editor-find.md`](docs/features/table-editor-find.md)
 - **표 편집기의 열 기준 정렬**: 고른 열의 값으로 줄 전체를 오름차순·내림차순 정렬(숫자 → 글자 → 빈 칸, 영문 → 한글). 여러 행을 고르면 그
   행들만, 첫 행을 헤더로 쓰면 맨 윗줄 제외, 세로 병합이 걸린 행은 정렬 불가. [`docs/features/table-editor-sort.md`](docs/features/table-editor-sort.md)
 - **큰 제목 간격**: 뷰어에서 큰 제목(1. 2. 3. …) 앞 간격을 넓혀 다음 큰 문단으로 넘어간 느낌을 줌.

@@ -6,7 +6,7 @@
 
 ## 쓰는 법
 
-툴바(배경색·정렬·병합 단추가 있는 줄)의 오른쪽 끝에 단추 네 개가 있다.
+**둘째 줄 툴바**(삽입 · 이동 · 복제 · 채우기 · 정렬 · 찾기)의 맨 앞 "삽입" 묶음에 단추 네 개가 있다. (0.95.0 에서 첫 줄 툴바에서 옮겨졌다.)
 
 | 단추 | 하는 일 |
 |---|---|
@@ -49,5 +49,5 @@
 ## 구현 위치
 
 - `src/lib/tableGrid.js` — `insertRow`, `insertColumn`(병합 처리 포함), `expandToMerges`(고른 범위를 병합 영역까지 넓힘), `visibleCellAt`(포커스를 줄 칸 정하기), `emptyCell`. 화면과 분리한 순수 함수이며 받은 격자를 바꾸지 않는다.
-- `src/components/TableEditorModal.jsx` — 툴바 단추 4개, `insertRowAt`·`insertColumnAt`(끼운 뒤 선택과 포커스), 헤더 행 위 삽입 차단(`canInsertRowAbove`).
+- `src/components/tableStructureOps.js` — 삽입 동작(`insertRowAt`·`insertColumnAt`: 끼운 뒤 선택과 포커스), 헤더 행 위 삽입 차단. 단추 그리기는 `TableStructureToolbar.jsx`.
 - 테스트: `tests/lib/tableGrid.test.js` — 병합이 없는 표, 병합의 안쪽·위·아래·옆, 2x2 병합, 병합 가리킴(`mergedInto`)이 밀리는지, 여러 번 번갈아 끼우기, 범위 확장(연쇄 포함), 원래 격자 불변, 모든 병합이 앞뒤가 맞는지 검사하는 보조 함수.

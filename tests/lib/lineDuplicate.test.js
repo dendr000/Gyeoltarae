@@ -17,7 +17,7 @@ function at(doc) {
   return apply(doc.replace('^', ''), pos)
 }
 
-describe('duplicateLinesEdit (Ctrl+D — 현재 줄을 아래에 복제)', () => {
+describe('duplicateLinesEdit (Ctrl+D — 현재 줄을 아래에 복제, 문서 어디서나)', () => {
   it('커서가 있는 줄을 바로 아래 줄에 그대로 복제한다', () => {
     const r = at(`${F}sql\nSELECT * FROM t;^\n${F}`)
     expect(r.next).toBe(`${F}sql\nSELECT * FROM t;\nSELECT * FROM t;\n${F}`)
@@ -95,10 +95,61 @@ describe('duplicateLinesEdit (Ctrl+D — 현재 줄을 아래에 복제)', () =>
     expect(duplicateLinesEdit(value, value.indexOf('x'), value.indexOf('뒤'))).toBeNull()
   })
 
-  it('코드블록 밖(문단·표·목록)에서는 null — 평소 Ctrl+D 동작을 그대로 둔다', () => {
-    expect(at('문단 글^')).toBeNull()
-    expect(at(`${F}sql\nx\n${F}\n뒤 문단^`)).toBeNull()
-    expect(at(`앞 문단^\n${F}sql\nx\n${F}`)).toBeNull()
+  describe('코드블록 밖에서도 복제된다 (문서 전체에서 쓰는 기능)', () => {
+    it('문단 줄', () => {
+      expect(at('문단 글^').next).toBe('문단 글\n문단 글')
+      expect(at('앞 줄\n문단^ 글\n뒤 줄').next).toBe('앞 줄\n문단 글\n문단 글\n뒤 줄')
+    })
+
+    it('표 줄·목록 줄·제목 줄도 그대로 복제한다', () => {
+      expect(at('||가||나||^\n||다||라||').next).toBe('||가||나||\n||가||나||\n||다||라||')
+      expect(at(' * 항목^').next).toBe(' * 항목\n * 항목')
+      expect(at('== 제목 ==^').next).toBe('== 제목 ==\n== 제목 ==')
+    })
+
+    it('코드블록 앞뒤의 문단 줄도 복제된다', () => {
+      expect(at(`${F}sql\nx\n${F}\n뒤 문단^`).next).toBe(`${F}sql\nx\n${F}\n뒤 문단\n뒤 문단`)
+      expect(at(`앞 문단^\n${F}sql\nx\n${F}`).next).toBe(`앞 문단\n앞 문단\n${F}sql\nx\n${F}`)
+    })
+
+    it('커서는 복제된 줄의 같은 자리로 옮겨 간다', () => {
+      const r = apply('abc def', 3)
+      expect(r.next).toBe('abc def\nabc def')
+      expect(r.selStart).toBe(3 + 'abc def'.length + 1)
+    })
+
+    it('여러 줄을 선택하면 걸친 줄 전체를 통째로 복제한다', () => {
+      const value = '가\n나\n다'
+      const r = apply(value, 0, value.indexOf('나') + 1)
+      expect(r.next).toBe('가\n나\n가\n나\n다')
+      expect(r.next.slice(r.selStart, r.selEnd)).toBe('가\n나')
+    })
+
+    it('빈 줄도 복제된다', () => {
+      expect(at('가\n^\n나').next).toBe('가\n\n\n나')
+    })
+
+    it('CRLF 문서에서도 정상', () => {
+      const doc = '가\r\n나^\r\n다'
+      const pos = doc.indexOf('^')
+      expect(apply(doc.replace('^', ''), pos).next).toBe('가\r\n나\r\n나\r\n다')
+    })
+
+    it('코드블록 한 덩어리(여는 줄~닫는 줄)를 통째로 선택하면 블록 전체가 복제된다 (구조가 그대로라서)', () => {
+      const value = `앞\n${F}sql\nx\n${F}\n뒤`
+      const r = apply(value, value.indexOf(F), value.indexOf(F, value.indexOf('x')) + 1)
+      expect(r.next).toBe(`앞\n${F}sql\nx\n${F}\n${F}sql\nx\n${F}\n뒤`)
+    })
+
+    it('블록 안의 줄과 닫는 줄을 함께 고르면 블록이 깨지므로 null', () => {
+      const value = `${F}sql\nx\n${F}\n뒤`
+      expect(duplicateLinesEdit(value, value.indexOf('x'), value.indexOf(F, value.indexOf('x')) + 1)).toBeNull()
+    })
+
+    it('블록 밖의 줄과 여는 줄을 함께 고르면 null', () => {
+      const value = `앞\n${F}sql\nx\n${F}`
+      expect(duplicateLinesEdit(value, 0, value.indexOf('sql'))).toBeNull()
+    })
   })
 
   it('언어가 없는 ``` 블록 안에서도 복제된다 (코드블록이면 된다)', () => {
@@ -111,9 +162,9 @@ describe('duplicateLinesEdit (Ctrl+D — 현재 줄을 아래에 복제)', () =>
     expect(r.next).toBe(`${F}sql\nSELECT 1;\nSELECT 1;`)
   })
 
-  it('백틱 4개로 연 블록 안의 ``` 줄은 코드 본문이라 복제할 수 없는 줄(펜스 모양)로 본다', () => {
-    // 4틱 블록 안의 ``` 줄 자체는 펜스처럼 보이므로 건드리지 않는다 (안전한 쪽)
-    expect(at(`\`\`\`\`\n${F}^\n\`\`\`\``)).toBeNull()
+  it('백틱 4개로 연 블록 안의 ``` 줄은 코드 본문이라 그대로 복제된다 (블록 구조가 달라지지 않으므로)', () => {
+    const four = '````'
+    expect(at(`${four}\n${F}^\n${four}`).next).toBe(`${four}\n${F}\n${F}\n${four}`)
   })
 
   it('빈 문서는 null', () => {

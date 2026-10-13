@@ -38,7 +38,12 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/electron/autoCategory.test.js` | 자동 분류 설정 파일(폴더 안 숨김 파일)의 저장·가장 가까운 윗 폴더 찾기·워크스페이스 밖 제외·해제·망가진 파일 | **진짜 디스크**(임시 폴더) |
 | `tests/store/autoCategory.test.js` | 새 문서를 만들 때 자동 분류가 붙는지(예: `04 외래키와 Join` → ddazua·DBMS·외래키), 글양식·가져온 파일·여러 겹 설정 | mockApi |
 | `tests/lib/tableNav.test.js` | 표 편집기 Tab(오른쪽 셀, 행 끝이면 아래 행 첫 셀)·Shift+Tab(그 반대)·Enter(바로 아래 셀) 이동 규칙, 새 행 생성, 병합된 셀 건너뛰기 | 순수 함수 |
-| `tests/lib/lineDuplicate.test.js` | 코드블록 안 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, ``` 줄·코드블록 밖 제외) | 순수 함수 |
+| `tests/lib/tableStats.test.js` | 표 편집기 상태 표시줄: 칸 글자에서 숫자 읽기(쉼표·통화·단위, 날짜·전화번호 제외), 범위 합계·평균·최소·최대, 병합·헤더 행 제외, 소수 오차, 엑셀식 열 이름 | 순수 함수 |
+| `tests/lib/tableGrid.test.js` | 표 편집기 행·열 중간 삽입(병합 한가운데에 끼우면 병합이 커지는 규칙), 고른 범위를 병합 영역까지 넓히기, 병합이 앞뒤가 맞는지 검사 | 순수 함수 |
+| `tests/lib/tableGridOps.test.js` | 표 편집기 행·열 이동·복제, 아래·오른쪽으로 채우기(헤더 행 보호, 병합 가리킴 갱신, 병합이 걸린 줄 거부) | 순수 함수 |
+| `tests/lib/tableSort.test.js` | 표 편집기 열 기준 정렬(숫자 → 글자 → 빈 칸, 영문 → 한글, 같은 값 순서 유지, 세로 병합 거부, 정렬 범위) | 순수 함수 |
+| `tests/lib/tableFind.test.js` | 표 편집기 찾아 바꾸기(대소문자 무시, 정규식 기호는 글자, 범위, 가려진 칸 제외, 한 곳·모두 바꾸기) | 순수 함수 |
+| `tests/lib/lineDuplicate.test.js` | 문서 어디서나 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, 코드블록 구조를 깨는 ``` 줄 제외, 블록 통째 복제) | 순수 함수 |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
 | `tests/lib/snippetOrder.test.js` | 폴더의 순서 목록 파일(`_순서.txt`) 해석(빈 줄·# 설명 건너뛰기, CRLF·BOM, 중복, 대소문자) | 순수 함수 |

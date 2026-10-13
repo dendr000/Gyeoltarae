@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ArrowDownAZ,
-  ArrowDownZA,
-  BetweenHorizontalEnd,
-  BetweenHorizontalStart,
-  BetweenVerticalEnd,
-  BetweenVerticalStart,
   BoxSelect,
   Bold,
   AlignLeft,
@@ -21,8 +15,11 @@ import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
 import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
-import { emptyCell, expandToMerges, insertColumn, insertRow, visibleCellAt } from '../lib/tableGrid.js'
-import { canSortRows, sortRows, sortScope } from '../lib/tableSort.js'
+import { emptyCell } from '../lib/tableGrid.js'
+import { buildStructureOps } from './tableStructureOps.js'
+import { TableStructureToolbar } from './TableStructureToolbar.jsx'
+import { TableFindBar } from './TableFindBar.jsx'
+import { useTableFind } from './useTableFind.js'
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -233,41 +230,17 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
-  // 행·열 중간 삽입(규칙은 lib/tableGrid.js). 위/왼쪽은 고른 범위의 첫 줄 앞에, 아래/오른쪽은 끝 줄 뒤에 한 줄을 끼운다.
-  // 범위가 병합 영역을 걸치고 있으면 병합 전체를 기준으로 해서, 병합 한가운데에 끼워 병합이 늘어나는 일이 없게 한다.
-  // 끼운 뒤에는 새 줄의 칸(같은 열/행 위치)을 골라 입력칸에 포커스를 준다.
-  const insertRange = expandToMerges(grid, range)
-  const insertRowAt = (index) => {
-    const next = insertRow(grid, index)
-    const target = visibleCellAt(next, index, focusCell.c)
-    setGrid(next)
-    setAnchor(target)
-    setFocusCell(target)
-    pendingFocusRef.current = target
+  // 구조 작업(삽입·이동·복제·채우기·정렬): tableStructureOps.js 가 격자와 고른 범위를 보고 단추별 켜짐·안내 글·동작을 만든다.
+  const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow })
+  // 단추·단축키로 동작을 실행하고, 동작이 돌려준 칸이 있으면 격자가 다시 그려진 뒤 그 입력칸에 포커스를 준다(위의 useEffect).
+  const runOp = (op) => {
+    const focusTarget = op.run()
+    if (focusTarget) pendingFocusRef.current = focusTarget
   }
-  const insertColumnAt = (index) => {
-    const next = insertColumn(grid, index)
-    const target = visibleCellAt(next, focusCell.r, index)
-    setGrid(next)
-    setAnchor(target)
-    setFocusCell(target)
-    pendingFocusRef.current = target
-  }
-  // 첫 행을 헤더로 쓰는 표에서 맨 윗줄 위에 끼우면 새 빈 행이 헤더가 되어 버리므로 막는다(아래에는 끼울 수 있다).
-  const canInsertRowAbove = !(headerRow && insertRange.r1 === 0)
 
-  // 정렬(규칙은 lib/tableSort.js): 고른 범위의 첫 열을 기준으로 줄 전체를 정렬한다. 한 행(한 칸)만 골랐으면 표 전체 행, 여러 행을
-  // 골랐으면 그 행들만이고, 첫 행을 헤더로 쓰는 표는 맨 윗줄을 뺀다. 세로 병합이 걸린 행이 있으면 정렬하지 않는다.
-  const sortRange = sortScope(range, { headerRow, rowCount: grid.length })
-  const sortBlockedReason =
-    sortRange.r2 - sortRange.r1 < 1
-      ? '정렬할 행이 2개 이상 있어야 합니다'
-      : !canSortRows(grid, sortRange.r1, sortRange.r2)
-        ? '세로 병합이 걸린 행이 있어 정렬할 수 없습니다 (병합을 먼저 나누세요)'
-        : null
-  const sortBy = (descending) => setGrid((g) => sortRows(g, range.c1, sortRange.r1, sortRange.r2, { descending }))
-  const sortTitle = (label) =>
-    sortBlockedReason ?? `${columnLabel(range.c1)}열 기준 ${label} 정렬 — ${sortRange.r1 + 1}~${sortRange.r2 + 1}행 (숫자 → 글자 → 빈 칸, 줄 전체가 함께 움직임)`
+  // 찾아 바꾸기(Ctrl+F, 규칙은 lib/tableFind.js). 찾은 칸은 입력칸에 포커스를 주지 않고 "고른 칸"으로만 만들며, 화면에 보이게 스크롤한다.
+  const scrollCellIntoView = (r, c) => inputRefs.current[`${r}:${c}`]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  const find = useTableFind({ grid, setGrid, range, isMultiCell, setAnchor, setFocusCell, scrollCellIntoView })
 
   // Removing a row/column first splits any merge it would cut through (so
   // no cell is left with a dangling span), then remaps the mergedInto
@@ -434,6 +407,27 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // class of bug and why execCommand-based edits avoid it), so Ctrl+Z
   // afterward didn't restore the pre-paste text either.
   function handleGridKeyDown(e) {
+    const mod = (e.ctrlKey || e.metaKey) && !e.altKey
+    // Ctrl+F — 찾아 바꾸기 열기(Ctrl+Shift+F 도 같음, 문서 편집기와 같은 키). 입력칸에 글자를 골라 둔 채 누르면 그 글자로 찾는다.
+    // 한글 자판이면 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
+    if (mod && (e.key.toLowerCase() === 'f' || e.code === 'KeyF')) {
+      e.preventDefault()
+      const active = document.activeElement
+      const picked =
+        active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && !active.closest('.table-find-bar')
+          ? active.value.slice(active.selectionStart, active.selectionEnd)
+          : ''
+      find.openBar(picked.includes('\n') ? '' : picked)
+      return
+    }
+    // 찾기 바 안의 입력칸에서는 아래의 표 단축키(복사·붙여넣기·채우기)를 쓰지 않는다 — 글자 입력칸의 평소 동작이어야 한다.
+    if (e.target.closest?.('.table-find-bar')) return
+    // Ctrl+D — 아래로 채우기(엑셀과 같음). 안 되는 상황이어도 브라우저의 기본 동작(북마크 등)은 막는다.
+    if (mod && !e.shiftKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
+      e.preventDefault()
+      if (ops.fillDown.enabled) runOp(ops.fillDown)
+      return
+    }
     const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c'
     const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v'
     // Covers both a cell's own <input> and the larger "선택한 셀 내용"
@@ -563,38 +557,14 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           <button type="button" disabled={!canSplit} title="병합된 셀 나누기" onClick={splitSelection}>
             <TableCellsSplit size={14} />
           </button>
-          <span className="editor-toolbar-divider" />
-          <button
-            type="button"
-            disabled={!canInsertRowAbove}
-            title={canInsertRowAbove ? '위에 행 삽입 (고른 범위의 첫 행 위)' : '헤더 행 위에는 끼울 수 없습니다 (아래에 행 삽입을 쓰세요)'}
-            onClick={() => insertRowAt(insertRange.r1)}
-          >
-            <BetweenHorizontalStart size={14} />
-          </button>
-          <button type="button" title="아래에 행 삽입 (고른 범위의 마지막 행 아래)" onClick={() => insertRowAt(insertRange.r2 + 1)}>
-            <BetweenHorizontalEnd size={14} />
-          </button>
-          <button type="button" title="왼쪽에 열 삽입 (고른 범위의 첫 열 왼쪽)" onClick={() => insertColumnAt(insertRange.c1)}>
-            <BetweenVerticalStart size={14} />
-          </button>
-          <button type="button" title="오른쪽에 열 삽입 (고른 범위의 마지막 열 오른쪽)" onClick={() => insertColumnAt(insertRange.c2 + 1)}>
-            <BetweenVerticalEnd size={14} />
-          </button>
-          <span className="editor-toolbar-divider" />
-          <button type="button" disabled={sortBlockedReason !== null} title={sortTitle('오름차순')} onClick={() => sortBy(false)}>
-            <ArrowDownAZ size={14} />
-          </button>
-          <button type="button" disabled={sortBlockedReason !== null} title={sortTitle('내림차순')} onClick={() => sortBy(true)}>
-            <ArrowDownZA size={14} />
-          </button>
         </div>
+        <TableStructureToolbar ops={ops} onRun={runOp} findOpen={find.open} onToggleFind={() => (find.open ? find.closeBar() : find.openBar())} />
+        {find.open && <TableFindBar find={find} />}
         <div className="cell-style-hint">
-          Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을
-          적용하거나 병합할 수 있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V로
-          셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수 있습니다. 툴바의 삽입 버튼은
-          고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼웁니다. 정렬 버튼은 고른 열을 기준으로 줄 전체를
-          정렬합니다(여러 행을 고르면 그 행들만, 첫 행을 헤더로 쓰면 맨 윗줄 제외).
+          Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을 적용하거나 병합할 수
+          있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V 로 셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서
+          붙여넣기도 가능), Ctrl+D 로 아래로 채우기, Ctrl+F 로 찾아 바꾸기를 할 수 있습니다. 둘째 줄 툴바는 행·열 삽입·이동·복제,
+          채우기, 정렬 단추입니다(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다).
         </div>
 
         {!isMultiCell && (
@@ -680,6 +650,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                           className={[
                             focusCell.r === r && focusCell.c === c ? 'cell-selected' : '',
                             r === 0 && headerRow ? 'cell-header' : '',
+                            find.matchCells.has(`${r}:${c}`) ? (find.currentCell === `${r}:${c}` ? 'cell-match cell-match-current' : 'cell-match') : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}

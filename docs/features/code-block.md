@@ -39,7 +39,7 @@ name VARCHAR(10)
 
 ### Ctrl+D — 줄 복제
 
-코드블록 안에서 **Ctrl+D** 를 누르면 현재 줄이 바로 아래에 복제된다(MySQL Workbench 와 같음). 코드블록 밖에서는 동작하지 않는다. 자세히: `docs/features/code-line-duplicate.md`.
+**Ctrl+D** 를 누르면 현재 줄이 바로 아래에 복제된다(MySQL Workbench 와 같음). 코드블록 안뿐 아니라 문서 어디서나 된다(0.95.0 부터). 자세히: `docs/features/code-line-duplicate.md`.
 
 ### Ctrl+/ — 주석 토글
 

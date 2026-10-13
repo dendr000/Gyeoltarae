@@ -9,6 +9,7 @@
 //   한국어 로캘('ko')은 한글을 영문보다 앞에 두므로 엑셀 한국어판과 같은 영문 → 한글 순서를 위해 'en' 로캘을 쓴다.
 // - 같은 값끼리는 원래 순서를 지킨다(내림차순에서도).
 
+import { reorderRows, rowsAreIndependent } from './tableGrid.js'
 import { parseCellNumber } from './tableStats.js'
 
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
@@ -35,14 +36,7 @@ function compareAscending(a, b) {
 // rowStart..rowEnd(끝 포함) 행을 정렬할 수 있는가. 세로 병합(rowspan)이 걸린 행이 있으면 그 행을 옮길 때 병합이 찢어지므로
 // 정렬하지 않는다. 가로 병합(colspan)은 한 행 안에서 끝나므로 괜찮다.
 export function canSortRows(grid, rowStart, rowEnd) {
-  if (!(rowStart >= 0 && rowEnd < grid.length && rowStart <= rowEnd)) return false
-  for (let r = rowStart; r <= rowEnd; r += 1) {
-    for (const cell of grid[r]) {
-      if (cell.rowspan > 1) return false
-      if (cell.mergedInto && cell.mergedInto.r !== r) return false
-    }
-  }
-  return true
+  return rowsAreIndependent(grid, rowStart, rowEnd)
 }
 
 // 고른 범위 기준으로 정렬할 행의 범위({ r1, r2 }). 한 행만 골랐으면(한 칸 포함) 표 전체 행이고, 여러 행을 골랐으면 그 행들만이다.
@@ -72,11 +66,6 @@ export function sortRows(grid, column, rowStart, rowEnd, { descending = false } 
     return descending ? -order : order
   })
 
-  const rows = grid.map((row) => row.map((cell) => ({ ...cell })))
-  keyed.forEach(({ r: from }, i) => {
-    const to = rowStart + i
-    // 정렬 범위의 행에는 세로 병합이 없으므로, 가려진 칸은 같은 행의 대표 칸을 가리킨다. 행이 옮겨졌으니 가리키는 행도 바꾼다.
-    rows[to] = grid[from].map((cell) => (cell.mergedInto ? { ...cell, mergedInto: { r: to, c: cell.mergedInto.c } } : { ...cell }))
-  })
-  return rows
+  // 정렬 범위의 행에는 세로 병합이 없으므로, 가려진 칸은 같은 행의 대표 칸을 가리킨다. 행이 옮겨졌으니 가리키는 행도 바꾼다(reorderRows).
+  return reorderRows(grid, rowStart, keyed.map(({ r }) => r))
 }

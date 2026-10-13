@@ -1833,6 +1833,43 @@
   margin-bottom: 14px;
 }
 
+/* 찾아 바꾸기(Ctrl+F): 바 모양은 문서 편집기 찾기 바와 같은 입력칸·단추 클래스(.find-bar-*)를 쓰고, 여기서는 바 자체만 꾸민다. */
+.table-find-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-header);
+}
+
+.table-find-scope {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.table-find-message {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* 찾은 칸: 연한 노란 덧칠(칸에 정한 배경색 위에도 보이게 background-image 로) + 주황 테두리. 지금 보는 칸은 굵은 고리. */
+.table-editor-grid input.cell-match {
+  background-image: linear-gradient(var(--find-match), var(--find-match));
+  border-color: var(--find-match-border);
+}
+
+.table-editor-grid input.cell-match-current {
+  outline: 2px solid var(--find-match-border);
+  outline-offset: 1px;
+}
+
 /* 열 글자(A, B, ...)와 행 번호: 누르면 그 줄 전체가 범위로 잡힌다. 고른 범위에 든 것은 강조색으로. */
 .table-editor-head-cell {
   text-align: center;

@@ -1157,9 +1157,10 @@ export function EditorPane({ text, onChange, disabled }) {
         return
       }
     }
-    // Ctrl+D — 코드블록(```) 안에서 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL
-    // Workbench 의 줄 복제와 같다. 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
-    // 코드블록 밖이거나 ``` 줄이면 duplicateLinesEdit 이 null 을 줘서 아무것도 안 하고 지나간다.
+    // Ctrl+D — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL Workbench 의 줄 복제와 같고
+    // 문서 어디서나 된다(처음에는 코드블록 안만 됐다). 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키
+    // (e.code)도 본다. 복제하면 코드블록(```) 구조가 깨지는 줄(여는 줄만, 닫는 줄만 등)이면 duplicateLinesEdit 이
+    // null 을 줘서 아무것도 안 하고 지나간다.
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
       const edit = duplicateLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {

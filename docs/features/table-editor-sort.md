@@ -6,7 +6,7 @@
 
 ## 쓰는 법
 
-툴바 맨 오른쪽의 정렬 단추 두 개(오름차순 `A→Z`, 내림차순 `Z→A`)를 누른다. 단추에 마우스를 올리면 **어느 열을 기준으로, 몇 행부터 몇 행까지** 정렬하는지 보인다. (예: `B열 기준 오름차순 정렬 — 2~6행`)
+**둘째 줄 툴바**의 "정렬" 묶음에 있는 단추 두 개(오름차순 `A→Z`, 내림차순 `Z→A`)를 누른다. 단추에 마우스를 올리면 **어느 열을 기준으로, 몇 행부터 몇 행까지** 정렬하는지 보인다. (예: `B열 기준 오름차순 정렬 — 2~6행`)
 
 - **기준 열**: 고른 범위의 **첫 열**이다. 한 칸을 골랐으면 그 칸의 열, 열 글자(A, B…)를 눌러 열 전체를 골랐으면 그 열이다.
 - **정렬할 행**:
@@ -52,5 +52,5 @@
 ## 구현 위치
 
 - `src/lib/tableSort.js` — `sortRows`(정렬), `canSortRows`(세로 병합 검사), `sortScope`(어느 행을 정렬할지). 화면과 분리한 순수 함수이며 받은 격자를 바꾸지 않는다. 숫자 읽기는 `tableStats.js` 의 `parseCellNumber` 를 쓴다.
-- `src/components/TableEditorModal.jsx` — 정렬 단추 2개, 범위·차단 이유 계산(`sortRange`, `sortBlockedReason`).
+- `src/components/tableStructureOps.js` — 정렬 범위·차단 이유 계산(`sortRange`, `sortBlockedReason`)과 동작. 단추 그리기는 `TableStructureToolbar.jsx`. 행을 다시 놓는 부분(`reorderRows`)은 행 이동과 함께 쓰는 `tableGrid.js` 의 공용 함수다.
 - 테스트: `tests/lib/tableSort.test.js` — 숫자·글자·섞인 열·빈 칸, 영문 → 한글, 행 전체 이동, 범위 밖 행 고정, 가로 병합, 세로 병합 차단, 정렬 범위 계산, 원래 격자 불변.
