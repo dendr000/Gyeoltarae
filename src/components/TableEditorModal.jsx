@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  BoxSelect,
   Bold,
   AlignLeft,
   AlignCenter,
@@ -13,6 +14,7 @@ import {
 import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
 import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
+import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
 
 function emptyCell() {
   return { text: '', bg: '', color: '', align: '', bold: false, colspan: 1, rowspan: 1, mergedInto: null, extraAttrs: [] }
@@ -145,6 +147,20 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
       setAnchor({ r, c })
       setFocusCell({ r, c })
     }
+  }
+
+  // 행 번호·열 글자·왼쪽 위 모서리를 누르면 그 줄/열/표 전체가 범위로 잡힌다(상태 표시줄의 합계·평균을 한 줄 단위로 보려고).
+  const selectRow = (r) => {
+    setAnchor({ r, c: 0 })
+    setFocusCell({ r, c: (grid[0]?.length ?? 1) - 1 })
+  }
+  const selectColumn = (c) => {
+    setAnchor({ r: 0, c })
+    setFocusCell({ r: grid.length - 1, c })
+  }
+  const selectAll = () => {
+    setAnchor({ r: 0, c: 0 })
+    setFocusCell({ r: grid.length - 1, c: (grid[0]?.length ?? 1) - 1 })
   }
 
   const updateCell = (r, c, patch) => {
@@ -397,6 +413,31 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
 
   const focusedCellData = grid[focusCell.r]?.[focusCell.c]
+
+  // 상태 표시줄: 여러 칸을 골랐을 때만 합계·평균 등을 보여 준다(문서에는 쓰지 않는다). 첫 행을 헤더로 쓰는 표는 맨 윗줄을 뺀다.
+  const stats = useMemo(
+    () => (isMultiCell ? rangeStats(grid, { r1: range.r1, r2: range.r2, c1: range.c1, c2: range.c2 }, { skipFirstRow: headerRow }) : null),
+    [grid, isMultiCell, range.r1, range.r2, range.c1, range.c2, headerRow],
+  )
+  const [copiedStat, setCopiedStat] = useState(null) // { key, ok } — 값을 눌러 복사한 직후 잠깐 표시
+  useEffect(() => {
+    if (!copiedStat) return undefined
+    const timer = setTimeout(() => setCopiedStat(null), 1200)
+    return () => clearTimeout(timer)
+  }, [copiedStat])
+
+  // 값을 누르면 쉼표 없는 숫자로 복사해서 칸에 바로 붙여넣을 수 있게 한다. 칸 복사본(clipboardRef)이 남아 있으면 Ctrl+V 가
+  // 방금 복사한 숫자 대신 그것을 붙이므로 비운다.
+  async function copyStat(key, value) {
+    clipboardRef.current = null
+    try {
+      await navigator.clipboard.writeText(formatStat(value, { grouping: false }))
+      setCopiedStat({ key, ok: true })
+    } catch {
+      setCopiedStat({ key, ok: false })
+    }
+  }
+
   const markup = buildMarkup(grid, headerRow)
   // Rendered exactly the way the viewer would show it — colspan/rowspan
   // only really read as "merged" once laid out as a real table, not as
@@ -420,9 +461,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
 
         <div className="cell-style-toolbar">
           <span className="cell-style-toolbar-label">
-            {isMultiCell
-              ? `선택 범위 (${range.r1 + 1},${range.c1 + 1}) ~ (${range.r2 + 1},${range.c2 + 1}):`
-              : `선택한 셀 (${focusCell.r + 1}행 ${focusCell.c + 1}열):`}
+            {isMultiCell ? `선택 범위 ${rangeLabel(range)}:` : `선택한 셀 ${rangeLabel(range)}:`}
           </span>
           <span className="cell-style-toolbar-sublabel">배경색</span>
           <ColorPicker
@@ -489,9 +528,9 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           </button>
         </div>
         <div className="cell-style-hint">
-          Shift+클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을 적용하거나 병합할 수
-          있습니다. Ctrl+C / Ctrl+V로 셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수
-          있습니다.
+          Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을
+          적용하거나 병합할 수 있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V로
+          셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수 있습니다.
         </div>
 
         {!isMultiCell && (
@@ -511,8 +550,39 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         <div className="table-editor-grid-wrap">
           <table className="table-editor-grid">
             <tbody>
+              {/* 열 글자(A, B, ...) — 누르면 그 열 전체가 범위로 잡힌다. 왼쪽 위 모서리는 표 전체. */}
+              <tr>
+                <td className="table-editor-head-cell">
+                  <button type="button" title="표 전체 선택" onClick={selectAll}>
+                    <BoxSelect size={12} />
+                  </button>
+                </td>
+                {grid[0]?.map((_, c) => (
+                  <td key={c} className="table-editor-head-cell">
+                    <button
+                      type="button"
+                      className={isMultiCell && c >= range.c1 && c <= range.c2 ? 'in-range' : ''}
+                      title={`${columnLabel(c)}열 전체 선택`}
+                      onClick={() => selectColumn(c)}
+                    >
+                      {columnLabel(c)}
+                    </button>
+                  </td>
+                ))}
+                <td />
+              </tr>
               {grid.map((row, r) => (
                 <tr key={r}>
+                  <td className="table-editor-head-cell">
+                    <button
+                      type="button"
+                      className={isMultiCell && r >= range.r1 && r <= range.r2 ? 'in-range' : ''}
+                      title={`${r + 1}행 전체 선택`}
+                      onClick={() => selectRow(r)}
+                    >
+                      {r + 1}
+                    </button>
+                  </td>
                   {row.map((cell, c) => {
                     // A cell covered by an earlier merge gets no <td> of its
                     // own at all — same as the raw markup, the browser's
@@ -566,6 +636,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                 </tr>
               ))}
               <tr>
+                <td />
                 {grid[0]?.map((_, c) => (
                   <td key={c} className="table-editor-col-actions">
                     <button title="열 삭제" onClick={() => removeColumn(c)}>
@@ -577,6 +648,35 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* 상태 표시줄: 고른 범위의 집계(보기용, 문서에는 쓰지 않음). 값을 누르면 숫자만 복사된다. */}
+        <div className="table-editor-stats" role="status" aria-live="polite">
+          {stats === null ? (
+            <span className="stats-hint">행 번호·열 글자를 누르거나 Shift+클릭으로 여러 칸을 고르면 합계·평균이 여기에 보입니다.</span>
+          ) : (
+            <>
+              <span className="stats-range">{rangeLabel(range)}</span>
+              <span>{stats.selected}칸</span>
+              {stats.count === 0 ? (
+                <span className="stats-hint">숫자가 있는 칸이 없습니다</span>
+              ) : (
+                [
+                  ['sum', '합계', stats.sum],
+                  ['avg', '평균', stats.avg],
+                  ['count', '개수', stats.count],
+                  ['min', '최소', stats.min],
+                  ['max', '최대', stats.max],
+                ].map(([key, label, value]) => (
+                  <button key={key} type="button" className="stats-item" title="누르면 이 숫자가 복사됩니다" onClick={() => copyStat(key, value)}>
+                    {label} <strong>{formatStat(value)}</strong>
+                    {copiedStat?.key === key && <em>{copiedStat.ok ? ' 복사됨' : ' 복사 실패'}</em>}
+                  </button>
+                ))
+              )}
+              {stats.skippedHeader && <span className="stats-hint">첫 행(헤더)은 계산에서 뺐습니다</span>}
+            </>
+          )}
         </div>
 
         <div className="table-editor-toolbar">

@@ -1833,6 +1833,84 @@
   margin-bottom: 14px;
 }
 
+/* 열 글자(A, B, ...)와 행 번호: 누르면 그 줄 전체가 범위로 잡힌다. 고른 범위에 든 것은 강조색으로. */
+.table-editor-head-cell {
+  text-align: center;
+}
+
+.table-editor-head-cell button {
+  min-width: 26px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-header);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.table-editor-head-cell button:hover {
+  border-color: var(--accent);
+}
+
+.table-editor-head-cell button.in-range {
+  border-color: var(--accent);
+  background: var(--grid-head);
+  color: var(--text-h);
+}
+
+/* 상태 표시줄: 고른 범위의 합계·평균 등(보기용). 값을 누르면 숫자만 복사된다. */
+.table-editor-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  min-height: 20px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-header);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.table-editor-stats .stats-range {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.table-editor-stats .stats-hint {
+  opacity: 0.65;
+}
+
+.table-editor-stats .stats-item {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-editor-stats .stats-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.table-editor-stats .stats-item strong {
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.table-editor-stats .stats-item em {
+  color: var(--accent);
+  font-style: normal;
+}
+
 .table-editor-preview {
   margin-bottom: 16px;
 }
