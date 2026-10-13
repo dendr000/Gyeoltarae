@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ArrowDownAZ,
+  ArrowDownZA,
   BetweenHorizontalEnd,
   BetweenHorizontalStart,
   BetweenVerticalEnd,
@@ -20,6 +22,7 @@ import { parseWikiText } from '../lib/wikiParser.js'
 import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
 import { emptyCell, expandToMerges, insertColumn, insertRow, visibleCellAt } from '../lib/tableGrid.js'
+import { canSortRows, sortRows, sortScope } from '../lib/tableSort.js'
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -252,6 +255,19 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
   // 첫 행을 헤더로 쓰는 표에서 맨 윗줄 위에 끼우면 새 빈 행이 헤더가 되어 버리므로 막는다(아래에는 끼울 수 있다).
   const canInsertRowAbove = !(headerRow && insertRange.r1 === 0)
+
+  // 정렬(규칙은 lib/tableSort.js): 고른 범위의 첫 열을 기준으로 줄 전체를 정렬한다. 한 행(한 칸)만 골랐으면 표 전체 행, 여러 행을
+  // 골랐으면 그 행들만이고, 첫 행을 헤더로 쓰는 표는 맨 윗줄을 뺀다. 세로 병합이 걸린 행이 있으면 정렬하지 않는다.
+  const sortRange = sortScope(range, { headerRow, rowCount: grid.length })
+  const sortBlockedReason =
+    sortRange.r2 - sortRange.r1 < 1
+      ? '정렬할 행이 2개 이상 있어야 합니다'
+      : !canSortRows(grid, sortRange.r1, sortRange.r2)
+        ? '세로 병합이 걸린 행이 있어 정렬할 수 없습니다 (병합을 먼저 나누세요)'
+        : null
+  const sortBy = (descending) => setGrid((g) => sortRows(g, range.c1, sortRange.r1, sortRange.r2, { descending }))
+  const sortTitle = (label) =>
+    sortBlockedReason ?? `${columnLabel(range.c1)}열 기준 ${label} 정렬 — ${sortRange.r1 + 1}~${sortRange.r2 + 1}행 (숫자 → 글자 → 빈 칸, 줄 전체가 함께 움직임)`
 
   // Removing a row/column first splits any merge it would cut through (so
   // no cell is left with a dangling span), then remaps the mergedInto
@@ -565,12 +581,20 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           <button type="button" title="오른쪽에 열 삽입 (고른 범위의 마지막 열 오른쪽)" onClick={() => insertColumnAt(insertRange.c2 + 1)}>
             <BetweenVerticalEnd size={14} />
           </button>
+          <span className="editor-toolbar-divider" />
+          <button type="button" disabled={sortBlockedReason !== null} title={sortTitle('오름차순')} onClick={() => sortBy(false)}>
+            <ArrowDownAZ size={14} />
+          </button>
+          <button type="button" disabled={sortBlockedReason !== null} title={sortTitle('내림차순')} onClick={() => sortBy(true)}>
+            <ArrowDownZA size={14} />
+          </button>
         </div>
         <div className="cell-style-hint">
           Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을
           적용하거나 병합할 수 있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V로
           셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수 있습니다. 툴바의 삽입 버튼은
-          고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼웁니다.
+          고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼웁니다. 정렬 버튼은 고른 열을 기준으로 줄 전체를
+          정렬합니다(여러 행을 고르면 그 행들만, 첫 행을 헤더로 쓰면 맨 윗줄 제외).
         </div>
 
         {!isMultiCell && (

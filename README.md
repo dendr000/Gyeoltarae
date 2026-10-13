@@ -173,6 +173,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   보임(보기용, 문서에는 쓰지 않음). 값을 누르면 숫자만 복사됨. [`docs/features/table-editor-stats.md`](docs/features/table-editor-stats.md)
 - **표 편집기의 행·열 삽입**: 툴바의 삽입 단추로 고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼움. 병합 셀 한가운데에 끼우면 병합이
   한 칸 커짐(엑셀과 같음). [`docs/features/table-editor-insert.md`](docs/features/table-editor-insert.md)
+- **표 편집기의 열 기준 정렬**: 고른 열의 값으로 줄 전체를 오름차순·내림차순 정렬(숫자 → 글자 → 빈 칸, 영문 → 한글). 여러 행을 고르면 그
+  행들만, 첫 행을 헤더로 쓰면 맨 윗줄 제외, 세로 병합이 걸린 행은 정렬 불가. [`docs/features/table-editor-sort.md`](docs/features/table-editor-sort.md)
 - **큰 제목 간격**: 뷰어에서 큰 제목(1. 2. 3. …) 앞 간격을 넓혀 다음 큰 문단으로 넘어간 느낌을 줌.
   [`docs/features/heading-spacing.md`](docs/features/heading-spacing.md)
 
