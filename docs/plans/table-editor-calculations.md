@@ -1,7 +1,7 @@
 # 표 편집기의 계산·엑셀식 편의 기능 — 계획
 
 - 작성일: 2026-10-13
-- **진행 상황 (2026-10-13)**: 1단계(상태 표시줄 집계)를 **0.92.0 에서 구현 완료** — 문서: [table-editor-stats.md](../features/table-editor-stats.md). 이어서 "그 밖의 후보" 중 **행·열 중간 삽입**을 **0.93.0 에서 구현 완료** — 문서: [table-editor-insert.md](../features/table-editor-insert.md). **정렬**도 **0.94.0 에서 구현 완료** — 문서: [table-editor-sort.md](../features/table-editor-sort.md). **아래로·오른쪽으로 채우기**(표 편집기), **행·열 이동·복제**, **표 안 찾아 바꾸기**는 **0.95.0 에서 구현 완료** — 문서: [table-editor-structure.md](../features/table-editor-structure.md), [table-editor-find.md](../features/table-editor-find.md). 같은 버전에서 **줄 복제(Ctrl+D)를 문서 전체로 확장**했다([code-line-duplicate.md](../features/code-line-duplicate.md)). **자동 채우기**(채우기 핸들 끌기)는 **0.96.0 에서 구현 완료** — 문서: [table-editor-autofill.md](../features/table-editor-autofill.md). 2단계 이후는 쓰다가 필요해지면 별도 요청으로 진행한다.
+- **진행 상황 (2026-10-13)**: 1단계(상태 표시줄 집계)를 **0.92.0 에서 구현 완료** — 문서: [table-editor-stats.md](../features/table-editor-stats.md). 이어서 "그 밖의 후보" 중 **행·열 중간 삽입**을 **0.93.0 에서 구현 완료** — 문서: [table-editor-insert.md](../features/table-editor-insert.md). **정렬**도 **0.94.0 에서 구현 완료** — 문서: [table-editor-sort.md](../features/table-editor-sort.md). **아래로·오른쪽으로 채우기**(표 편집기), **행·열 이동·복제**, **표 안 찾아 바꾸기**는 **0.95.0 에서 구현 완료** — 문서: [table-editor-structure.md](../features/table-editor-structure.md), [table-editor-find.md](../features/table-editor-find.md). 같은 버전에서 **줄 복제(Ctrl+D)를 문서 전체로 확장**했다([code-line-duplicate.md](../features/code-line-duplicate.md)). **숫자 서식·조건부 색·열 너비·줄무늬 행·행·열 전치**는 **0.97.0 에서 구현 완료** — 문서: [table-editor-format.md](../features/table-editor-format.md). **자동 채우기**(채우기 핸들 끌기)는 **0.96.0 에서 구현 완료** — 문서: [table-editor-autofill.md](../features/table-editor-autofill.md). 2단계 이후는 쓰다가 필요해지면 별도 요청으로 진행한다.
 - 관련 문서: [table-editor-keys.md](../features/table-editor-keys.md) (셀 키 이동), 나무위키 문법 기준은 README 의 표 문법 절.
 
 ## 요청과 결정
@@ -56,15 +56,15 @@
 | 정렬 | 열 기준 오름/내림, 숫자순·가나다순 | **0.94.0 완료** (세로 병합이 걸린 행은 정렬 불가) |
 | 아래로 복사(Ctrl+D)·오른쪽으로 복사 | 고른 범위를 위 칸·왼쪽 칸 내용으로 채우기 | **0.95.0 완료** (오른쪽은 Ctrl+R 이 앱 메뉴의 새로고침과 겹쳐 단추만) |
 | 표 안 찾아 바꾸기 | 공백 정리, 특정 글자 일괄 교체 | **0.95.0 완료** |
-| 줄무늬 행 | 번갈아 배경색 | 쉬움 |
-| 행·열 전치 | 가로와 세로를 뒤집기 | 쉬움 (병합 셀은 풀고 해야 함) |
+| 줄무늬 행 | 번갈아 배경색 | **0.97.0 완료** |
+| 행·열 전치 | 가로와 세로를 뒤집기 | **0.97.0 완료** (병합은 가로↔세로가 바뀜) |
 | 방향키 이동 | 화살표로 셀 이동 (table-editor-keys.md 의 "알려진 한계") | 쉬움 |
 | 자동 채우기 | `1, 2` → `3, 4…`, 날짜·요일 | **0.96.0 완료** (채우기 핸들 끌기, 엑셀과 같은 규칙) |
-| 숫자 서식 | 천 단위 쉼표, 소수 자릿수, `%`, 통화 기호 | 보통 |
-| 조건부 색 | "0보다 작으면 빨강" 같은 규칙을 일괄 적용 | 보통 |
-| 열 너비 지정 | 파서가 `<width=…>` 를 읽지만 편집기에서 조절은 못 함 | 보통 |
+| 숫자 서식 | 천 단위 쉼표, 소수 자릿수, `%`, 통화 기호 | **0.97.0 완료** |
+| 조건부 색 | "0보다 작으면 빨강" 같은 규칙을 일괄 적용 | **0.97.0 완료** (한 번 적용하는 방식) |
+| 열 너비 지정 | 파서가 `<width=…>` 를 읽지만 편집기에서 조절은 못 함 | **0.97.0 완료** |
 
-권장 순서(요청자 확인 전): 상태 표시줄(완료) → 행·열 중간 삽입(완료) → 정렬(완료) → 아래로 복사(완료) → 행·열 이동·복제(완료) → 찾아 바꾸기(완료). 자동 채우기(완료, 0.96.0). 남은 것: 숫자 서식, 조건부 색, 열 너비 지정, 줄무늬 행, 전치, 방향키 이동.
+권장 순서(요청자 확인 전): 상태 표시줄(완료) → 행·열 중간 삽입(완료) → 정렬(완료) → 아래로 복사(완료) → 행·열 이동·복제(완료) → 찾아 바꾸기(완료). 자동 채우기(완료, 0.96.0) → 숫자 서식·조건부 색·열 너비·줄무늬·전치(완료, 0.97.0). 남은 것: 방향키 이동.
 
 ## 알려진 한계와 확인할 것
 

@@ -7,20 +7,35 @@
 const NUMBER = String.raw`(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+`
 // 앞에는 부호와 통화 기호만, 뒤에는 % 나 짧은 단위(최대 3글자, 숫자·구분 기호 제외)만 허용한다.
 // 그 밖의 글이 섞이면 숫자 칸이 아니다 — "서울 3호선", "2024-01-05", "010-1234-5678", "10:30" 이 숫자로 읽히면 합계가 엉뚱해진다.
-const CELL_NUMBER = new RegExp(String.raw`^([+-]?)\s*[₩$€¥£]?\s*([+-]?)\s*(${NUMBER})\s*(?:[%A-Za-z가-힣㎏㎖㎡㎝㎜㎞℃℉°]{1,3})?$`)
+const CELL_NUMBER = new RegExp(String.raw`^([+-]?)\s*([₩$€¥£]?)\s*([+-]?)\s*(${NUMBER})\s*((?:[%A-Za-z가-힣㎏㎖㎡㎝㎜㎞℃℉°]{1,3})?)$`)
 
-// 칸의 글에서 숫자를 읽는다. 숫자 칸이 아니면 null.
-export function parseCellNumber(text) {
+// 칸의 글에서 숫자를 읽어 부분으로 나눈다: { value(부호 포함), currency(통화 기호), suffix(뒤 단위), decimals(소수 자릿수), grouped(천 단위 쉼표가
+// 있는가), padded(007 처럼 앞에 0 이 붙은 정수인가) }. 숫자 칸이 아니면 null. 숫자 서식(tableNumberFormat.js)이 원래 모양을 알아야 해서 쓴다.
+export function parseCellNumberParts(text) {
   if (typeof text !== 'string') return null
   // 셀 안 줄바꿈 [br] 은 공백으로 보고, 유니코드 마이너스는 일반 마이너스로 바꾼다.
   const cleaned = text.replace(/\[br\]/gi, ' ').replace(/−/g, '-').trim()
   const match = CELL_NUMBER.exec(cleaned)
   if (!match) return null
-  const [, signBefore, signAfter, digits] = match
+  const [, signBefore, currency, signAfter, digits, suffix] = match
   if (signBefore && signAfter) return null // "--3", "+-3"
-  const value = Number(digits.replace(/,/g, ''))
-  if (!Number.isFinite(value)) return null
-  return signBefore === '-' || signAfter === '-' ? -value : value
+  const magnitude = Number(digits.replace(/,/g, ''))
+  if (!Number.isFinite(magnitude)) return null
+  const [integerDigits, fractionDigits = ''] = digits.replace(/,/g, '').split('.')
+  return {
+    value: signBefore === '-' || signAfter === '-' ? -magnitude : magnitude,
+    currency,
+    suffix,
+    decimals: fractionDigits.length,
+    grouped: digits.includes(','),
+    padded: integerDigits.length > 1 && integerDigits.startsWith('0'),
+  }
+}
+
+// 칸의 글에서 숫자 값을 읽는다. 숫자 칸이 아니면 null.
+export function parseCellNumber(text) {
+  const parts = parseCellNumberParts(text)
+  return parts === null ? null : parts.value
 }
 
 // 0.1 + 0.2 = 0.30000000000000004 같은 이진 소수 오차를 15자리 유효숫자로 걷어낸다.

@@ -15,7 +15,10 @@
 | 복제 | 행 복제, 열 복제 | 아래 |
 | 채우기 | 아래로 채우기(Ctrl+D), 오른쪽으로 채우기 | 아래 |
 | 정렬 | 오름차순, 내림차순 | [table-editor-sort.md](table-editor-sort.md) |
+| 표 | 행·열 바꾸기(전치) | [table-editor-format.md](table-editor-format.md) |
 | 찾기 | 찾아 바꾸기(Ctrl+F) | [table-editor-find.md](table-editor-find.md) |
+
+**셋째 줄 툴바("서식")** 에는 숫자 서식·조건부 색·열 너비·줄무늬 도구가 있다: [table-editor-format.md](table-editor-format.md).
 
 모든 동작은 **고른 범위**를 기준으로 한다. 열 글자(A, B…)·행 번호(1, 2…)를 누르거나 Shift+클릭으로 범위를 고르면 그 줄 전체가 대상이다.
 

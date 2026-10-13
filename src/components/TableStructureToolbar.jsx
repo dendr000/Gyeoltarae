@@ -12,6 +12,7 @@ import {
   BetweenVerticalEnd,
   BetweenVerticalStart,
   Columns3,
+  FlipHorizontal2,
   Rows3,
   Search,
 } from 'lucide-react'
@@ -79,6 +80,11 @@ export function TableStructureToolbar({ ops, onRun, findOpen, onToggleFind }) {
       </OpButton>
       <OpButton op={ops.sortDescending} onRun={onRun}>
         <ArrowDownZA size={14} />
+      </OpButton>
+      <span className="editor-toolbar-divider" />
+      <span className="cell-style-toolbar-sublabel">표</span>
+      <OpButton op={ops.transpose} onRun={onRun}>
+        <FlipHorizontal2 size={14} />
       </OpButton>
       <span className="editor-toolbar-divider" />
       <button type="button" className={findOpen ? 'active' : ''} title="찾아 바꾸기 (Ctrl+F)" onClick={onToggleFind}>

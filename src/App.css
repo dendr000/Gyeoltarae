@@ -3268,3 +3268,72 @@
 .image-sidebar-item:hover .image-sidebar-delete-btn {
   display: inline-block;
 }
+
+/* 서식 패널(숫자 서식·조건부 색·열 너비·줄무늬): 토글 단추 줄(.table-format-toolbar) 아래에 열리는 입력 줄. */
+.table-format-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-header);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.table-format-scope {
+  flex-basis: 100%;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.table-format-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-format-select,
+.table-format-input {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 12px;
+}
+
+.table-format-input {
+  width: 110px;
+}
+
+.table-format-input-short {
+  width: 80px;
+}
+
+.table-format-count {
+  opacity: 0.75;
+}
+
+.table-format-apply {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.table-format-apply:hover {
+  border-color: var(--accent);
+}
+
+/* 조건부 색 미리 보기: 조건에 맞는 칸을 주황 점선으로(찾기의 노란 칸과 구분). */
+.table-editor-grid input.cell-rule-preview {
+  outline: 2px dashed var(--find-match-border);
+  outline-offset: -2px;
+}

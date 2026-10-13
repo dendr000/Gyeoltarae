@@ -21,6 +21,8 @@ import { TableStructureToolbar } from './TableStructureToolbar.jsx'
 import { TableFindBar } from './TableFindBar.jsx'
 import { useTableFind } from './useTableFind.js'
 import { useAutoFillDrag } from './useAutoFillDrag.js'
+import { TableFormatPanels } from './TableFormatPanels.jsx'
+import { useTableFormat } from './useTableFormat.js'
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -232,7 +234,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
   // 구조 작업(삽입·이동·복제·채우기·정렬): tableStructureOps.js 가 격자와 고른 범위를 보고 단추별 켜짐·안내 글·동작을 만든다.
-  const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow })
+  const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow })
   // 단추·단축키로 동작을 실행하고, 동작이 돌려준 칸이 있으면 격자가 다시 그려진 뒤 그 입력칸에 포커스를 준다(위의 useEffect).
   const runOp = (op) => {
     const focusTarget = op.run()
@@ -246,6 +248,9 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // 자동 채우기(채우기 핸들 끌기, 규칙은 lib/fillSeries.js·tableAutoFill.js): 고른 범위의 오른쪽 아래 칸에 핸들이 붙는다. 범위에 병합이 걸려 있으면 채울 수 없으므로 핸들을 숨긴다.
   const fillDrag = useAutoFillDrag({ grid, setGrid, range, setAnchor, setFocusCell })
   const showFillHandle = !regionHasMerge(grid, range.r1, range.r2, range.c1, range.c2)
+
+  // 서식 패널(숫자 서식·조건부 색·열 너비·줄무늬, 규칙은 lib/tableNumberFormat.js·tableConditional.js·tableStyle.js).
+  const format = useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
 
   // Removing a row/column first splits any merge it would cut through (so
   // no cell is left with a dangling span), then remaps the mergedInto
@@ -564,13 +569,15 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           </button>
         </div>
         <TableStructureToolbar ops={ops} onRun={runOp} findOpen={find.open} onToggleFind={() => (find.open ? find.closeBar() : find.openBar())} />
+        <TableFormatPanels format={format} />
         {find.open && <TableFindBar find={find} />}
         <div className="cell-style-hint">
           Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을 적용하거나 병합할 수
           있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V 로 셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서
           붙여넣기도 가능), Ctrl+D 로 아래로 채우기, Ctrl+F 로 찾아 바꾸기를 할 수 있습니다. 고른 범위의 오른쪽 아래 모서리에 있는 작은
           네모(핸들)를 아래·오른쪽으로 끌면 1, 2 → 3, 4…, 날짜, 요일 등을 이어서 자동으로 채웁니다. 둘째 줄 툴바는 행·열
-          삽입·이동·복제, 채우기, 정렬 단추입니다(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다).
+          삽입·이동·복제, 채우기, 정렬, 행·열 바꾸기 단추이고(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다), 셋째 줄
+          "서식" 툴바는 숫자 서식·조건부 색·열 너비·줄무늬 도구입니다.
         </div>
 
         {!isMultiCell && (
@@ -658,6 +665,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                             focusCell.r === r && focusCell.c === c ? 'cell-selected' : '',
                             r === 0 && headerRow ? 'cell-header' : '',
                             find.matchCells.has(`${r}:${c}`) ? (find.currentCell === `${r}:${c}` ? 'cell-match cell-match-current' : 'cell-match') : '',
+                            format.previewCells.has(`${r}:${c}`) ? 'cell-rule-preview' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}

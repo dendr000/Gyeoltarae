@@ -4,10 +4,10 @@
 // lib/tableSort.js 에 있고, 여기서는 그 결과를 격자(grid)에 반영하고 고른 범위·입력칸 포커스를 정리하며, 단추마다 켜질 수 있는지(enabled)와
 // 안내 글(title)을 만든다. 모달(TableEditorModal.jsx)이 렌더링마다 부르는 순수한 함수이며 React 훅이 아니다.
 //
-// ctx: { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow }
+// ctx: { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow }
 //   range      - 고른 범위({ r1, r2, c1, c2 }, 끝 포함)
 // 돌려주는 값: { insertAbove, insertBelow, insertLeft, insertRight, moveRowUp, moveRowDown, moveColumnLeft, moveColumnRight,
-//   duplicateRow, duplicateColumn, fillDown, fillRight, sortAscending, sortDescending } — 각각 { enabled, title, run }.
+//   duplicateRow, duplicateColumn, fillDown, fillRight, transpose, sortAscending, sortDescending } — 각각 { enabled, title, run }.
 //   run() 은 격자와 고른 범위를 바꾸고, 격자가 다시 그려진 뒤 입력칸에 포커스를 줄 칸({ r, c })을 돌려준다(없으면 null/undefined).
 //   포커스 예약은 호출한 쪽(모달)이 한다.
 
@@ -30,6 +30,7 @@ import {
   visibleCellAt,
 } from '../lib/tableGrid.js'
 import { canSortRows, sortRows, sortScope } from '../lib/tableSort.js'
+import { transposeGrid } from '../lib/tableTranspose.js'
 import { columnLabel } from '../lib/tableStats.js'
 
 const MERGE_ROW_REASON = '세로 병합이 걸린 행이 있어 할 수 없습니다 (병합을 먼저 나누세요)'
@@ -41,7 +42,7 @@ function op(enabled, title, run) {
 }
 
 export function buildStructureOps(ctx) {
-  const { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow } = ctx
+  const { grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setHeaderRow } = ctx
   const rowCount = grid.length
   const colCount = grid[0]?.length ?? 0
 
@@ -154,6 +155,15 @@ export function buildStructureOps(ctx) {
     sortBlockedReason ??
     `${columnLabel(range.c1)}열 기준 ${label} 정렬 — ${sortRange.r1 + 1}~${sortRange.r2 + 1}행 (숫자 → 글자 → 빈 칸, 줄 전체가 함께 움직임)`
 
+  // ---- 행·열 바꾸기(전치) ----------------------------------------------------------------------------------------------
+  // 가로와 세로를 뒤집는다(규칙은 lib/tableTranspose.js). "첫 번째 행을 헤더로"는 맨 윗줄에만 굵게를 입히는 설정이라 뒤집으면 엉뚱한 줄이
+  // 굵어지므로, 지금의 헤더 행을 칸의 굵게로 바꿔 두고(굵은 첫 열이 된다) 체크는 끈다.
+  function transposeTable() {
+    const base = headerRow ? grid.map((row, r) => (r === 0 ? row.map((cell) => ({ ...cell, bold: true })) : row)) : grid
+    setHeaderRow(false)
+    return apply(transposeGrid(base), { r: 0, c: 0 }, { r: 0, c: 0 }, { followFocus: true })
+  }
+
   const canMoveUp = canMoveRows(grid, range.r1, range.r2, -1, rowMin)
   const canMoveDown = canMoveRows(grid, range.r1, range.r2, 1, rowMin)
   const canMoveLeft = canMoveColumns(grid, range.c1, range.c2, -1)
@@ -193,6 +203,13 @@ export function buildStructureOps(ctx) {
       canFillRightNow,
       canFillRightNow ? '오른쪽으로 채우기 — 고른 범위의 첫 열(한 열만 골랐으면 바로 왼쪽 열)을 오른쪽 칸에 복사' : fillRightReason(),
       () => setGrid((g) => fillRight(g, range)),
+    ),
+    transpose: op(
+      rowCount > 0,
+      headerRow
+        ? '행과 열 바꾸기 — 가로와 세로를 뒤집습니다. 지금의 헤더 행은 굵은 첫 열이 되고 "첫 번째 행을 헤더로" 체크는 꺼집니다'
+        : '행과 열 바꾸기 — 가로와 세로를 뒤집습니다 (한 번 더 누르면 원래대로)',
+      transposeTable,
     ),
     sortAscending: op(sortBlockedReason === null, sortTitle('오름차순'), () => sortBy(false)),
     sortDescending: op(sortBlockedReason === null, sortTitle('내림차순'), () => sortBy(true)),

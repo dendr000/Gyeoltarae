@@ -45,6 +45,11 @@ npm run test:watch  # 파일을 저장할 때마다 자동으로 다시 돌림 (
 | `tests/lib/tableFind.test.js` | 표 편집기 찾아 바꾸기(대소문자 무시, 정규식 기호는 글자, 범위, 가려진 칸 제외, 한 곳·모두 바꾸기) | 순수 함수 |
 | `tests/lib/fillSeries.test.js` | 표 편집기 자동 채우기 규칙(숫자 등차, 글자 속 숫자, 날짜·달 단위·윤년, 요일·월 이름 순환, 반복, Ctrl 반전) | 순수 함수 |
 | `tests/lib/tableAutoFill.test.js` | 자동 채우기를 격자에 적용(끌기 방향·칸 수, 열/행마다 규칙, 서식 반복 복사, 병합·표 끝 거부) | 순수 함수 |
+| `tests/lib/tableNumberParts.test.js` | 칸 글자를 숫자의 부분(값·통화 기호·뒤 단위·소수 자릿수·쉼표·앞의 0)으로 읽기 | 순수 함수 |
+| `tests/lib/tableNumberFormat.test.js` | 숫자 서식(쉼표 넣기·빼기, 소수 자릿수 5 올림, 통화 기호·뒤 글자, 007 제외, 헤더·범위·병합) | 순수 함수 |
+| `tests/lib/tableConditional.test.js` | 조건부 색 규칙(숫자 비교·사이·글자 포함·비어 있음·최댓값/최솟값·중복)과 서식 입히기·지우기 | 순수 함수 |
+| `tests/lib/tableStyle.test.js` | 줄무늬 행(시작 줄·범위·해제)과 열 너비(width 속성 저장·정리·값 검증) | 순수 함수 |
+| `tests/lib/tableTranspose.test.js` | 행·열 바꾸기(병합 가로↔세로, 가려진 칸 가리킴, 방향 속성 맞바꿈, 두 번 하면 원래대로) | 순수 함수 |
 | `tests/lib/lineDuplicate.test.js` | 문서 어디서나 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, 코드블록 구조를 깨는 ``` 줄 제외, 블록 통째 복제) | 순수 함수 |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |
