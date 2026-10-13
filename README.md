@@ -171,6 +171,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   새 행을 만듦), Shift+Enter = 셀 안 줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
 - **표 편집기의 합계·평균 표시줄**: 행 번호·열 글자를 누르거나 Shift+클릭으로 칸을 여러 개 고르면 표 아래에 합계·평균·개수·최소·최대가
   보임(보기용, 문서에는 쓰지 않음). 값을 누르면 숫자만 복사됨. [`docs/features/table-editor-stats.md`](docs/features/table-editor-stats.md)
+- **표 편집기의 행·열 삽입**: 툴바의 삽입 단추로 고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼움. 병합 셀 한가운데에 끼우면 병합이
+  한 칸 커짐(엑셀과 같음). [`docs/features/table-editor-insert.md`](docs/features/table-editor-insert.md)
 - **큰 제목 간격**: 뷰어에서 큰 제목(1. 2. 3. …) 앞 간격을 넓혀 다음 큰 문단으로 넘어간 느낌을 줌.
   [`docs/features/heading-spacing.md`](docs/features/heading-spacing.md)
 

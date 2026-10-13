@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  BetweenHorizontalEnd,
+  BetweenHorizontalStart,
+  BetweenVerticalEnd,
+  BetweenVerticalStart,
   BoxSelect,
   Bold,
   AlignLeft,
@@ -15,10 +19,7 @@ import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
 import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
-
-function emptyCell() {
-  return { text: '', bg: '', color: '', align: '', bold: false, colspan: 1, rowspan: 1, mergedInto: null, extraAttrs: [] }
-}
+import { emptyCell, expandToMerges, insertColumn, insertRow, visibleCellAt } from '../lib/tableGrid.js'
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -229,6 +230,29 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   }
   const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
+  // 행·열 중간 삽입(규칙은 lib/tableGrid.js). 위/왼쪽은 고른 범위의 첫 줄 앞에, 아래/오른쪽은 끝 줄 뒤에 한 줄을 끼운다.
+  // 범위가 병합 영역을 걸치고 있으면 병합 전체를 기준으로 해서, 병합 한가운데에 끼워 병합이 늘어나는 일이 없게 한다.
+  // 끼운 뒤에는 새 줄의 칸(같은 열/행 위치)을 골라 입력칸에 포커스를 준다.
+  const insertRange = expandToMerges(grid, range)
+  const insertRowAt = (index) => {
+    const next = insertRow(grid, index)
+    const target = visibleCellAt(next, index, focusCell.c)
+    setGrid(next)
+    setAnchor(target)
+    setFocusCell(target)
+    pendingFocusRef.current = target
+  }
+  const insertColumnAt = (index) => {
+    const next = insertColumn(grid, index)
+    const target = visibleCellAt(next, focusCell.r, index)
+    setGrid(next)
+    setAnchor(target)
+    setFocusCell(target)
+    pendingFocusRef.current = target
+  }
+  // 첫 행을 헤더로 쓰는 표에서 맨 윗줄 위에 끼우면 새 빈 행이 헤더가 되어 버리므로 막는다(아래에는 끼울 수 있다).
+  const canInsertRowAbove = !(headerRow && insertRange.r1 === 0)
+
   // Removing a row/column first splits any merge it would cut through (so
   // no cell is left with a dangling span), then remaps the mergedInto
   // pointers of every merge group past the removed index, since those
@@ -415,10 +439,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   const focusedCellData = grid[focusCell.r]?.[focusCell.c]
 
   // 상태 표시줄: 여러 칸을 골랐을 때만 합계·평균 등을 보여 준다(문서에는 쓰지 않는다). 첫 행을 헤더로 쓰는 표는 맨 윗줄을 뺀다.
-  const stats = useMemo(
-    () => (isMultiCell ? rangeStats(grid, { r1: range.r1, r2: range.r2, c1: range.c1, c2: range.c2 }, { skipFirstRow: headerRow }) : null),
-    [grid, isMultiCell, range.r1, range.r2, range.c1, range.c2, headerRow],
-  )
+  const stats = isMultiCell ? rangeStats(grid, range, { skipFirstRow: headerRow }) : null
   const [copiedStat, setCopiedStat] = useState(null) // { key, ok } — 값을 눌러 복사한 직후 잠깐 표시
   useEffect(() => {
     if (!copiedStat) return undefined
@@ -526,11 +547,30 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           <button type="button" disabled={!canSplit} title="병합된 셀 나누기" onClick={splitSelection}>
             <TableCellsSplit size={14} />
           </button>
+          <span className="editor-toolbar-divider" />
+          <button
+            type="button"
+            disabled={!canInsertRowAbove}
+            title={canInsertRowAbove ? '위에 행 삽입 (고른 범위의 첫 행 위)' : '헤더 행 위에는 끼울 수 없습니다 (아래에 행 삽입을 쓰세요)'}
+            onClick={() => insertRowAt(insertRange.r1)}
+          >
+            <BetweenHorizontalStart size={14} />
+          </button>
+          <button type="button" title="아래에 행 삽입 (고른 범위의 마지막 행 아래)" onClick={() => insertRowAt(insertRange.r2 + 1)}>
+            <BetweenHorizontalEnd size={14} />
+          </button>
+          <button type="button" title="왼쪽에 열 삽입 (고른 범위의 첫 열 왼쪽)" onClick={() => insertColumnAt(insertRange.c1)}>
+            <BetweenVerticalStart size={14} />
+          </button>
+          <button type="button" title="오른쪽에 열 삽입 (고른 범위의 마지막 열 오른쪽)" onClick={() => insertColumnAt(insertRange.c2 + 1)}>
+            <BetweenVerticalEnd size={14} />
+          </button>
         </div>
         <div className="cell-style-hint">
           Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을
           적용하거나 병합할 수 있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V로
-          셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수 있습니다.
+          셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서 붙여넣기도 가능)할 수 있습니다. 툴바의 삽입 버튼은
+          고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼웁니다.
         </div>
 
         {!isMultiCell && (
