@@ -13,6 +13,7 @@ import { preserveSpaces } from './preserveSpaces.js'
 // Size/color : {{{+1 텍스트}}} ~ {{{+5}}}, {{{-1}}} ~ {{{-5}}}, {{{#색상 텍스트}}}
 // Footnote   : [* 내용]  (auto-numbered)
 // Line break : [br]  (일반 줄바꿈은 문단 안에서 뭉개지므로 명시적으로 끊을 때 씀)
+// Page count : [pagecount]  (지금 워크스페이스의 문서 수, 인자 형태는 미지원)
 // Lists      : * 항목 (중첩 **, ***…), 1. 항목 (단일 레벨)
 // Quote      : > 인용 (중첩 >>, >>>…)
 // Table      : ||내용||내용||  with optional <...> cell attributes:
@@ -388,6 +389,13 @@ function applyInline(text, footnotes, docIndex = {}) {
   // 반영이 안 됨(HTML처럼 일반 공백으로 뭉개짐 — 특히 각주([* 내용])는 한 줄로 뭉쳐 보이는
   // 게 기본이라 줄바꿈을 넣고 싶으면 이 매크로가 사실상 유일한 방법).
   out = out.replace(/\[br\]/g, '<br>')
+
+  // [pagecount] — 지금 워크스페이스의 문서 수(나무위키는 사이트 전체 문서 수). docIndex 는 문서 하나를 이름 두 가지(파일 이름과 번호를 뗀 이름)로
+  // 색인하므로 경로로 중복을 걷어 한 번만 센다. 인자가 있는 형태([pagecount(...)])는 지원하지 않아 글자 그대로 둔다.
+  if (out.includes('[pagecount]')) {
+    const paths = new Set(Object.values(docIndex).flat().map((doc) => doc.path))
+    out = out.replace(/\[pagecount\]/g, String(paths.size))
+  }
 
   // [anchor(이름)] — an invisible named jump target, for [[#이름]]/
   // [[문서명#이름]] links to point at when there's no heading with that

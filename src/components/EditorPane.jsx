@@ -1213,8 +1213,8 @@ export function EditorPane({ text, onChange, disabled }) {
       updateSnippetSuggest()
       return
     }
-    // `* 항목` 줄에서 Enter — 아래 줄에 `* ` 를 이어 만들고, 빈 `* ` 줄에서 Enter 하면 그 `* ` 를 지운다.
-    // 한글 조합 중 Enter(글자 확정)는 건드리지 않는다. 규칙은 lib/listContinue.js.
+    // `* 항목`·`1. 항목`·`> 인용` 줄에서 Enter — 아래 줄에 같은 표시(`* `, 다음 번호, `> `)를 이어 만들고, 표시만 있는 빈 줄에서 Enter 하면
+    // 그 표시를 지워 목록·인용을 끝낸다. 한글 조합 중 Enter(글자 확정)는 건드리지 않는다. 규칙은 lib/listContinue.js.
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.nativeEvent.isComposing) {
       const edit = listContinueEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
