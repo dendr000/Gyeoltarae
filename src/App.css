@@ -3337,3 +3337,24 @@
   outline: 2px dashed var(--find-match-border);
   outline-offset: -2px;
 }
+
+/* 조건부 색의 규칙 목록: 규칙 한 줄(번호 · 조건 · 값 · 색 · 맞는 칸 수 · 삭제)이 한 묶음으로 보이게. */
+.table-format-rules {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  gap: 6px;
+}
+
+.table-format-rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.table-format-rule-no {
+  min-width: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}

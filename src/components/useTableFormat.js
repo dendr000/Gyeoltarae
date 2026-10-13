@@ -6,18 +6,29 @@
 // 적용 범위: 여러 칸을 골라 두었으면 그 범위, 한 칸만 골랐으면 표 전체이고, 첫 행을 헤더로 쓰는 표는 맨 윗줄을 뺀다(헤더의 2024 같은 숫자를
 // 서식으로 바꾸거나 헤더를 칠하지 않게). 열 너비는 고른 범위가 걸친 열에 적용한다.
 import { useState } from 'react'
-import { applyRuleStyle, clearRuleStyle, isRuleReady, matchRule } from '../lib/tableConditional.js'
+import { applyRuleSet, clearRuleSet, isRuleReady, matchRuleSet } from '../lib/tableConditional.js'
 import { formatNumbersInRange } from '../lib/tableNumberFormat.js'
 import { columnLabel } from '../lib/tableStats.js'
-import { clearStripes, getColumnWidth, normalizeWidth, setColumnWidth, stripeRows } from '../lib/tableStyle.js'
+import {
+  clearStripes,
+  getColumnWidth,
+  getRowHeight,
+  normalizeHeight,
+  normalizeWidth,
+  setColumnWidth,
+  setRowHeight,
+  stripeRows,
+} from '../lib/tableStyle.js'
 
 // ctx: { grid, setGrid, range, isMultiCell, headerRow }
 export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow }) {
   const [panel, setPanel] = useState(null) // 'number' | 'conditional' | 'width' | 'stripe' | null
   const [number, setNumber] = useState({ grouping: 'add', decimals: 'keep', currency: 'keep', suffix: 'keep' })
-  // bg·color 가 빈 글자면 그 항목은 칠하지 않는다.
-  const [rule, setRule] = useState({ kind: 'lt', a: '0', b: '', bg: '#ffd6d6', color: '', bold: false })
+  // 조건부 색의 규칙 목록. 각 규칙은 { id, kind, a, b, bg, color, bold }. bg·color 가 빈 글자면 그 항목은 칠하지 않는다.
+  const [rules, setRules] = useState([{ id: 1, kind: 'lt', a: '0', b: '', bg: '#ffd6d6', color: '', bold: false }])
+  const [nextRuleId, setNextRuleId] = useState(2)
   const [widthForm, setWidthForm] = useState({ value: '', unit: 'px' })
+  const [heightValue, setHeightValue] = useState('')
   const [stripe, setStripe] = useState({ color: '#e8eaf2', start: 'second' })
   const [message, setMessage] = useState('')
 
@@ -25,6 +36,7 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
   const colCount = grid[0]?.length ?? 0
   const scope = isMultiCell ? { r1: range.r1, r2: range.r2, c1: range.c1, c2: range.c2 } : null
   const scopeLabel = isMultiCell ? '고른 범위' : '표 전체'
+  const rowsLabel = range.r1 === range.r2 ? `${range.r1 + 1}행` : `${range.r1 + 1}~${range.r2 + 1}행`
 
   // 줄무늬는 헤더 행을 뺀 범위. 한 칸만 골랐으면 표 전체의 모든 열.
   function bodyScope() {
@@ -32,9 +44,11 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     return { r1: headerRow && base.r1 === 0 ? 1 : base.r1, r2: base.r2, c1: base.c1, c2: base.c2 }
   }
 
-  const ruleMatches = panel === 'conditional' ? matchRule(grid, rule, scope, { skipFirstRow: headerRow }) : []
-  const previewCells = new Set(ruleMatches.map(({ r, c }) => `${r}:${c}`))
+  // 조건부 색 미리 보기: 모든 규칙에 맞는 칸의 합. 규칙마다 맞는 칸 수도 보여 준다.
+  const ruleMatches = panel === 'conditional' ? matchRuleSet(grid, rules, scope, { skipFirstRow: headerRow }) : { perRule: [], union: [] }
+  const previewCells = new Set(ruleMatches.union.map(({ r, c }) => `${r}:${c}`))
   const currentWidth = panel === 'width' ? getColumnWidth(grid, range.c1) : null
+  const currentHeight = panel === 'height' ? getRowHeight(grid, range.r1) : null
 
   function togglePanel(name) {
     setMessage('')
@@ -57,30 +71,50 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     setMessage(`${count}칸의 숫자 서식을 바꿨습니다`)
   }
 
-  function applyRule() {
-    if (!isRuleReady(rule)) {
+  const MAX_RULES = 6
+
+  function addRule() {
+    if (rules.length >= MAX_RULES) return
+    setRules((list) => [...list, { id: nextRuleId, kind: 'gt', a: '', b: '', bg: '#d6f5d6', color: '', bold: false }])
+    setNextRuleId((id) => id + 1)
+    setMessage('')
+  }
+
+  function updateRule(id, patch) {
+    setRules((list) => list.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)))
+  }
+
+  function removeRule(id) {
+    setRules((list) => (list.length > 1 ? list.filter((rule) => rule.id !== id) : list))
+    setMessage('')
+  }
+
+  function applyRules() {
+    if (!rules.some((rule) => isRuleReady(rule))) {
       setMessage('조건에 필요한 값을 입력하세요')
       return
     }
-    if (!rule.bg && !rule.color && !rule.bold) {
+    if (!rules.some((rule) => isRuleReady(rule) && (rule.bg || rule.color || rule.bold))) {
       setMessage('칠할 배경색·글자색을 고르거나 굵게를 켜세요')
       return
     }
-    if (ruleMatches.length === 0) {
+    const { grid: next, applied } = applyRuleSet(grid, rules, scope, { skipFirstRow: headerRow })
+    if (applied === 0) {
       setMessage('조건에 맞는 칸이 없습니다')
       return
     }
-    setGrid(applyRuleStyle(grid, ruleMatches, { bg: rule.bg || null, color: rule.color || null, bold: rule.bold }))
-    setMessage(`${ruleMatches.length}칸에 색을 입혔습니다`)
+    setGrid(next)
+    setMessage(`${applied}개 조건을 적용해 ${ruleMatches.union.length}칸에 색을 입혔습니다`)
   }
 
-  function clearRule() {
-    if (ruleMatches.length === 0) {
+  function clearRules() {
+    const { grid: next, cleared } = clearRuleSet(grid, rules, scope, { skipFirstRow: headerRow })
+    if (cleared === 0) {
       setMessage('조건에 맞는 칸이 없습니다')
       return
     }
-    setGrid(clearRuleStyle(grid, ruleMatches))
-    setMessage(`${ruleMatches.length}칸의 배경색·글자색·굵게를 지웠습니다`)
+    setGrid(next)
+    setMessage(`${cleared}칸의 배경색·글자색·굵게를 지웠습니다`)
   }
 
   function applyWidth(clear) {
@@ -102,6 +136,21 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     )
   }
 
+  function applyHeight(clear) {
+    const height = clear ? null : normalizeHeight(heightValue)
+    if (!clear && height === null) {
+      setMessage('높이는 1~9999 사이의 정수(px)로 입력하세요')
+      return
+    }
+    const { grid: next, changed } = setRowHeight(grid, range.r1, range.r2, height)
+    if (changed === 0) {
+      setMessage(clear ? '지울 높이가 없습니다' : '이미 그 높이이거나, 높이를 붙일 수 있는 칸이 없습니다 (세로 병합된 행)')
+      return
+    }
+    setGrid(next)
+    setMessage(clear ? `${changed}개 행의 높이를 지웠습니다` : `${rowsLabel}의 높이를 ${height}로 정했습니다`)
+  }
+
   function applyStripes(clear) {
     const area = bodyScope()
     const next = clear ? clearStripes(grid, area, stripe.color) : stripeRows(grid, area, stripe.color, { startWith: stripe.start })
@@ -121,17 +170,26 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     number,
     setNumber,
     applyNumberFormat,
-    rule,
-    setRule,
-    ruleMatchCount: ruleMatches.length,
+    rules,
+    ruleCounts: ruleMatches.perRule.map((cells) => cells.length),
+    ruleMatchCount: ruleMatches.union.length,
+    maxRules: MAX_RULES,
+    addRule,
+    updateRule,
+    removeRule,
     previewCells,
-    applyRule,
-    clearRule,
+    applyRules,
+    clearRules,
     widthForm,
     setWidthForm,
     currentWidth,
     widthColumns: range.c1 === range.c2 ? columnLabel(range.c1) : `${columnLabel(range.c1)}~${columnLabel(range.c2)}`,
     applyWidth,
+    heightValue,
+    setHeightValue,
+    currentHeight,
+    rowsLabel,
+    applyHeight,
     stripe,
     setStripe,
     applyStripes,

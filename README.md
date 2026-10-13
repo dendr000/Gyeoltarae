@@ -178,9 +178,10 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   (아래로 채우기는 Ctrl+D). 병합이 걸림돌이면 단추가 꺼지고 이유가 보임. [`docs/features/table-editor-structure.md`](docs/features/table-editor-structure.md)
 - **표 편집기의 되돌리기·다시 실행**: 둘째 줄 툴바의 ↶·↷ 또는 Ctrl+Z / Ctrl+Y(Ctrl+Shift+Z). 같은 칸에 이어 치는 글자는 한 단계로 묶고, 삽입·이동·정렬·채우기·
   서식·찾아 바꾸기·전치 등 모든 변경을 한 단계씩 되돌림. [`docs/features/table-editor-history.md`](docs/features/table-editor-history.md)
+- **표 편집기의 방향키 이동**: 칸 입력창에서 ↑↓ 는 항상, ←→ 는 글자 맨 앞·맨 뒤에서 이웃 칸으로 이동. [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
 - **표 편집기의 서식 도구**: 셋째 줄 툴바에서 숫자 서식(쉼표·소수 자릿수·₩ 등), 조건부 색("0보다 작으면 빨강", 미리 보기 점선), 열 너비
-  (`<width=120px>`), 줄무늬 행을 적용. 둘째 줄의 행·열 바꾸기(전치) 단추도 함께 추가. [`docs/features/table-editor-format.md`](docs/features/table-editor-format.md)
-- **표 편집기의 자동 채우기**: 고른 칸의 오른쪽 아래 모서리 핸들을 아래·오른쪽으로 끌면 1, 2 → 3, 4…, 날짜, 요일·월 이름, `항목1 → 항목2`
+  (`<width=120px>`), 행 높이(`<height=48px>`), 줄무늬 행을 적용. 조건부 색은 조건을 최대 6개까지 걸 수 있음. 둘째 줄의 행·열 바꾸기(전치) 단추도 함께 추가. [`docs/features/table-editor-format.md`](docs/features/table-editor-format.md)
+- **표 편집기의 자동 채우기**: 고른 칸의 오른쪽 아래 모서리 핸들을 아래·오른쪽·위·왼쪽으로 끌거나(위·왼쪽은 거꾸로) 더블클릭하면(옆 열 데이터 끝까지) 1, 2 → 3, 4…, 날짜, 요일·월 이름, `항목1 → 항목2`
   등을 엑셀처럼 이어서 채움(Ctrl 을 누른 채 놓으면 복사↔이어 가기 반전, Esc 취소). [`docs/features/table-editor-autofill.md`](docs/features/table-editor-autofill.md)
 - **표 편집기의 찾아 바꾸기(Ctrl+F)**: 칸 안의 글자를 찾아 한 곳씩/모두 바꿈. 여러 칸을 고르고 열면 그 범위 안에서만. 문서 본문의 찾기는
   편집 모드의 Ctrl+F / Ctrl+Shift+F. [`docs/features/table-editor-find.md`](docs/features/table-editor-find.md)

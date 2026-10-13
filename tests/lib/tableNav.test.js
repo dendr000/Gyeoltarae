@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enterTarget, shiftTabTarget, tabTarget } from '../../src/lib/tableNav.js'
+import { arrowTarget, enterTarget, shiftTabTarget, tabTarget } from '../../src/lib/tableNav.js'
 
 // 셀 모양은 표 편집기의 grid 와 같다: { colspan, rowspan, mergedInto }. 병합으로 가려진 칸은 mergedInto 가 있다.
 const cell = () => ({ text: '', colspan: 1, rowspan: 1, mergedInto: null })
@@ -121,5 +121,54 @@ describe('enterTarget (Enter — 바로 아래 셀로)', () => {
     g[0][0] = { ...cell(), colspan: 2 }
     g[0][1] = { ...cell(), mergedInto: { r: 0, c: 0 } }
     expect(enterTarget(g, 0, 0)).toEqual({ r: 1, c: 0, addRow: false })
+  })
+})
+
+describe('arrowTarget (방향키 — 칸 사이 이동)', () => {
+  const merged = (extra) => ({ ...cell(), ...extra })
+
+  it('일반 표에서 네 방향으로 한 칸 이동한다', () => {
+    const g = grid(3, 3)
+    expect(arrowTarget(g, 1, 1, 'right')).toEqual({ r: 1, c: 2 })
+    expect(arrowTarget(g, 1, 1, 'left')).toEqual({ r: 1, c: 0 })
+    expect(arrowTarget(g, 1, 1, 'down')).toEqual({ r: 2, c: 1 })
+    expect(arrowTarget(g, 1, 1, 'up')).toEqual({ r: 0, c: 1 })
+  })
+
+  it('표의 끝에서는 null (새 행을 만들지 않고, 줄바꿈하듯 다음 행으로 넘어가지도 않는다)', () => {
+    const g = grid(3, 3)
+    expect(arrowTarget(g, 0, 0, 'left')).toBeNull()
+    expect(arrowTarget(g, 0, 0, 'up')).toBeNull()
+    expect(arrowTarget(g, 2, 2, 'right')).toBeNull()
+    expect(arrowTarget(g, 2, 2, 'down')).toBeNull()
+  })
+
+  it('가로 병합된 칸에서 오른쪽으로 가면 병합이 끝난 다음 칸으로 간다', () => {
+    const g = grid(1, 4)
+    g[0][1] = merged({ colspan: 2 })
+    g[0][2] = merged({ mergedInto: { r: 0, c: 1 } })
+    expect(arrowTarget(g, 0, 1, 'right')).toEqual({ r: 0, c: 3 })
+    expect(arrowTarget(g, 0, 3, 'left')).toEqual({ r: 0, c: 1 }) // 가려진 칸 대신 대표 칸
+  })
+
+  it('세로 병합된 칸에서 아래로 가면 병합이 끝난 다음 행으로 간다', () => {
+    const g = grid(4, 2)
+    g[1][0] = merged({ rowspan: 2 })
+    g[2][0] = merged({ mergedInto: { r: 1, c: 0 } })
+    expect(arrowTarget(g, 1, 0, 'down')).toEqual({ r: 3, c: 0 })
+    expect(arrowTarget(g, 3, 0, 'up')).toEqual({ r: 1, c: 0 })
+  })
+
+  it('옆·위·아래 칸이 다른 병합에 가려져 있으면 그 병합의 대표 칸으로 간다', () => {
+    const g = grid(2, 2)
+    g[0][0] = merged({ rowspan: 2 })
+    g[1][0] = merged({ mergedInto: { r: 0, c: 0 } })
+    expect(arrowTarget(g, 1, 1, 'left')).toEqual({ r: 0, c: 0 })
+    expect(arrowTarget(g, 0, 1, 'left')).toEqual({ r: 0, c: 0 })
+  })
+
+  it('없는 칸이나 이상한 방향은 null', () => {
+    expect(arrowTarget(grid(2, 2), 5, 5, 'down')).toBeNull()
+    expect(arrowTarget(grid(2, 2), 0, 0, 'diagonal')).toBeNull()
   })
 })

@@ -240,3 +240,46 @@ describe('그 밖: 씨앗 반복', () => {
     expect(go([], 2)).toEqual(['', ''])
   })
 })
+
+describe('backward - 위·왼쪽으로 끌 때 (이어 붙는 쪽부터 가까운 순서)', () => {
+  const back = (seeds, count, options) => continueSeries(seeds, count, { ...options, backward: true })
+
+  it('숫자 둘 이상: 씨앗이 앞에서 뒤로 늘어나는 방향의 반대로 이어 간다 (3, 4 → 2, 1, 0)', () => {
+    expect(back(['3', '4'], 3)).toEqual(['2', '1', '0'])
+    expect(back(['10', '20'], 2)).toEqual(['0', '-10'])
+  })
+
+  it('숫자 하나는 복사, Ctrl 이면 1씩 줄어든다', () => {
+    expect(back(['7'], 2)).toEqual(['7', '7'])
+    expect(back(['7'], 3, { invert: true })).toEqual(['6', '5', '4'])
+  })
+
+  it('글자 속 숫자 하나는 1씩 줄어든다', () => {
+    expect(back(['항목5'], 3)).toEqual(['항목4', '항목3', '항목2'])
+  })
+
+  it('날짜 하나는 하루씩 거꾸로 (윤년·달 경계 포함)', () => {
+    expect(back(['2024-03-01'], 2)).toEqual(['2024-02-29', '2024-02-28'])
+    expect(back(['2024-01-01'], 1)).toEqual(['2023-12-31'])
+  })
+
+  it('날짜 둘: 같은 일자에 달만 다르면 달 단위로 거꾸로 (2/1, 3/1 → 1/1, 12/1)', () => {
+    expect(back(['2024-02-01', '2024-03-01'], 2)).toEqual(['2024-01-01', '2023-12-01'])
+  })
+
+  it('요일·월 이름은 거꾸로 한 바퀴 돈다', () => {
+    expect(back(['화'], 3)).toEqual(['월', '일', '토'])
+    expect(back(['1월'], 2)).toEqual(['12월', '11월'])
+    expect(back(['수', '목'], 3)).toEqual(['화', '월', '일'])
+  })
+
+  it('반복 씨앗은 이어 붙는 쪽(끝)부터 거꾸로 반복한다', () => {
+    expect(back(['a', 'b'], 5)).toEqual(['b', 'a', 'b', 'a', 'b'])
+    expect(back(['1', '2', '4'], 4)).toEqual(['4', '2', '1', '4'])
+  })
+
+  it('빈 칸·count 0 은 앞쪽과 같다', () => {
+    expect(back([''], 2)).toEqual(['', ''])
+    expect(back(['1', '2'], 0)).toEqual([])
+  })
+})

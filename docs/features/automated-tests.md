@@ -64,6 +64,8 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/tableStyle.test.js` | 줄무늬 행(시작 줄·범위·해제)과 열 너비(width 속성 저장·정리·값 검증) | 순수 함수 |
 | `tests/lib/tableTranspose.test.js` | 행·열 바꾸기(병합 가로↔세로, 가려진 칸 가리킴, 방향 속성 맞바꿈, 두 번 하면 원래대로) | 순수 함수 |
 | `tests/lib/gridHistory.test.js` | 표 편집기 되돌리기·다시 실행 기록(같은 칸 입력 묶기, 개수 제한, 다시 실행 목록 비우기, 헤더 설정 함께 되돌리기) | 순수 함수 |
+| `tests/lib/tableRowHeight.test.js` | 표 편집기 행 높이(height 속성 저장·정리·값 검증, 세로 병합 건너뛰기) | 순수 함수 |
+| `tests/lib/tableConditionalSet.test.js` | 조건부 색 여러 조건(차례로 적용, 같은 항목은 뒤가 덮어씀, 건너뛰기 규칙, 지우기) | 순수 함수 |
 | `tests/lib/lineDuplicate.test.js` | 문서 어디서나 Ctrl+D 줄 복제(커서 이동, 여러 줄 선택, CRLF, 코드블록 구조를 깨는 ``` 줄 제외, 블록 통째 복제) | 순수 함수 |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |

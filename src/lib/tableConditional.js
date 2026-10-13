@@ -120,3 +120,49 @@ export function applyRuleStyle(grid, cells, style) {
 export function clearRuleStyle(grid, cells) {
   return mapCells(grid, cells, (cell) => ({ ...cell, bg: '', color: '', bold: false }))
 }
+
+// ---- 여러 조건 ---------------------------------------------------------------------------------------------------------
+// 규칙 목록(각각 { kind, a, b, bg, color, bold })을 위에서부터 차례로 적용한다. 맞는 칸은 모두 처음 표의 글자로 판단하고(색을 입혀도 글자는
+// 그대로이므로 순서와 상관없다), 같은 칸에 여러 규칙이 맞으면 뒤의 규칙이 같은 항목(배경색·글자색)을 덮어쓴다. 입력이 모자라거나 칠할 것이 없는
+// 규칙은 건너뛴다.
+
+function hasStyle(rule) {
+  return Boolean(rule.bg) || Boolean(rule.color) || rule.bold === true
+}
+
+// 규칙마다 맞는 칸 perRule 과, 합친(중복 없는, 위→아래·왼쪽→오른쪽 순서) 칸 union 을 돌려준다. 칠할 것이 없는 규칙도 맞는 칸은 센다(미리 보기용).
+export function matchRuleSet(grid, rules, scope, options = {}) {
+  const perRule = rules.map((rule) => matchRule(grid, rule, scope, options))
+  const seen = new Set()
+  const union = []
+  for (const cells of perRule) {
+    for (const cell of cells) {
+      const key = `${cell.r}:${cell.c}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        union.push(cell)
+      }
+    }
+  }
+  union.sort((a, b) => a.r - b.r || a.c - b.c)
+  return { perRule, union }
+}
+
+// 규칙들을 적용한 { grid, applied }. applied 는 실제로 적용된(입력이 충분하고 칠할 것이 있고 맞는 칸이 있는) 규칙 수다. 적용한 것이 없으면 같은 격자.
+export function applyRuleSet(grid, rules, scope, options = {}) {
+  const { perRule } = matchRuleSet(grid, rules, scope, options)
+  let next = grid
+  let applied = 0
+  rules.forEach((rule, i) => {
+    if (!hasStyle(rule) || perRule[i].length === 0) return
+    next = applyRuleStyle(next, perRule[i], { bg: rule.bg || null, color: rule.color || null, bold: rule.bold })
+    applied += 1
+  })
+  return { grid: next, applied }
+}
+
+// 모든 규칙에 맞는 칸(합친 것)의 배경색·글자색·굵게를 지운 { grid, cleared }. cleared 는 지운 칸 수. 맞는 칸이 없으면 같은 격자.
+export function clearRuleSet(grid, rules, scope, options = {}) {
+  const { union } = matchRuleSet(grid, rules, scope, options)
+  return { grid: clearRuleStyle(grid, union), cleared: union.length }
+}

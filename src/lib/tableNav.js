@@ -52,3 +52,22 @@ export function enterTarget(grid, r, c) {
   if (below?.mergedInto) return { r: below.mergedInto.r, c: below.mergedInto.c, addRow: false }
   return { r: next, c, addRow: false }
 }
+
+// 방향키: 칸 입력창 안에서 화살표로 칸 사이를 이동할 때 갈 칸. direction 은 'up' | 'down' | 'left' | 'right'.
+// 병합을 고려한다 — 가로로 병합된 칸(colspan)에서 오른쪽으로 가면 병합이 끝난 다음 칸으로, 세로로 병합된 칸(rowspan)에서 아래로 가면 병합이
+// 끝난 다음 행으로 간다. 가려진 칸으로 가게 되면 그 칸을 덮고 있는 대표 칸(화면에 입력창이 있는 칸)으로 간다. 표 끝이면 null — 호출한 쪽이
+// 평소 동작(입력창 안의 커서 이동)에 맡긴다. 새 행은 만들지 않는다(Tab·Enter 와 다르다).
+export function arrowTarget(grid, r, c, direction) {
+  const here = grid[r]?.[c]
+  if (!here) return null
+  let target
+  if (direction === 'right') target = { r, c: c + Math.max(1, here.colspan ?? 1) }
+  else if (direction === 'left') target = { r, c: c - 1 }
+  else if (direction === 'down') target = { r: r + Math.max(1, here.rowspan ?? 1), c }
+  else if (direction === 'up') target = { r: r - 1, c }
+  else return null
+
+  const cell = grid[target.r]?.[target.c]
+  if (!cell) return null
+  return cell.mergedInto ? { r: cell.mergedInto.r, c: cell.mergedInto.c } : target
+}

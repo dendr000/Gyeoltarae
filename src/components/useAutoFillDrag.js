@@ -5,9 +5,9 @@
 // Ctrl 을 누른 채 놓으면 복사↔이어 가기가 바뀌며, Esc 로 취소한다.
 //
 // 칸은 <td data-cell="행:열"> 로 찾는다(마우스 아래의 칸을 elementFromPoint 로 얻는다). 끌기를 시작할 때의 범위와 격자를 붙잡아 두므로 끄는
-// 동안 고른 범위가 바뀌어도 영향이 없다.
+// 동안 고른 범위가 바뀌어도 영향이 없다. 위·왼쪽으로 끌면 거꾸로 이어 가고, 핸들을 더블클릭하면 이웃한 열의 데이터 끝까지 아래로 채운다.
 import { useEffect, useState } from 'react'
-import { autoFill, canAutoFill, dragFillTarget, extendedRange } from '../lib/tableAutoFill.js'
+import { adjacentDataCount, autoFill, canAutoFill, dragFillTarget, extendedRange } from '../lib/tableAutoFill.js'
 
 function cellAtPoint(x, y) {
   const td = document.elementFromPoint(x, y)?.closest?.('td[data-cell]')
@@ -69,9 +69,23 @@ export function useAutoFillDrag({ grid, setGrid, range, setAnchor, setFocusCell 
   const isPreviewCell = (r, c) => {
     if (!preview || !session) return false
     const { range: seed } = session
-    if (preview.direction === 'down') return c >= seed.c1 && c <= seed.c2 && r > seed.r2 && r <= seed.r2 + preview.count
-    return r >= seed.r1 && r <= seed.r2 && c > seed.c2 && c <= seed.c2 + preview.count
+    const withinColumns = c >= seed.c1 && c <= seed.c2
+    const withinRows = r >= seed.r1 && r <= seed.r2
+    if (preview.direction === 'down') return withinColumns && r > seed.r2 && r <= seed.r2 + preview.count
+    if (preview.direction === 'up') return withinColumns && r < seed.r1 && r >= seed.r1 - preview.count
+    if (preview.direction === 'right') return withinRows && c > seed.c2 && c <= seed.c2 + preview.count
+    return withinRows && c < seed.c1 && c >= seed.c1 - preview.count
   }
 
-  return { dragging: session !== null, start, isPreviewCell }
+  // 핸들 더블클릭: 이웃한 열의 데이터가 이어진 곳까지 아래로 한 번에 채운다(엑셀과 같음). 채울 곳이 없으면 아무것도 하지 않는다.
+  const fillToAdjacent = (e) => {
+    const count = adjacentDataCount(grid, range)
+    if (count === 0 || !canAutoFill(grid, range, 'down', count)) return
+    setGrid(autoFill(grid, range, 'down', count, { invert: e.ctrlKey || e.metaKey }))
+    const extended = extendedRange(range, 'down', count)
+    setAnchor({ r: extended.r1, c: extended.c1 })
+    setFocusCell({ r: extended.r2, c: extended.c2 })
+  }
+
+  return { dragging: session !== null, start, isPreviewCell, fillToAdjacent }
 }

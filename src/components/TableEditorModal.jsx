@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { ColorPicker } from './ColorPicker.jsx'
 import { parseWikiText } from '../lib/wikiParser.js'
-import { enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
+import { arrowTarget, enterTarget, shiftTabTarget, tabTarget } from '../lib/tableNav.js'
 import { columnLabel, formatStat, rangeLabel, rangeStats } from '../lib/tableStats.js'
 import { emptyCell, regionHasMerge } from '../lib/tableGrid.js'
 import { buildStructureOps } from './tableStructureOps.js'
@@ -24,6 +24,8 @@ import { useAutoFillDrag } from './useAutoFillDrag.js'
 import { useGridHistory } from './useGridHistory.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
 import { useTableFormat } from './useTableFormat.js'
+
+const ARROW_DIRECTIONS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
 
 function emptyGrid(rows, cols) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, emptyCell))
@@ -222,6 +224,22 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   function handleCellKeyDown(e, r, c) {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.ctrlKey || e.metaKey || e.altKey) return
+    // 방향키: 위·아래는 늘 다른 칸으로, 왼쪽·오른쪽은 입력창 안의 커서가 글자의 맨 앞·맨 뒤에 있을 때만 다른 칸으로 간다(글자 사이를 움직이는
+    // 평소 동작을 해치지 않게). Shift 가 든 조합은 글자 선택이라 건드리지 않는다. 표 끝이면 평소 동작에 맡긴다.
+    const arrow = ARROW_DIRECTIONS[e.key]
+    if (arrow && !e.shiftKey) {
+      const input = e.currentTarget
+      const collapsed = input.selectionStart === input.selectionEnd
+      const atEdge = arrow === 'left' ? input.selectionStart === 0 : arrow === 'right' ? input.selectionStart === input.value.length : true
+      const target = collapsed && atEdge ? arrowTarget(grid, r, c, arrow) : null
+      if (target) {
+        e.preventDefault()
+        goToCell(target)
+        // 오른쪽으로 들어온 칸은 글자의 맨 앞에, 왼쪽·위·아래는 맨 뒤에 커서를 둔다(방금 지나온 쪽에서 이어 가도록).
+        if (arrow === 'right') inputRefs.current[`${target.r}:${target.c}`]?.setSelectionRange(0, 0)
+      }
+      return
+    }
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault()
       // execCommand 로 넣어야 입력칸의 되돌리기(Ctrl+Z)가 이어진다 — EditorPane.jsx 의 replaceRange 와 같은 이유.
@@ -699,11 +717,16 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                         {showFillHandle && r === range.r2 && c === range.c2 && (
                           <span
                             className="fill-handle"
-                            title="끌어서 자동 채우기 — 고른 범위가 씨앗이 되어 아래·오른쪽으로 이어 채웁니다 (Ctrl 을 누른 채 놓으면 복사↔이어 가기가 바뀝니다, Esc 로 취소)"
+                            title="끌어서 자동 채우기 — 고른 범위가 씨앗이 되어 아래·오른쪽(위·왼쪽은 거꾸로)으로 이어 채웁니다. 두 번 누르면 옆 열 데이터 끝까지 아래로 채웁니다. Ctrl 을 누른 채 놓으면 복사↔이어 가기가 바뀝니다, Esc 로 취소"
                             onMouseDown={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
                               fillDrag.start()
+                            }}
+                            onDoubleClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              fillDrag.fillToAdjacent(e)
                             }}
                           />
                         )}

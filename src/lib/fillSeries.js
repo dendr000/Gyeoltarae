@@ -47,7 +47,7 @@ function cycleStyle(sample) {
 }
 
 // 씨앗이 모두 같은 묶음의 이름이면 { values(k 번째 이름 만들기) } 를 돌려준다. 단 steps: 몇 칸씩 건너뛰는지.
-function cycleStrategy(trimmed) {
+function cycleStrategy(trimmed, dir) {
   const list = CYCLES.find((names) => {
     const lower = names.map((name) => name.toLowerCase())
     return trimmed.every((seed) => lower.includes(seed.toLowerCase()))
@@ -56,7 +56,7 @@ function cycleStrategy(trimmed) {
   const lower = list.map((name) => name.toLowerCase())
   const indexes = trimmed.map((seed) => lower.indexOf(seed.toLowerCase()))
   const size = list.length
-  let step = 1
+  let step = dir // 씨앗 하나면 채우는 방향으로 한 칸씩
   if (indexes.length > 1) {
     step = (((indexes[1] - indexes[0]) % size) + size) % size
     for (let i = 2; i < indexes.length; i += 1) {
@@ -66,7 +66,7 @@ function cycleStrategy(trimmed) {
   }
   const style = cycleStyle(trimmed[0])
   const last = indexes[indexes.length - 1]
-  return { consistent: true, at: (k) => style(list[(last + step * k) % size]) }
+  return { consistent: true, at: (k) => style(list[(((last + step * k) % size) + size) % size]) }
 }
 
 // ---- 날짜 -------------------------------------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ function dateFromEpochDay(days, format) {
 }
 
 // 모두 날짜 모양이면 { shape: true, ... }. 존재하지 않는 날짜이거나 서식이 서로 다르면 { shape: true, consistent: false }(반복).
-function dateStrategy(trimmed) {
+function dateStrategy(trimmed, dir) {
   const dates = trimmed.map(parseDate)
   if (dates.some((d) => d === null)) return null
   if (dates.some((d) => !d.valid) || dates.some((d) => !sameFormat(d.format, dates[0].format))) return { consistent: false }
@@ -133,7 +133,7 @@ function dateStrategy(trimmed) {
   const last = dates[dates.length - 1]
   if (dates.length === 1) {
     const base = epochDay(last)
-    return { consistent: true, at: (k) => dateFromEpochDay(base + k, format) }
+    return { consistent: true, at: (k) => dateFromEpochDay(base + dir * k, format) }
   }
   // 같은 일자에 달만 바뀌면 달 단위로(1/1, 2/1 → 3/1, 4/1). 씨앗이 둘이면 일 단위 차이는 늘 일정해 보이므로 이쪽을 먼저 본다.
   const monthIndexes = dates.map((d) => d.year * 12 + d.month - 1)
@@ -194,7 +194,7 @@ function formatNumber(value, style) {
   return `${style.prefix}${negative ? '-' : ''}${integer}${fraction !== undefined ? `.${fraction}` : ''}${style.suffix}`
 }
 
-function numberStrategy(trimmed) {
+function numberStrategy(trimmed, dir) {
   const parsed = trimmed.map(parseSeedNumber)
   if (parsed.some((p) => p === null)) return null
   const first = parsed[0]
@@ -209,7 +209,7 @@ function numberStrategy(trimmed) {
   }
   const values = parsed.map((p) => p.value)
   const last = values[values.length - 1]
-  let step = 1
+  let step = dir
   if (values.length > 1) {
     step = constantStep(values)
     if (step === null || Math.abs(step) < EPSILON) return { consistent: false, embedded: first.embedded }
@@ -220,15 +220,18 @@ function numberStrategy(trimmed) {
 // ---- 공개 함수 --------------------------------------------------------------------------------------------------------
 
 // seeds: 씨앗 칸의 글자들(위에서 아래, 또는 왼쪽에서 오른쪽 순서). 이어질 글자 count 개를 돌려준다.
-// options.invert: Ctrl 을 누른 채 끈 경우 — 이어 가던 것은 복사로, 복사하던 것은 이어 가기로 바꾼다.
-export function continueSeries(seeds, count, { invert = false } = {}) {
+// options.invert: Ctrl 을 누른 채 끈 경우 — 이어 가던 것은 복사로, 복사하던 것은 이어 가기로 바꾼다. options.backward: 위·왼쪽으로 끈 경우.
+export function continueSeries(seeds, count, { invert = false, backward = false } = {}) {
   if (count <= 0) return []
   if (seeds.length === 0) return Array.from({ length: count }, () => '')
+  // 위·왼쪽으로 끄는 경우(backward): 씨앗을 이어 붙는 쪽(끝)부터 거꾸로 읽고, 씨앗이 하나일 때의 기본 걸음도 거꾸로(-1)다. 결과는 가까운 칸부터.
+  const dir = backward ? -1 : 1
+  if (backward) seeds = [...seeds].reverse()
 
   const trimmed = seeds.map((seed) => seed.trim())
   if (trimmed.some((seed) => seed === '')) return repeatSeeds(seeds, count)
 
-  const strategy = cycleStrategy(trimmed) ?? dateStrategy(trimmed) ?? numberStrategy(trimmed)
+  const strategy = cycleStrategy(trimmed, dir) ?? dateStrategy(trimmed, dir) ?? numberStrategy(trimmed, dir)
   if (!strategy || !strategy.consistent) return repeatSeeds(seeds, count)
 
   // 하나뿐인 순수 숫자만 기본이 "복사"이고, 나머지는 기본이 "이어 가기"다. Ctrl 은 그 반대로 바꾼다.

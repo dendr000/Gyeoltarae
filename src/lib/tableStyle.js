@@ -40,64 +40,101 @@ export function clearStripes(grid, scope, color) {
   return cleared === 0 ? grid : next
 }
 
-// ---- 열 너비 ----------------------------------------------------------------------------------------------------------
+// ---- 열 너비·행 높이 ----------------------------------------------------------------------------------------------------
+// 크기는 칸의 `<width=120px>` / `<height=40px>` 속성으로 남는다. 한 열(행)의 크기는 그 줄의 "붙일 수 있는 칸" 가운데 맨 위(맨 왼쪽) 한 곳에만 둔다.
 
-// 입력칸의 값과 단위를 `120px` / `30%` 로 만든다. 파서가 읽을 수 있는 범위(정수, px 1~9999, % 1~100)만 허용하고 소수는 반올림한다. 아니면 null.
-export function normalizeWidth(value, unit) {
+function normalizeSize(value, unit, max) {
   if (unit !== 'px' && unit !== '%') return null
   const number = Math.round(Number(String(value).trim()))
-  const max = unit === '%' ? 100 : 9999
   if (!Number.isFinite(number) || number < 1 || number > max) return null
   return `${number}${unit}`
 }
 
-const WIDTH_TOKEN = /^width=(\d{1,4})(px|%)?$/
-
-// 열 너비를 붙일 수 있는 칸 — 병합에 가려지지 않았고 가로로 합쳐지지도 않은 칸(합쳐진 칸의 너비는 어느 열의 것인지 알 수 없다).
-function widthCellRows(grid, c) {
-  const rows = []
-  for (let r = 0; r < grid.length; r += 1) {
-    const cell = grid[r][c]
-    if (cell && !cell.mergedInto && cell.colspan === 1) rows.push(r)
-  }
-  return rows
+// 입력칸의 값과 단위를 `120px` / `30%` 로 만든다. 파서가 읽을 수 있는 범위(정수, px 1~9999, % 1~100)만 허용하고 소수는 반올림한다. 아니면 null.
+export function normalizeWidth(value, unit) {
+  return normalizeSize(value, unit, unit === '%' ? 100 : 9999)
 }
 
-// 열 c 의 지금 너비 { value, unit }. 맨 위에서부터 처음 만나는 width 속성을 읽고(단위가 없으면 px), 없으면 null.
-export function getColumnWidth(grid, c) {
-  for (const r of widthCellRows(grid, c)) {
+// 행 높이는 px 만(표 높이 대비 %는 뜻이 없다). 정수 1~9999, 소수는 반올림. 아니면 null.
+export function normalizeHeight(value) {
+  return normalizeSize(value, 'px', 9999)
+}
+
+const TOKEN = { width: /^width=(\d{1,4})(px|%)?$/, height: /^height=(\d{1,4})(px|%)?$/ }
+
+// 크기를 붙일 수 있는 칸의 자리 [[r, c], ...]. axis 'column': 열 index 의 칸들(위→아래), 'row': 행 index 의 칸들(왼쪽→오른쪽).
+// 병합에 가려지지 않고, 그 방향으로 합쳐지지도 않은 칸만(합쳐진 칸의 크기는 어느 줄의 것인지 알 수 없다).
+function sizeCells(grid, axis, index) {
+  const cells = []
+  if (axis === 'column') {
+    for (let r = 0; r < grid.length; r += 1) {
+      const cell = grid[r][index]
+      if (cell && !cell.mergedInto && cell.colspan === 1) cells.push([r, index])
+    }
+  } else {
+    for (let c = 0; c < (grid[index]?.length ?? 0); c += 1) {
+      const cell = grid[index][c]
+      if (cell && !cell.mergedInto && cell.rowspan === 1) cells.push([index, c])
+    }
+  }
+  return cells
+}
+
+function readSize(grid, axis, index, kind) {
+  for (const [r, c] of sizeCells(grid, axis, index)) {
     for (const token of grid[r][c].extraAttrs ?? []) {
-      const match = WIDTH_TOKEN.exec(token)
+      const match = TOKEN[kind].exec(token)
       if (match) return { value: Number(match[1]), unit: match[2] ?? 'px' }
     }
   }
   return null
 }
 
-// 열 c1..c2 의 너비를 width(`120px` 같은 normalizeWidth 결과, null 이면 지움)로 정한 { grid, changed }. changed 는 실제로 바뀐 열 수다.
-// 같은 열의 다른 칸에 있던 width 는 지우고, 맨 위의 붙일 수 있는 칸 한 곳에만 둔다(다른 속성은 건드리지 않는다).
-export function setColumnWidth(grid, c1, c2, width) {
+// from..to 줄의 크기를 size(`120px` 같은 normalize* 결과, null 이면 지움)로 정한 { grid, changed }. changed 는 실제로 바뀐 줄 수다.
+// 같은 줄의 다른 칸에 있던 같은 종류의 속성은 지우고 맨 위(왼쪽) 붙일 수 있는 칸 한 곳에만 둔다. 다른 속성은 건드리지 않는다.
+function writeSize(grid, axis, from, to, kind, size) {
   const next = grid.map((row) => row.slice())
+  const prefix = `${kind}=`
   let changed = 0
-  for (let c = c1; c <= c2; c += 1) {
-    const rows = widthCellRows(grid, c)
-    if (rows.length === 0) continue
-    const withWidth = rows.filter((r) => (grid[r][c].extraAttrs ?? []).some((token) => token.startsWith('width=')))
-    // 이미 원하는 상태: 지우려는데 width 가 없거나, 맨 위 칸 한 곳에만 같은 값이 있다.
-    const widthTokens = withWidth.flatMap((r) => grid[r][c].extraAttrs.filter((token) => token.startsWith('width=')))
+  for (let index = from; index <= to; index += 1) {
+    const cells = sizeCells(grid, axis, index)
+    if (cells.length === 0) continue
+    const withSize = cells.filter(([r, c]) => (grid[r][c].extraAttrs ?? []).some((token) => token.startsWith(prefix)))
+    const sizeTokens = withSize.flatMap(([r, c]) => grid[r][c].extraAttrs.filter((token) => token.startsWith(prefix)))
+    // 이미 원하는 상태: 지우려는데 속성이 없거나, 맨 위(왼쪽) 칸 한 곳에만 같은 값이 있다.
     const alreadySet =
-      width === null
-        ? withWidth.length === 0
-        : withWidth.length === 1 && withWidth[0] === rows[0] && widthTokens.length === 1 && widthTokens[0] === `width=${width}`
+      size === null
+        ? withSize.length === 0
+        : withSize.length === 1 && withSize[0][0] === cells[0][0] && withSize[0][1] === cells[0][1] && sizeTokens.length === 1 && sizeTokens[0] === `${prefix}${size}`
     if (alreadySet) continue
     changed += 1
-    for (const r of withWidth) {
-      next[r][c] = { ...next[r][c], extraAttrs: next[r][c].extraAttrs.filter((token) => !token.startsWith('width=')) }
+    for (const [r, c] of withSize) {
+      next[r][c] = { ...next[r][c], extraAttrs: next[r][c].extraAttrs.filter((token) => !token.startsWith(prefix)) }
     }
-    if (width !== null) {
-      const top = next[rows[0]][c]
-      next[rows[0]][c] = { ...top, extraAttrs: [...(top.extraAttrs ?? []), `width=${width}`] }
+    if (size !== null) {
+      const [r, c] = cells[0]
+      next[r][c] = { ...next[r][c], extraAttrs: [...(next[r][c].extraAttrs ?? []), `${prefix}${size}`] }
     }
   }
   return changed === 0 ? { grid, changed: 0 } : { grid: next, changed }
+}
+
+// 열 c 의 지금 너비 { value, unit }. 맨 위에서부터 처음 만나는 width 속성을 읽고(단위가 없으면 px), 없으면 null.
+export function getColumnWidth(grid, c) {
+  return readSize(grid, 'column', c, 'width')
+}
+
+// 열 c1..c2 의 너비를 width 로 정한 { grid, changed }.
+export function setColumnWidth(grid, c1, c2, width) {
+  return writeSize(grid, 'column', c1, c2, 'width', width)
+}
+
+// 행 r 의 지금 높이 { value, unit }. 없으면 null.
+export function getRowHeight(grid, r) {
+  return readSize(grid, 'row', r, 'height')
+}
+
+// 행 r1..r2 의 높이를 height 로 정한 { grid, changed }.
+export function setRowHeight(grid, r1, r2, height) {
+  return writeSize(grid, 'row', r1, r2, 'height', height)
 }

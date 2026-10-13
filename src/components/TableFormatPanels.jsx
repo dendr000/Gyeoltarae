@@ -1,4 +1,4 @@
-import { Hash, MoveHorizontal, Paintbrush, Rows4 } from 'lucide-react'
+import { Hash, MoveHorizontal, MoveVertical, Paintbrush, Rows4 } from 'lucide-react'
 import { ColorPicker } from './ColorPicker.jsx'
 import { RULE_KINDS } from '../lib/tableConditional.js'
 
@@ -74,44 +74,64 @@ function NumberPanel({ f }) {
   )
 }
 
-function ConditionalPanel({ f }) {
-  const spec = RULE_KINDS.find((entry) => entry.kind === f.rule.kind)
-  const set = (key) => (value) => f.setRule((state) => ({ ...state, [key]: value }))
-  const numeric = f.rule.kind !== 'contains'
+function RuleRow({ f, rule, index }) {
+  const spec = RULE_KINDS.find((entry) => entry.kind === rule.kind)
+  const set = (key) => (value) => f.updateRule(rule.id, { [key]: value })
+  const numeric = rule.kind !== 'contains'
   return (
-    <>
-      <Field label="조건">
-        <Select value={f.rule.kind} options={RULE_KINDS.map(({ kind }) => [kind, RULE_LABELS[kind]])} onChange={set('kind')} />
-      </Field>
+    <div className="table-format-rule">
+      <span className="table-format-rule-no">{index + 1}</span>
+      <Select value={rule.kind} options={RULE_KINDS.map(({ kind }) => [kind, RULE_LABELS[kind]])} onChange={set('kind')} />
       {spec.inputs >= 1 && (
         <input
           type="text"
           className="table-format-input"
           placeholder={numeric ? '값 (숫자)' : '찾을 글자'}
-          value={f.rule.a}
+          value={rule.a}
           onChange={(e) => set('a')(e.target.value)}
         />
       )}
       {spec.inputs === 2 && (
-        <input type="text" className="table-format-input" placeholder="값 (숫자)" value={f.rule.b} onChange={(e) => set('b')(e.target.value)} />
+        <input type="text" className="table-format-input" placeholder="값 (숫자)" value={rule.b} onChange={(e) => set('b')(e.target.value)} />
       )}
       <span className="table-format-field">
         <span>배경색</span>
-        <ColorPicker value={f.rule.bg} onChange={set('bg')} onClear={() => set('bg')('')} title="맞는 칸의 배경색 (지우면 배경은 칠하지 않음)" />
+        <ColorPicker value={rule.bg} onChange={set('bg')} onClear={() => set('bg')('')} title="맞는 칸의 배경색 (지우면 배경은 칠하지 않음)" />
       </span>
       <span className="table-format-field">
         <span>글자색</span>
-        <ColorPicker value={f.rule.color} onChange={set('color')} onClear={() => set('color')('')} title="맞는 칸의 글자색 (지우면 글자색은 칠하지 않음)" />
+        <ColorPicker value={rule.color} onChange={set('color')} onClear={() => set('color')('')} title="맞는 칸의 글자색 (지우면 글자색은 칠하지 않음)" />
       </span>
       <label className="table-format-field">
-        <input type="checkbox" checked={f.rule.bold} onChange={(e) => set('bold')(e.target.checked)} />
+        <input type="checkbox" checked={rule.bold} onChange={(e) => set('bold')(e.target.checked)} />
         <span>굵게</span>
       </label>
-      <span className="table-format-count">{f.ruleMatchCount}칸이 조건에 맞음 (점선 표시)</span>
-      <button type="button" className="table-format-apply" onClick={f.applyRule}>
+      <span className="table-format-count">{f.ruleCounts[index] ?? 0}칸</span>
+      {f.rules.length > 1 && (
+        <button type="button" className="table-format-apply" title="이 조건 지우기" onClick={() => f.removeRule(rule.id)}>
+          ×
+        </button>
+      )}
+    </div>
+  )
+}
+
+function ConditionalPanel({ f }) {
+  return (
+    <>
+      <div className="table-format-rules">
+        {f.rules.map((rule, index) => (
+          <RuleRow key={rule.id} f={f} rule={rule} index={index} />
+        ))}
+      </div>
+      <button type="button" className="table-format-apply" disabled={f.rules.length >= f.maxRules} onClick={f.addRule} title="조건을 더 겁니다 (최대 6개). 같은 칸에 여러 조건이 맞으면 아래 조건이 같은 항목을 덮어씁니다">
+        + 조건 추가
+      </button>
+      <span className="table-format-count">모두 {f.ruleMatchCount}칸이 조건에 맞음 (점선 표시)</span>
+      <button type="button" className="table-format-apply" onClick={f.applyRules}>
         색 적용
       </button>
-      <button type="button" className="table-format-apply" onClick={f.clearRule} title="조건에 맞는 칸의 배경색·글자색·굵게를 지웁니다">
+      <button type="button" className="table-format-apply" onClick={f.clearRules} title="어느 조건에든 맞는 칸의 배경색·글자색·굵게를 지웁니다">
         색 지우기
       </button>
     </>
@@ -153,6 +173,37 @@ function WidthPanel({ f }) {
   )
 }
 
+function HeightPanel({ f }) {
+  const current = f.currentHeight
+  return (
+    <>
+      <span className="table-format-count">{f.rowsLabel}의 높이</span>
+      <input
+        type="text"
+        inputMode="numeric"
+        className="table-format-input table-format-input-short"
+        placeholder={current ? String(current.value) : '숫자'}
+        value={f.heightValue}
+        onChange={(e) => f.setHeightValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            f.applyHeight(false)
+          }
+        }}
+      />
+      <span className="table-format-count">px (픽셀)</span>
+      <button type="button" className="table-format-apply" onClick={() => f.applyHeight(false)}>
+        적용
+      </button>
+      <button type="button" className="table-format-apply" onClick={() => f.applyHeight(true)}>
+        지우기
+      </button>
+      <span className="table-format-count">지금: {current ? `${current.value}${current.unit}` : '정하지 않음 (글자 높이에 맞춤)'}</span>
+    </>
+  )
+}
+
 function StripePanel({ f }) {
   return (
     <>
@@ -186,6 +237,7 @@ const PANELS = {
   number: { label: '숫자 서식', icon: <Hash size={14} />, Body: NumberPanel, hint: '숫자 칸의 쉼표·소수 자릿수·기호를 글자로 바꿉니다' },
   conditional: { label: '조건부 색', icon: <Paintbrush size={14} />, Body: ConditionalPanel, hint: '조건에 맞는 칸을 한꺼번에 칠합니다 (값이 바뀌어도 자동으로 다시 칠하지는 않음)' },
   width: { label: '열 너비', icon: <MoveHorizontal size={14} />, Body: WidthPanel, hint: '고른 열의 너비를 정합니다' },
+  height: { label: '행 높이', icon: <MoveVertical size={14} />, Body: HeightPanel, hint: '고른 행의 높이를 정합니다' },
   stripe: { label: '줄무늬', icon: <Rows4 size={14} />, Body: StripePanel, hint: '행을 한 줄 걸러 칠합니다' },
 }
 
@@ -205,8 +257,8 @@ export function TableFormatPanels({ format }) {
       {active && (
         <div className="table-format-panel">
           <span className="table-format-scope">
-            {active.label} — 적용 범위: {format.panel === 'width' ? '고른 열' : format.scopeLabel}
-            {format.panel !== 'width' && ' (첫 행을 헤더로 쓰면 그 행은 제외)'}
+            {active.label} — 적용 범위: {format.panel === 'width' ? '고른 열' : format.panel === 'height' ? '고른 행' : format.scopeLabel}
+            {format.panel !== 'width' && format.panel !== 'height' && ' (첫 행을 헤더로 쓰면 그 행은 제외)'}
           </span>
           <active.Body f={format} />
           {format.message && <span className="table-find-message">{format.message}</span>}
