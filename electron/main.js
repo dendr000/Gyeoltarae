@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import chokidar from 'chokidar'
+import { createWatchScheduler } from './watchScheduler.js'
 import {
   scanTree,
   readDoc,
@@ -65,6 +66,20 @@ app.setAppUserModelId('com.gyeoltarae.app')
 let mainWindow = null
 let watcher = null
 let currentWorkspacePath = null
+
+// 감시기는 켜자마자 작업 폴더 전체를 훑어서 화면의 첫 색인 읽기와 서로 늦춘다(상용구 4천여 개에서 시작이 15초 걸림).
+// 그래서 직접 켜지 않고, 화면이 첫 색인을 끝냈다고 알린 뒤(workspace:watch) 사용자가 3초 입력이 없는 틈에 켠다.
+// 계속 입력 중이어도 20초가 지나면 켠다. 규칙: electron/watchScheduler.js
+const WATCH_IDLE_MS = 3000
+const WATCH_MAX_WAIT_MS = 20000
+const watchScheduler = createWatchScheduler({
+  idleMs: WATCH_IDLE_MS,
+  maxWaitMs: WATCH_MAX_WAIT_MS,
+  start: (workspacePath) => {
+    // 기다리는 사이에 다른 워크스페이스로 바뀌었으면 옛 경로는 켜지 않는다.
+    if (workspacePath === currentWorkspacePath) startWatching(workspacePath)
+  },
+})
 
 function getConfigPath() {
   return path.join(app.getPath('userData'), 'config.json')
@@ -168,6 +183,16 @@ async function stopWatching() {
   }
 }
 
+// 작업 폴더를 정한다. 감시는 여기서 켜지 않는다 — 옛 감시기와 대기 중이던 예약만 치우고, 화면이 알려 주면(workspace:watch) 켠다.
+function selectWorkspace(workspacePath) {
+  currentWorkspacePath = workspacePath
+  watchScheduler.cancel()
+  if (watcher) {
+    watcher.close()
+    watcher = null
+  }
+}
+
 function startWatching(workspacePath) {
   currentWorkspacePath = workspacePath
   if (watcher) {
@@ -226,6 +251,11 @@ function createWindow() {
       sandbox: true,
     },
   })
+
+  // 사용자가 입력 중이면 감시기 시작을 미룬다(watchScheduler). input-event 는 키보드·마우스·휠 전부, before-input-event 는
+  // 키보드가 빠지는 경우를 대비한 보조다.
+  mainWindow.webContents.on('input-event', () => watchScheduler.touch())
+  mainWindow.webContents.on('before-input-event', () => watchScheduler.touch())
 
   if (isDev) {
     const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3171'
@@ -329,7 +359,7 @@ ipcMain.handle('workspace:choose', async () => {
     return null
   }
   saveConfig({ ...loadConfig(), lastWorkspace: chosen })
-  startWatching(chosen)
+  selectWorkspace(chosen)
   ensureWorkspaceShortcut(chosen)
   return chosen
 })
@@ -349,11 +379,16 @@ ipcMain.handle('workspace:getLast', () => {
         })
         .then(() => refocusMainWindow())
     }
-    startWatching(lastWorkspace)
+    selectWorkspace(lastWorkspace)
     ensureWorkspaceShortcut(lastWorkspace)
     return lastWorkspace
   }
   return null
+})
+
+// 화면이 첫 색인(문서 읽기)을 끝냈다는 알림 — 이제 폴더 감시를 예약한다. 다른 폴더가 선택돼 있으면 무시한다.
+ipcMain.handle('workspace:watch', (_event, workspacePath) => {
+  if (workspacePath && workspacePath === currentWorkspacePath) watchScheduler.request(workspacePath)
 })
 
 ipcMain.handle('workspace:scan', (_event, workspacePath) => {
@@ -398,7 +433,7 @@ ipcMain.handle('file:delete', async (_event, filePath) => {
       return { permanentlyDeleted: true }
     }
   } finally {
-    if (currentWorkspacePath) startWatching(currentWorkspacePath)
+    if (currentWorkspacePath) watchScheduler.request(currentWorkspacePath)
   }
 })
 
@@ -409,7 +444,7 @@ ipcMain.handle('file:rename', async (_event, oldPath, newName) => {
   try {
     return renamePath(oldPath, newName)
   } finally {
-    if (currentWorkspacePath) startWatching(currentWorkspacePath)
+    if (currentWorkspacePath) watchScheduler.request(currentWorkspacePath)
   }
 })
 
@@ -419,7 +454,7 @@ ipcMain.handle('file:move', async (_event, sourcePath, destDirPath) => {
   try {
     return movePath(sourcePath, destDirPath)
   } finally {
-    if (currentWorkspacePath) startWatching(currentWorkspacePath)
+    if (currentWorkspacePath) watchScheduler.request(currentWorkspacePath)
   }
 })
 

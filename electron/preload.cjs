@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('api', {
   chooseWorkspace: () => ipcRenderer.invoke('workspace:choose'),
   getLastWorkspace: () => ipcRenderer.invoke('workspace:getLast'),
   scanWorkspace: (workspacePath) => ipcRenderer.invoke('workspace:scan', workspacePath),
+  // 첫 색인이 끝났음을 알려 폴더 감시를 켜게 한다 (감시기가 색인 읽기와 겹쳐 느려지는 것을 피함).
+  watchWorkspace: (workspacePath) => ipcRenderer.invoke('workspace:watch', workspacePath),
 
   readFile: (filePath) => ipcRenderer.invoke('file:read', filePath),
   writeFile: (filePath, content) => ipcRenderer.invoke('file:write', filePath, content),

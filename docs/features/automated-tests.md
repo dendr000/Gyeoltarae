@@ -44,6 +44,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/codeHighlight.test.js` | 언어 이름 해석(대소문자·한글·구분 기호 무시, 모르는 이름), 색 입히기가 원문 글자를 바꾸지 않는지, HTML 이스케이프 | 순수 함수 |
 | `tests/lib/listAndRule.test.js` | 목록 들여쓰기 하위 항목(공백 1·2·4칸, 탭, 번호 목록, 예전 `**` 방식), 목록 항목 아래 코드블록(목록이 끊기지 않는지, 빈 줄·접기 블록은 예전대로), `---` 구분선과 굵기 | 순수 함수 |
 | `tests/electron/softRefocus.test.js` | 클릭으로 여는 동작이 blur 가 들어간 창 포커스 호출을 쓰지 않는지(뒤의 앱이 깜빡이던 문제의 회귀 방지), 가벼운 포커스 함수가 `blur()` 를 쓰지 않는지, IPC 이름 일치 | 소스 검사 |
+| `tests/electron/watchScheduler.test.js` | 폴더 감시기를 켜는 시점(첫 색인 뒤, 입력이 3초 쉴 때, 계속 입력해도 20초 뒤), 시작·삭제·이동 경로가 감시기를 직접 켜지 않는지 | 가짜 시계 · 소스 검사 |
 | `tests/lib/defaultTemplate.test.js`, `tests/electron/defaultTemplate.test.js`, `tests/store/defaultTemplate.test.js` | 폴더 기본 틀: 시작 틀 우선순위(직접 고른 틀 > 폴더 기본 틀 > 내장 기본 내용), 설정 파일 읽기·쓰기(물려받기·해제·망가진 파일), 새 문서 만들기 | 순수 함수 · 임시 폴더 · mockApi |
 | `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |
 | `tests/lib/smartQuotes.test.js` | 뷰어의 둥근 따옴표(열림/닫힘 판단, 태그·블록 경계, 코드·속성은 그대로, 두 번 적용해도 같음)와 실제 파서 출력(굵게·표·목록·각주·접기·스타일 상자, 목차 데이터 불변) | 순수 함수 |

@@ -652,7 +652,13 @@ export const useAppStore = create((set, get) => ({
     const api = getApi()
     const tree = await api.scanWorkspace(workspacePath)
     set({ workspacePath, tree })
-    await get().rebuildIndexes()
+    try {
+      await get().rebuildIndexes()
+    } finally {
+      // 첫 색인이 끝났다고(실패해도) 메인에 알린다. 폴더 감시기는 이때 비로소(사용자가 잠깐 쉬는 틈에) 켜진다 — 켜자마자
+      // 폴더 전체를 훑는 감시기가 위의 파일 읽기와 겹치면 시작이 10초 넘게 느려진다.
+      api.watchWorkspace?.(workspacePath)
+    }
 
     // Drop the previous workspace's listener first — otherwise switching
     // workspaces (or reloading the same one) stacks another one on top
