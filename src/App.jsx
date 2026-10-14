@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useAppStore } from './store/useAppStore.js'
+import { isSidebarToggleKey } from './lib/sidebarShortcut.js'
 import { getApi } from './lib/api.js'
 import { FileTree } from './components/FileTree.jsx'
 import { SearchBar } from './components/SearchBar.jsx'
@@ -112,6 +113,11 @@ export default function App() {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') {
         e.preventDefault()
         if (activeTabId) closeTab(activeTabId)
+      }
+      // Ctrl+M — 왼쪽 사이드바(문서/폴더 목록 등) 열기·닫기. 편집 중에도 동작한다.
+      if (isSidebarToggleKey(e)) {
+        e.preventDefault()
+        setSidebarCollapsed((v) => !v)
       }
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
@@ -382,7 +388,7 @@ export default function App() {
         type="button"
         className={`sidebar-toggle-btn ${sidebarCollapsed ? 'collapsed' : ''}`}
         onClick={() => setSidebarCollapsed((v) => !v)}
-        title={sidebarCollapsed ? '사이드바 열기' : '사이드바 닫기'}
+        title={sidebarCollapsed ? '사이드바 열기 (Ctrl+M)' : '사이드바 닫기 (Ctrl+M)'}
       >
         <ChevronLeft size={12} strokeWidth={2.5} />
       </button>
