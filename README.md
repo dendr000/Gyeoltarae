@@ -153,6 +153,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
 - **편집·코드 글꼴**: D2Coding 글꼴 파일이 앱에 들어 있어서 어느 PC 에서나 한글이 영문 2칸 폭으로 보이고(열 맞춤), 헤더의 "글꼴" 단추에서 다른 고정폭 글꼴로 바꿀 수 있음(설치된 글꼴만, 직접 입력 가능). 라이선스(OFL 1.1)는 `THIRD_PARTY_NOTICES.md`.
   [`docs/features/mono-font.md`](docs/features/mono-font.md)
+- **Ctrl+E / Ctrl+1·2·3 (화면 모드)**: Ctrl+E 는 뷰어 <-> 편집(듀얼 제외), Ctrl+1/2/3 은 뷰어/듀얼/편집으로 바로 이동. 창(모달)이 떠 있으면 무시. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
 - **Ctrl+M (사이드바 열기·닫기)**: 왼쪽 문서/폴더 목록 사이드바를 열고 닫음. 편집 중에도 됨. [`docs/features/sidebar-toggle.md`](docs/features/sidebar-toggle.md)
 - **Ctrl+D (줄 복제)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 문서 어디서나
   됨(문단·표 줄·목록·코드블록). 코드블록 구조를 깨는 줄(여는/닫는 ``` 줄만)은 복제하지 않음.

@@ -1,9 +1,9 @@
 import { FontSettings } from './FontSettings.jsx'
 
 const MODES = [
-  { key: 'preview', label: '뷰어' },
-  { key: 'dual', label: '듀얼' },
-  { key: 'focus', label: '편집' },
+  { key: 'preview', label: '뷰어', shortcut: 'Ctrl+1' },
+  { key: 'dual', label: '듀얼', shortcut: 'Ctrl+2' },
+  { key: 'focus', label: '편집', shortcut: 'Ctrl+3' },
 ]
 
 const THEME_ICON = {
@@ -41,6 +41,7 @@ export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onT
             key={m.key}
             className={`mode-btn ${mode === m.key ? 'active' : ''}`}
             onClick={() => onModeChange(m.key)}
+            title={`${m.label} 모드 (${m.shortcut})${m.key === 'dual' ? '' : ' — Ctrl+E 로 뷰어와 편집을 오갑니다'}`}
           >
             {m.label}
           </button>

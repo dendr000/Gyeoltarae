@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useAppStore } from './store/useAppStore.js'
 import { isSidebarToggleKey } from './lib/sidebarShortcut.js'
+import { modeShortcutTarget } from './lib/modeShortcut.js'
 import { getApi } from './lib/api.js'
 import { FileTree } from './components/FileTree.jsx'
 import { SearchBar } from './components/SearchBar.jsx'
@@ -119,10 +120,19 @@ export default function App() {
         e.preventDefault()
         setSidebarCollapsed((v) => !v)
       }
+      // Ctrl+1/2/3 뷰어·듀얼·편집으로 이동, Ctrl+E 뷰어 <-> 편집(듀얼 제외). 규칙은 lib/modeShortcut.js.
+      // 모달(표 편집기 등)이 떠 있으면 무시한다 — 뷰어로 바뀌면 편집 창이 사라져서 모달 안의 작업이 날아간다.
+      if (!document.querySelector('.modal-backdrop')) {
+        const target = modeShortcutTarget(e, mode)
+        if (target) {
+          e.preventDefault()
+          if (target !== mode) setMode(target)
+        }
+      }
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [activeTabId, closeTab, promptRequest])
+  }, [activeTabId, closeTab, promptRequest, mode, setMode])
 
   if (!workspacePath) {
     return (
