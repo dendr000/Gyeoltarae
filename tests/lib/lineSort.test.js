@@ -7,33 +7,80 @@ import { sortLinesEdit } from '../../src/lib/lineSort.js'
 function apply(value, edit) {
   return value.slice(0, edit.from) + edit.insert + value.slice(edit.to)
 }
-const sortAll = (value) => {
-  const edit = sortLinesEdit(value, 0, value.length)
+const FLIP = { flip: true } // 설정 "다시 누르면 뒤집기"가 켜진 상태
+const sortAll = (value, options) => {
+  const edit = sortLinesEdit(value, 0, value.length, options)
   return edit ? apply(value, edit) : null
 }
 
-describe('줄 이름순 정렬 (Ctrl+`)', () => {
+describe('줄 이름순 정렬 (Ctrl+`) — 기본: 항상 오름차순', () => {
   it('선택한 줄들을 오름차순으로 정렬한다', () => {
     expect(sortAll('다\n가\n나')).toBe('가\n나\n다')
   })
 
-  it('이미 오름차순이면 내림차순으로 뒤집는다 (다시 누르면 반대로)', () => {
-    expect(sortAll('가\n나\n다')).toBe('다\n나\n가')
+  it('이미 오름차순이면 뒤집지 않고 아무것도 하지 않는다 (null)', () => {
+    expect(sortAll('가\n나\n다')).toBeNull()
   })
 
   it('내림차순 상태에서 누르면 오름차순이 된다', () => {
     expect(sortAll('다\n나\n가')).toBe('가\n나\n다')
   })
 
+  it('여러 번 눌러도 오름차순이 유지된다 (두 번째부터는 바뀌는 것이 없다)', () => {
+    const first = sortAll('나\n다\n가')
+    expect(first).toBe('가\n나\n다')
+    expect(sortAll(first)).toBeNull()
+    expect(sortAll(first, { flip: false })).toBeNull()
+  })
+
+  it('앞 공백(들여쓰기)이 있는 줄도 항상 오름차순이다', () => {
+    expect(sortAll('  가\n나\n    다')).toBeNull()
+    expect(sortAll('    다\n나\n  가')).toBe('  가\n나\n    다')
+  })
+
+  it('빈 줄은 맨 아래로 간다', () => {
+    expect(sortAll('다\n\n가\n나')).toBe('가\n나\n다\n')
+    expect(sortAll('가\n나\n다\n\n')).toBeNull()
+  })
+})
+
+describe('줄 이름순 정렬 — 설정 "다시 누르면 뒤집기" 를 켠 경우 (flip: true)', () => {
+  it('정렬되어 있지 않으면 오름차순이 된다', () => {
+    expect(sortAll('다\n가\n나', FLIP)).toBe('가\n나\n다')
+  })
+
+  it('이미 오름차순이면 내림차순으로 뒤집는다 (다시 누르면 반대로)', () => {
+    expect(sortAll('가\n나\n다', FLIP)).toBe('다\n나\n가')
+  })
+
+  it('내림차순 상태에서 누르면 오름차순이 된다', () => {
+    expect(sortAll('다\n나\n가', FLIP)).toBe('가\n나\n다')
+  })
+
   it('두 번 누르면 오름차순 -> 내림차순 -> 오름차순으로 돌아온다', () => {
     let v = '나\n다\n가'
-    v = sortAll(v)
+    v = sortAll(v, FLIP)
     expect(v).toBe('가\n나\n다')
-    v = sortAll(v)
+    v = sortAll(v, FLIP)
     expect(v).toBe('다\n나\n가')
-    v = sortAll(v)
+    v = sortAll(v, FLIP)
     expect(v).toBe('가\n나\n다')
   })
+
+  it('내림차순에서도 앞의 공백은 무시하고 비교한다', () => {
+    expect(sortAll('  가\n나\n    다', FLIP)).toBe('    다\n나\n  가')
+  })
+
+  it('빈 줄은 내림차순에서도 맨 아래로 간다', () => {
+    expect(sortAll('가\n나\n다\n\n', FLIP)).toBe('다\n나\n가\n\n')
+  })
+
+  it('모두 같은 줄이라 바뀔 것이 없으면 아무것도 하지 않는다', () => {
+    expect(sortAll('가\n가\n가', FLIP)).toBeNull()
+  })
+})
+
+describe('줄 이름순 정렬 — 규칙', () => {
 
   it('한글 · 영문 · 숫자를 섞어도 폴더 트리와 같은 한국어 이름순이다 (숫자 < 한글 < 영문)', () => {
     expect(sortAll('하늘\nbanana\n10\n가을\napple\n2')).toBe('2\n10\n가을\n하늘\napple\nbanana')
@@ -51,14 +98,6 @@ describe('줄 이름순 정렬 (Ctrl+`)', () => {
     expect(sortAll('  다\n가\n    나')).toBe('가\n    나\n  다')
   })
 
-  it('내림차순에서도 앞의 공백은 무시하고 비교한다', () => {
-    expect(sortAll('  가\n나\n    다')).toBe('    다\n나\n  가')
-  })
-
-  it('빈 줄은 오름차순에서도 내림차순에서도 맨 아래로 간다', () => {
-    expect(sortAll('다\n\n가\n나')).toBe('가\n나\n다\n')
-    expect(sortAll('가\n나\n다\n\n')).toBe('다\n나\n가\n\n')
-  })
 })
 
 describe('범위와 선택', () => {

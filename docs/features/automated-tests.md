@@ -74,6 +74,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/modeShortcut.test.js` | Ctrl+E(뷰어<->편집, 듀얼 제외)·Ctrl+1/2/3 판별, Cmd·Shift/Alt 제외·한글 조합·한글 자판, App 연결(모달 중 무시) 소스 점검 | 순수 함수 · 소스 검사 |
 | `tests/lib/lineSort.test.js` | 줄 이름순 정렬(오름·내림 전환, 한국어 순서, 숫자 크기순, 대소문자 무시, 빈 줄, 선택 범위, CRLF, 코드블록 보호) + 에디터 연결 소스 점검 | 순수 함수 · 소스 검사 |
 | `tests/lib/blockSort.test.js` | 묶음 정렬(들여쓰기·목록 표시·빈 줄로 묶기, 번호 제자리 유지, 표시 무시 비교, 구분선 빈 줄 유지, 범위, CRLF, 코드블록 보호) + 에디터 연결 소스 점검 | 순수 함수 · 소스 검사 |
+| `tests/electron/sortSetting.test.js` | 설정 메뉴 항목(체크 표시·저장값 반영·클릭 알림), 스토어의 `sortFlip`(기본 꺼짐·시작 때 읽기·변경 알림·구독 해제), 메인·preload·편집기 연결 소스 점검 | 순수 함수 · 스토어 · 소스 검사 |
 | `tests/store/monoFont.test.js` | 고른 글꼴의 저장·복원(안전하지 않은 값은 기본으로, 기본을 고르면 저장 삭제) | 스토어(가짜 저장소) |
 | `tests/lib/horizontalWheel.test.js` | 툴바 위 휠 → 좌우 스크롤 계산(끝에서 멈춤, 넘치지 않으면 무시, Ctrl+휠·가로 입력 제외) | 순수 함수 |
 | `tests/lib/snippetMatch.test.js` | 상용구 정확 일치(대소문자 구분)와 추천 팝업(대소문자 무시, 같은 대소문자 우선, 다 친 글자와 같은 후보 제외, `NOT NULL` 뒤 `NULLIF` 제외, 순서 목록 `rank` 정렬, 코드블록에서 단어 중간부터는 찾지 않기), 코드블록 안 Enter 규칙 | 순수 함수 |

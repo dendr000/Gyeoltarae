@@ -62,6 +62,7 @@ export default function App() {
     chooseWorkspace,
     initWorkspace,
     initTheme,
+    initSettings,
     setTheme,
     openFile,
     openCategory,
@@ -97,8 +98,9 @@ export default function App() {
 
   useEffect(() => {
     initTheme()
+    initSettings()
     initWorkspace()
-  }, [initTheme, initWorkspace])
+  }, [initTheme, initSettings, initWorkspace])
 
   useEffect(() => {
     const unsubscribe = getApi().onMenuChooseWorkspace?.(() => chooseWorkspace())

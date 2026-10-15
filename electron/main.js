@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
 import chokidar from 'chokidar'
 import { createWatchScheduler } from './watchScheduler.js'
+import { createSettingsMenu } from './settingsMenu.js'
 import {
   scanTree,
   readDoc,
@@ -306,6 +307,14 @@ function buildMenu() {
         { role: 'togglefullscreen', label: '전체 화면' },
       ],
     },
+    // 설정 — 값은 userData 의 config.json 에 저장하고, 바뀌면 화면(렌더러)에 알린다(settings:changed). 규칙: electron/settingsMenu.js
+    createSettingsMenu({
+      getSortFlip: () => loadConfig().sortFlip === true,
+      onSortFlipChange: (sortFlip) => {
+        saveConfig({ ...loadConfig(), sortFlip })
+        mainWindow?.webContents.send('settings:changed', { sortFlip })
+      },
+    }),
     {
       label: '창',
       submenu: [
@@ -385,6 +394,9 @@ ipcMain.handle('workspace:getLast', () => {
   }
   return null
 })
+
+// 화면이 시작할 때 읽는 설정(메뉴 "설정"에서 바꾼 값). 아직 저장된 것이 없으면 꺼짐(false)이다.
+ipcMain.handle('settings:get', () => ({ sortFlip: loadConfig().sortFlip === true }))
 
 // 화면이 첫 색인(문서 읽기)을 끝냈다는 알림 — 이제 폴더 감시를 예약한다. 다른 폴더가 선택돼 있으면 무시한다.
 ipcMain.handle('workspace:watch', (_event, workspacePath) => {

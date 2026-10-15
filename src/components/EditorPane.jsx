@@ -516,6 +516,8 @@ export function EditorPane({ text, onChange, disabled }) {
   const toolbarRef = useRef(null)
   useHorizontalWheelScroll(toolbarRef, !disabled)
   // 줄 여백: 줄 번호 표시 여부, 이 문서에서 점을 눌러 강조해 둔 줄(lib/lineMarks.js 규칙, 스토어가 줄 수 변화를 따라 옮겨 줌).
+  // 메뉴 "설정" > 정렬 단축키 "다시 누르면 뒤집기". 꺼져 있으면(기본) 정렬 단축키는 항상 오름차순이다.
+  const sortFlip = useAppStore((s) => s.sortFlip)
   const editorLineNumbers = useAppStore((s) => s.editorLineNumbers)
   const setEditorLineNumbers = useAppStore((s) => s.setEditorLineNumbers)
   const toggleLineMark = useAppStore((s) => s.toggleLineMark)
@@ -1163,7 +1165,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 없거나 한 줄뿐이거나 코드블록 여는·닫는 줄이 들어 있으면 sortLinesEdit 가 null 을 줘서 지나간다(규칙은 lib/lineSort.js).
     // 백틱은 키보드 배열에 따라 e.key 가 다를 수 있어 물리 키(e.code)도 본다.
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '`' || e.code === 'Backquote')) {
-      const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
         replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
@@ -1177,7 +1179,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // Ctrl+Shift+` — 선택에 걸친 줄들을 "묶음" 단위로 이름순 정렬한다(맨 윗줄 글자 기준, 딸린 줄은 함께 움직임). 묶음은 들여쓰기나
     // 목록 표시(*, 1.)·빈 줄로 나뉜다(규칙은 lib/blockSort.js). Shift 가 눌리면 US 배열에서 e.key 가 '~' 가 되므로 물리 키(e.code)도 본다.
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === '~' || e.key === '`' || e.code === 'Backquote')) {
-      const edit = blockSortEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      const edit = blockSortEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
         replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)

@@ -6,8 +6,9 @@ import { blockSortEdit } from '../../src/lib/blockSort.js'
 function apply(value, edit) {
   return value.slice(0, edit.from) + edit.insert + value.slice(edit.to)
 }
-const sortAll = (value) => {
-  const edit = blockSortEdit(value, 0, value.length)
+const FLIP = { flip: true } // 설정 "다시 누르면 뒤집기"가 켜진 상태
+const sortAll = (value, options) => {
+  const edit = blockSortEdit(value, 0, value.length, options)
   return edit ? apply(value, edit) : null
 }
 
@@ -17,8 +18,42 @@ describe('들여쓰기로 묶기: 안 들여쓴 줄이 묶음의 맨 윗줄, 들
     expect(sortAll(value)).toBe('* 가\n  * 가하위\n* 다\n  * 하위2\n  * 하위1')
   })
 
-  it('이미 오름차순이면 내림차순으로 뒤집는다 (묶음 단위로)', () => {
-    expect(sortAll('* 가\n  * 가하위\n* 다\n  * 다하위')).toBe('* 다\n  * 다하위\n* 가\n  * 가하위')
+  it('이미 오름차순이면 기본은 아무것도 하지 않는다 (뒤집지 않는다)', () => {
+    expect(sortAll('* 가\n  * 가하위\n* 다\n  * 다하위')).toBeNull()
+  })
+
+  it('(예: * 자 / * 가 / * 마) 한 번 누르면 오름차순이고 이미 정렬된 뒤에는 그대로다', () => {
+    const once = sortAll('* 자\n* 가\n* 마')
+    expect(once).toBe('* 가\n* 마\n* 자')
+    expect(sortAll(once)).toBeNull()
+  })
+
+  it('내림차순으로 놓인 묶음도 기본은 오름차순이 된다', () => {
+    expect(sortAll('* 다\n  * 다하위\n* 가\n  * 가하위')).toBe('* 가\n  * 가하위\n* 다\n  * 다하위')
+  })
+
+  it('설정을 켜면(flip) 이미 오름차순일 때 묶음 단위로 내림차순으로 뒤집는다', () => {
+    expect(sortAll('* 가\n  * 가하위\n* 다\n  * 다하위', FLIP)).toBe('* 다\n  * 다하위\n* 가\n  * 가하위')
+  })
+
+  it('설정을 켜도 정렬되어 있지 않으면 먼저 오름차순이 되고, 한 번 더 누르면 내림차순이다', () => {
+    const once = sortAll('* 자\n* 가\n* 마', FLIP)
+    expect(once).toBe('* 가\n* 마\n* 자')
+    const twice = sortAll(once, FLIP)
+    expect(twice).toBe('* 자\n* 마\n* 가')
+    expect(sortAll(twice, FLIP)).toBe('* 가\n* 마\n* 자')
+  })
+
+  it('설정을 켜고 번호 목록을 뒤집어도 번호는 제자리에 남는다', () => {
+    expect(sortAll('1. 가\n2. 나\n3. 다', FLIP)).toBe('1. 다\n2. 나\n3. 가')
+  })
+
+  it('설정을 꺼 두면(flip: false) 번호 목록이 이미 정렬되어 있을 때 아무것도 하지 않는다', () => {
+    expect(sortAll('1. 가\n2. 나\n3. 다', { flip: false })).toBeNull()
+  })
+
+  it('설정을 켜도 모두 같아서 바뀔 것이 없으면 아무것도 하지 않는다', () => {
+    expect(sortAll('* 가\n* 가', FLIP)).toBeNull()
   })
 
   it('1~3줄, 1~2줄처럼 크기가 다른 묶음도 통째로 옮긴다', () => {

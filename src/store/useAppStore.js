@@ -36,6 +36,8 @@ let promptResolve = null
 // keep stacking a new listener on top of the last one forever, each firing
 // its own full rebuildIndexes() on every future file change.
 let unsubscribeWatch = null
+// 메뉴 "설정" 변경 알림의 구독 해제 함수(initSettings).
+let unsubscribeSettings = null
 
 // A real file path can use either separator depending on where it came
 // from (Windows APIs mostly give "\", but this app also runs against the
@@ -457,6 +459,9 @@ export const useAppStore = create((set, get) => ({
   // — 강조 표시는 앱을 켜 둔 동안만 유지한다(파일에 저장하지 않음). 규칙은 lib/lineMarks.js.
   editorLineNumbers: loadEditorLineNumbers(),
   monoFont: loadMonoFont(),
+  // 정렬 단축키(Ctrl+`, Ctrl+Shift+`)를 이미 오름차순인 글에서 다시 누르면 내림차순으로 뒤집을지. 기본은 꺼짐(항상 오름차순).
+  // 값은 메인의 config.json 에 있고(메뉴 "설정"), 여기에는 그 사본이 있다(initSettings).
+  sortFlip: false,
   lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
@@ -604,6 +609,16 @@ export const useAppStore = create((set, get) => ({
     const theme = loadStoredTheme()
     applyTheme(theme)
     set({ theme })
+  },
+
+  // 메뉴 "설정"의 값을 메인에서 읽어 오고, 메뉴에서 바꿀 때마다 따라간다. 지금은 정렬 단축키의 "다시 누르면 뒤집기"(sortFlip)뿐이다.
+  // 메인 API 가 없는 환경(브라우저 미리보기)이면 기본(꺼짐)으로 둔다. 다시 불러도 구독이 쌓이지 않게 이전 구독을 먼저 푼다.
+  async initSettings() {
+    const api = getApi()
+    const settings = await api.getSettings?.()
+    if (settings) set({ sortFlip: settings.sortFlip === true })
+    unsubscribeSettings?.()
+    unsubscribeSettings = api.onSettingsChanged?.((next) => set({ sortFlip: next?.sortFlip === true })) ?? null
   },
 
   setSnippetSuggestEnabled(enabled) {

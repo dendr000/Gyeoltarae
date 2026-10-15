@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
-// Ctrl+` — 선택에 걸친 줄들을 이름순(가나다·ABC·숫자 크기순)으로 정렬한다. 이미 오름차순이면 내림차순으로 뒤집어서, 같은 키를
-// 다시 누르면 반대 방향이 된다. 화면(textarea)과 분리한 순수 함수라서 시험할 수 있다.
+// Ctrl+` — 선택에 걸친 줄들을 이름순(가나다·ABC·숫자 크기순)으로 정렬한다. 기본은 항상 오름차순이고, 설정(메뉴 "설정")에서
+// "다시 누르면 뒤집기"를 켜면 이미 오름차순일 때 내림차순으로 뒤집는다. 화면(textarea)과 분리한 순수 함수라서 시험할 수 있다.
 //
 // 비교 규칙: 줄 앞의 공백은 무시하고, 대소문자는 구분하지 않으며(같은 것은 원래 순서 유지), 숫자는 크기로 비교한다(문서2 < 문서10).
 // 왼쪽 폴더 트리와 같은 한국어 정렬 규칙(localeCompare 'ko')이라 기호 < 숫자 < 한글 < 영문 순이다. 빈 줄(공백만 있는 줄)은 방향과 상관없이 맨 아래로 간다.
@@ -57,9 +57,11 @@ export function selectedLines(value, selStart, selEnd) {
 //   from/to      - 바꿀 범위(걸친 줄들의 시작 ~ 마지막 줄의 끝, 마지막 줄바꿈은 포함하지 않는다)
 //   insert       - 그 자리에 넣을 글(정렬된 줄들)
 //   selStart/End - 바꾼 뒤 정렬된 줄들 전체가 선택된 채로 남도록 하는 자리
+// 기본은 **항상 오름차순**이다(이미 오름차순이면 바뀌는 것이 없어서 null). 설정 "다시 누르면 뒤집기"를 켜서 { flip: true } 로 부르면,
+// 이미 오름차순일 때 내림차순으로 뒤집는다.
 // null 이면 아무것도 하지 않는다: 선택이 없을 때, 한 줄만 걸쳤을 때, 코드블록 여는·닫는 줄(```)이 들어 있을 때(순서를 바꾸면
 // 구조가 깨진다), 정렬해도 바뀌는 것이 없을 때.
-export function sortLinesEdit(value, selStart, selEnd) {
+export function sortLinesEdit(value, selStart, selEnd, { flip = false } = {}) {
   const selected = selectedLines(value, selStart, selEnd)
   if (!selected) return null
   const { blockStart, blockEnd, lines, separator, trailingCr } = selected
@@ -67,7 +69,8 @@ export function sortLinesEdit(value, selStart, selEnd) {
   if (lines.some((line) => FENCE_LINE_RE.test(line))) return null
 
   const ascending = [...lines].sort(compareAscending)
-  const sorted = ascending.every((line, i) => line === lines[i]) ? [...lines].sort(compareDescending) : ascending
+  const alreadyAscending = ascending.every((line, i) => line === lines[i])
+  const sorted = flip && alreadyAscending ? [...lines].sort(compareDescending) : ascending
   if (sorted.every((line, i) => line === lines[i])) return null
 
   const insert = sorted.join(separator) + (trailingCr ? '\r' : '')

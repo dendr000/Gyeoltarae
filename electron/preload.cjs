@@ -61,6 +61,14 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('watch:event', listener)
   },
 
+  // 메뉴 "설정"의 값. getSettings 는 시작할 때 한 번, onSettingsChanged 는 메뉴에서 바꿀 때마다 받는다.
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  onSettingsChanged: (callback) => {
+    const listener = (_event, payload) => callback(payload)
+    ipcRenderer.on('settings:changed', listener)
+    return () => ipcRenderer.removeListener('settings:changed', listener)
+  },
+
   onMenuChooseWorkspace: (callback) => {
     const listener = () => callback()
     ipcRenderer.on('menu:choose-workspace', listener)

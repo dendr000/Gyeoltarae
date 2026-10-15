@@ -1,8 +1,8 @@
 // Copyright (c) dendr000. MIT License.
 
 // Ctrl+Shift+` — 선택에 걸친 줄들을 "묶음" 단위로 이름순 정렬한다. 묶음의 맨 윗줄 글자가 기준이고 딸린 줄은 함께 움직인다.
-// 줄 하나씩 정렬하는 Ctrl+` (lineSort.js)와 짝이다. 이미 오름차순이면 내림차순으로 뒤집는다. 화면(textarea)과 분리한 순수 함수라서
-// 시험할 수 있다.
+// 줄 하나씩 정렬하는 Ctrl+` (lineSort.js)와 짝이다. 기본은 항상 오름차순이고, 설정에서 "다시 누르면 뒤집기"를 켜면 이미 오름차순일 때
+// 내림차순으로 뒤집는다. 화면(textarea)과 분리한 순수 함수라서 시험할 수 있다.
 //
 // 묶음을 나누는 규칙 (선택한 줄 중 가장 얕게 들여쓴 줄을 "맨 윗줄 들여쓰기"로 본다):
 //   - 맨 윗줄 들여쓰기의 줄이 묶음의 머리가 되고, 그보다 더 들여쓴 줄은 바로 위 묶음에 딸린다.     (* 항목 / "  * 하위 항목")
@@ -61,8 +61,9 @@ function splitGroups(core) {
 }
 
 // 돌려주는 값: { from, to, insert, selStart, selEnd } (lineSort.js 의 sortLinesEdit 와 같은 모양)
+// 기본은 **항상 오름차순**이다. { flip: true }(설정 "다시 누르면 뒤집기")로 부르면 이미 오름차순일 때 내림차순으로 뒤집는다.
 // null 이면 아무것도 하지 않는다: 선택이 없을 때, 묶음이 하나뿐일 때, 코드블록 여는·닫는 줄(```)이 들어 있을 때, 바뀌는 것이 없을 때.
-export function blockSortEdit(value, selStart, selEnd) {
+export function blockSortEdit(value, selStart, selEnd, { flip = false } = {}) {
   const selected = selectedLines(value, selStart, selEnd)
   if (!selected) return null
   const { blockStart, blockEnd, lines, separator, trailingCr } = selected
@@ -97,7 +98,7 @@ export function blockSortEdit(value, selStart, selEnd) {
   const original = lines.join('\n')
   const ascending = [...groups].sort((a, b) => collator.compare(keyOf(a), keyOf(b)))
   let result = build(ascending)
-  if (result.join('\n') === original) result = build([...groups].sort((a, b) => collator.compare(keyOf(b), keyOf(a))))
+  if (flip && result.join('\n') === original) result = build([...groups].sort((a, b) => collator.compare(keyOf(b), keyOf(a))))
   if (result.join('\n') === original) return null
 
   const insert = result.join(separator) + (trailingCr ? '\r' : '')
