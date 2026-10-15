@@ -45,6 +45,7 @@ import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
 import { sortLinesEdit } from '../lib/lineSort.js'
+import { blockSortEdit } from '../lib/blockSort.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
@@ -1163,6 +1164,20 @@ export function EditorPane({ text, onChange, disabled }) {
     // 백틱은 키보드 배열에 따라 e.key 가 다를 수 있어 물리 키(e.code)도 본다.
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '`' || e.code === 'Backquote')) {
       const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      e.preventDefault()
+      if (edit) {
+        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd)
+        })
+      }
+      return
+    }
+    // Ctrl+Shift+` — 선택에 걸친 줄들을 "묶음" 단위로 이름순 정렬한다(맨 윗줄 글자 기준, 딸린 줄은 함께 움직임). 묶음은 들여쓰기나
+    // 목록 표시(*, 1.)·빈 줄로 나뉜다(규칙은 lib/blockSort.js). Shift 가 눌리면 US 배열에서 e.key 가 '~' 가 되므로 물리 키(e.code)도 본다.
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === '~' || e.key === '`' || e.code === 'Backquote')) {
+      const edit = blockSortEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       e.preventDefault()
       if (edit) {
         replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
