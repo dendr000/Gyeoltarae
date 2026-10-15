@@ -4,7 +4,7 @@
 //   `* 항목`   별표 목록 → 다음 줄도 같은 별표(깊이 유지)
 //   `1. 항목`  번호 목록 → 다음 줄은 다음 번호(`2. `, 앞의 0 자릿수 유지)
 //   `> 내용`   인용      → 다음 줄도 같은 `>`(깊이 유지)
-//   `    내용` 들여쓴 줄 → 다음 줄도 같은 들여쓰기(공백·탭 그대로). 표시 없이 들여쓰기만 있는 줄이다.
+//   `    내용` 들여쓴 줄 → 다음 줄도 같은 들여쓰기(공백·탭 그대로). 표시 없이 들여쓰기만 있는 줄이다. 코드블록 안에서는 이것만 한다.
 // 내용이 없는 표시(또는 들여쓰기)만 있는 줄에서 Enter 를 한 번 더 치면 그것을 지워서 이어쓰기를 끝낸다.
 // 화면(textarea)과 분리한 순수 함수라서 시험할 수 있다.
 import { isInCodeFenceAt } from './codeFence.js'
@@ -37,28 +37,33 @@ function parseLine(text) {
     return { markerEnd: indent.length + arrows.length + gap.length, content, nextMarker: `${indent}${arrows} ` }
   }
   // 마지막에 본다 — 들여쓴 `* 항목` 은 위에서 목록으로 잡히고, 여기에는 표시 없는 들여쓴 줄(들여쓰기만 있는 줄 포함)만 온다.
-  match = INDENT_LINE_RE.exec(text)
-  if (match) {
-    const [, indent, content] = match
-    return { markerEnd: indent.length, content, nextMarker: indent }
-  }
-  return null
+  return parseIndentLine(text)
+}
+
+// 들여쓴 줄만 해석한다(목록·인용 표시는 보지 않는다). 코드블록 안에서는 이것만 쓴다 — 코드의 `* ` 나 `> ` 는 목록·인용이 아니다.
+function parseIndentLine(text) {
+  const match = INDENT_LINE_RE.exec(text)
+  if (!match) return null
+  const [, indent, content] = match
+  return { markerEnd: indent.length, content, nextMarker: indent }
 }
 
 // 돌려주는 값: { from, to, insert, caret }
 //   from/to - 바꿀 범위, insert - 넣을 글, caret - 바꾼 뒤 커서 자리
 // null 이면 아무것도 하지 않는다(= 호출한 쪽이 평소 Enter 동작을 그대로 둔다):
-//   선택 영역이 있을 때, 코드블록 안일 때, 목록·인용·들여쓴 줄이 아닐 때, 커서가 표시(`* `, `1. `, `> `)나 들여쓰기보다 앞이나 안에 있을 때.
+//   선택 영역이 있을 때, 목록·인용·들여쓴 줄이 아닐 때, 커서가 표시(`* `, `1. `, `> `)나 들여쓰기보다 앞이나 안에 있을 때.
+//   코드블록 안에서는 들여쓴 줄만 이어받고(들여쓰기 그대로), 들여쓰지 않은 줄과 목록·인용 표시는 평소 Enter 다.
 export function listContinueEdit(value, selStart, selEnd) {
   if (selStart !== selEnd) return null
-  if (isInCodeFenceAt(value, selStart)) return null
+  const inCodeBlock = isInCodeFenceAt(value, selStart)
 
   const lineStart = selStart === 0 ? 0 : value.lastIndexOf('\n', selStart - 1) + 1
   const idx = value.indexOf('\n', selStart)
   const rawEnd = idx === -1 ? value.length : idx
   // 윈도우 줄바꿈(CRLF)이면 줄 끝의 \r 은 내용이 아니다.
   const lineEnd = value[rawEnd - 1] === '\r' && rawEnd > lineStart ? rawEnd - 1 : rawEnd
-  const parsed = parseLine(value.slice(lineStart, lineEnd))
+  const lineText = value.slice(lineStart, lineEnd)
+  const parsed = inCodeBlock ? parseIndentLine(lineText) : parseLine(lineText)
   if (!parsed) return null
 
   if (selStart < lineStart + parsed.markerEnd) return null

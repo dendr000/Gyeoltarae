@@ -233,12 +233,48 @@ describe('listContinueEdit - 들여쓰기 이어쓰기 (표시 없는 들여쓴 
     expect(listContinueEdit('  가나', 3, 4)).toBeNull()
   })
 
-  it('코드블록 안에서는 null', () => {
-    expect(enter(`${F}\n  코드^\n${F}`)).toBeNull()
-    expect(enter(`${F}\n  ^\n${F}`)).toBeNull()
-  })
-
   it('코드블록이 끝난 뒤에는 다시 동작한다', () => {
     expect(enter(`${F}\nx\n${F}\n  가^`).next).toBe(`${F}\nx\n${F}\n  가\n  ^`)
+  })
+})
+
+// 코드블록(```) 안에서도 들여쓰기는 이어진다. 다만 목록·번호·인용 표시는 이어받지 않는다 — 코드의 `* ` 나 `> ` 는 목록·인용이 아니라서
+// 줄마다 표시가 따라붙으면 오히려 방해가 된다.
+describe('listContinueEdit - 코드블록 안의 들여쓰기 이어쓰기', () => {
+  it('들여쓴 코드 줄 끝에서 Enter 하면 같은 들여쓰기가 이어진다', () => {
+    expect(enter(`${F}sql\n  SELECT^\n${F}`).next).toBe(`${F}sql\n  SELECT\n  ^\n${F}`)
+    expect(enter(`${F}\n\t탭 코드^\n${F}`).next).toBe(`${F}\n\t탭 코드\n\t^\n${F}`)
+  })
+
+  it('들여쓰지 않은 코드 줄은 평소 Enter (null)', () => {
+    expect(enter(`${F}\ncode^\n${F}`)).toBeNull()
+  })
+
+  it('들여쓰기만 있는 코드 줄에서 Enter 하면 들여쓰기가 지워진다', () => {
+    expect(enter(`${F}\nx\n    ^\n${F}`).next).toBe(`${F}\nx\n^\n${F}`)
+  })
+
+  it('목록·번호·인용 모양의 코드 줄은 표시를 이어받지 않고 들여쓰기만 이어받는다', () => {
+    expect(enter(`${F}\n  * 주석^\n${F}`).next).toBe(`${F}\n  * 주석\n  ^\n${F}`)
+    expect(enter(`${F}\n  1. 단계^\n${F}`).next).toBe(`${F}\n  1. 단계\n  ^\n${F}`)
+    expect(enter(`${F}\n  > 출력^\n${F}`).next).toBe(`${F}\n  > 출력\n  ^\n${F}`)
+  })
+
+  it('들여쓰지 않은 목록 모양의 코드 줄은 예전처럼 평소 Enter (null)', () => {
+    expect(enter(`${F}\n* 사과^\n${F}`)).toBeNull()
+    expect(enter(`${F}\n1. 단계^\n${F}`)).toBeNull()
+  })
+
+  it('커서가 들여쓰기 앞이나 안에 있으면 평소 Enter (null)', () => {
+    expect(enter(`${F}\n^  코드\n${F}`)).toBeNull()
+    expect(enter(`${F}\n ^ 코드\n${F}`)).toBeNull()
+  })
+
+  it('선택 영역이 있으면 null', () => {
+    expect(listContinueEdit(`${F}\n  코드\n${F}`, 6, 8)).toBeNull()
+  })
+
+  it('코드블록을 닫는 ``` 줄이나 그 바깥은 들여쓰기만 이어받는 코드 규칙이 아니라 일반 규칙이다', () => {
+    expect(enter(`${F}\n  코드\n${F}\n  * 항목^`).next).toBe(`${F}\n  코드\n${F}\n  * 항목\n  * ^`)
   })
 })

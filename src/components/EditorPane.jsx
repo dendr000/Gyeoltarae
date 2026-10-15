@@ -1245,7 +1245,8 @@ export function EditorPane({ text, onChange, disabled }) {
       return
     }
     // `* 항목`·`1. 항목`·`> 인용` 줄에서 Enter — 아래 줄에 같은 표시(`* `, 다음 번호, `> `)를 이어 만들고, 표시만 있는 빈 줄에서 Enter 하면
-    // 그 표시를 지워 목록·인용을 끝낸다. 한글 조합 중 Enter(글자 확정)는 건드리지 않는다. 규칙은 lib/listContinue.js.
+    // 그 표시를 지워 목록·인용을 끝낸다. 표시 없이 들여쓴 줄은 같은 들여쓰기를 이어주고(코드블록 안에서는 이것만 한다), 들여쓰기만 있는
+    // 줄에서 Enter 하면 들여쓰기가 지워진다. 한글 조합 중 Enter(글자 확정)는 건드리지 않는다. 규칙은 lib/listContinue.js.
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.nativeEvent.isComposing) {
       const edit = listContinueEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
