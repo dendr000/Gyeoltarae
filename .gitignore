@@ -18,6 +18,7 @@ release-packager
 # Scratch/debug artifacts — not meant to be tracked
 electron-test-log.txt
 scratch-portfolio.b64
+scratch-portfolio.md
 
 # Editor directories and files
 .vscode/*
