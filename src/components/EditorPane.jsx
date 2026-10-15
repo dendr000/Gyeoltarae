@@ -46,6 +46,7 @@ import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
 import { sortLinesEdit } from '../lib/lineSort.js'
 import { blockSortEdit } from '../lib/blockSort.js'
+import { canTypewrite, isTypewriterNavKey, typewriterScrollTop } from '../lib/typewriterScroll.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
@@ -515,9 +516,11 @@ export function EditorPane({ text, onChange, disabled }) {
   // 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤(스크롤바를 잡지 않아도 됨).
   const toolbarRef = useRef(null)
   useHorizontalWheelScroll(toolbarRef, !disabled)
-  // 줄 여백: 줄 번호 표시 여부, 이 문서에서 점을 눌러 강조해 둔 줄(lib/lineMarks.js 규칙, 스토어가 줄 수 변화를 따라 옮겨 줌).
   // 메뉴 "설정" > 정렬 단축키 "다시 누르면 뒤집기". 꺼져 있으면(기본) 정렬 단축키는 항상 오름차순이다.
   const sortFlip = useAppStore((s) => s.sortFlip)
+  // 메뉴 "설정" > 타자기 스크롤: 0 = 끔(기본), 1~5 = 글 쓰는 줄이 머물 구역(편집창 세로 5등분, 1 맨 위쪽 ~ 5 맨 아래쪽).
+  const typewriterZone = useAppStore((s) => s.typewriterZone)
+  // 줄 여백: 줄 번호 표시 여부, 이 문서에서 점을 눌러 강조해 둔 줄(lib/lineMarks.js 규칙, 스토어가 줄 수 변화를 따라 옮겨 줌).
   const editorLineNumbers = useAppStore((s) => s.editorLineNumbers)
   const setEditorLineNumbers = useAppStore((s) => s.setEditorLineNumbers)
   const toggleLineMark = useAppStore((s) => s.toggleLineMark)
@@ -933,8 +936,30 @@ export function EditorPane({ text, onChange, disabled }) {
     setFindBar((prev) => prev && { ...prev, matches: [], currentIndex: -1 })
   }
 
+  // 타자기 스크롤 — 커서 줄의 가운데가 편집창의 고른 구역(typewriterZone)에 오도록 편집창을 스크롤한다. 끔(0)이면 아무것도 하지 않는다.
+  // 글을 쓸 때는 onChange 에서 바로(브라우저가 스크롤을 맞춘 직후, 그려지기 전에) 부르고, 커서를 옮기는 키는 다음 프레임에(키의 기본
+  // 동작으로 커서가 옮겨진 뒤) 부른다. 마우스 클릭·휠 스크롤에는 반응하지 않는다. 계산 규칙은 lib/typewriterScroll.js.
+  function recenterCaret() {
+    if (!typewriterZone) return
+    const textarea = textareaRef.current
+    if (!textarea || textarea.disabled || !canTypewrite(textarea.value.length)) return
+    // 선택을 늘리는 중이면 움직이는 쪽 끝(방향이 뒤쪽이면 시작, 아니면 끝)을 따라간다.
+    const caret = textarea.selectionDirection === 'backward' ? textarea.selectionStart : textarea.selectionEnd
+    const target = typewriterScrollTop({
+      caretTop: getContentTopOffset(textarea, caret),
+      lineHeight: parseFloat(window.getComputedStyle(textarea).lineHeight) || 20,
+      clientHeight: textarea.clientHeight,
+      scrollHeight: textarea.scrollHeight,
+      zone: typewriterZone,
+    })
+    if (target === null || Math.abs(target - textarea.scrollTop) < 1) return
+    textarea.scrollTop = target
+    if (backdropRef.current) backdropRef.current.scrollTop = target
+  }
+
   function handleKeyDown(e) {
     const textarea = e.currentTarget
+    if (typewriterZone && isTypewriterNavKey(e.key)) requestAnimationFrame(recenterCaret)
     if (fileSuggest) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -1550,6 +1575,7 @@ export function EditorPane({ text, onChange, disabled }) {
             if (!rewrote) onChange(e.target.value)
             updateFileSuggest()
             updateSnippetSuggest()
+            recenterCaret()
           }}
           onKeyDown={handleKeyDown}
           onMouseMove={(e) => {

@@ -20,6 +20,7 @@ import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
+import { normalizeTypewriterZone } from '../../shared/typewriterZone.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -38,6 +39,14 @@ let promptResolve = null
 let unsubscribeWatch = null
 // 메뉴 "설정" 변경 알림의 구독 해제 함수(initSettings).
 let unsubscribeSettings = null
+
+// 메인이 알려 주는 설정({ sortFlip, typewriterZone })을 스토어 상태 모양으로 바로잡는다. 빠졌거나 이상한 값은 기본(꺼짐)이다.
+function settingsPatch(settings) {
+  return {
+    sortFlip: settings?.sortFlip === true,
+    typewriterZone: normalizeTypewriterZone(settings?.typewriterZone),
+  }
+}
 
 // A real file path can use either separator depending on where it came
 // from (Windows APIs mostly give "\", but this app also runs against the
@@ -462,6 +471,8 @@ export const useAppStore = create((set, get) => ({
   // 정렬 단축키(Ctrl+`, Ctrl+Shift+`)를 이미 오름차순인 글에서 다시 누르면 내림차순으로 뒤집을지. 기본은 꺼짐(항상 오름차순).
   // 값은 메인의 config.json 에 있고(메뉴 "설정"), 여기에는 그 사본이 있다(initSettings).
   sortFlip: false,
+  // 타자기 스크롤 구역: 0 = 끔(기본), 1~5 = 편집창을 세로로 5등분했을 때 글 쓰는 줄이 머물 구역(1 맨 위쪽 ~ 5 맨 아래쪽). 메인의 config.json 사본.
+  typewriterZone: 0,
   lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.
@@ -616,9 +627,9 @@ export const useAppStore = create((set, get) => ({
   async initSettings() {
     const api = getApi()
     const settings = await api.getSettings?.()
-    if (settings) set({ sortFlip: settings.sortFlip === true })
+    if (settings) set(settingsPatch(settings))
     unsubscribeSettings?.()
-    unsubscribeSettings = api.onSettingsChanged?.((next) => set({ sortFlip: next?.sortFlip === true })) ?? null
+    unsubscribeSettings = api.onSettingsChanged?.((next) => set(settingsPatch(next))) ?? null
   },
 
   setSnippetSuggestEnabled(enabled) {

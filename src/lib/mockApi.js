@@ -190,6 +190,8 @@ function movePathPrefix(oldPath, newPath) {
 export function createMockApi() {
   let workspace = null
   const watchListeners = new Set()
+  let mockSettings = { sortFlip: false, typewriterZone: 0 }
+  const settingsListeners = new Set()
 
   return {
     async chooseWorkspace() {
@@ -462,6 +464,18 @@ export function createMockApi() {
     onWatchEvent(callback) {
       watchListeners.add(callback)
       return () => watchListeners.delete(callback)
+    },
+    // 메뉴 "설정"의 값(정렬 뒤집기, 타자기 스크롤 구역). 브라우저 미리보기에는 메뉴가 없어서 __setSettings 로 직접 바꿔 가며 확인한다.
+    async getSettings() {
+      return { ...mockSettings }
+    },
+    onSettingsChanged(callback) {
+      settingsListeners.add(callback)
+      return () => settingsListeners.delete(callback)
+    },
+    __setSettings(next) {
+      mockSettings = { ...mockSettings, ...next }
+      for (const listener of settingsListeners) listener({ ...mockSettings })
     },
     onMenuChooseWorkspace() {
       return () => {}

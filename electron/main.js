@@ -9,6 +9,7 @@ import { execFile } from 'node:child_process'
 import chokidar from 'chokidar'
 import { createWatchScheduler } from './watchScheduler.js'
 import { createSettingsMenu } from './settingsMenu.js'
+import { normalizeTypewriterZone } from '../shared/typewriterZone.js'
 import {
   scanTree,
   readDoc,
@@ -92,6 +93,13 @@ function loadConfig() {
   } catch {
     return {}
   }
+}
+
+// 메뉴 "설정"의 값들. config.json 에서 읽어 모양을 바로잡는다 — 정렬 뒤집기는 true/false, 타자기 스크롤 구역은 0~5(그 밖은 끔).
+// 화면(settings:get)과 메뉴가 같은 값을 보도록 읽는 곳을 여기 하나로 둔다.
+function readSettings() {
+  const config = loadConfig()
+  return { sortFlip: config.sortFlip === true, typewriterZone: normalizeTypewriterZone(config.typewriterZone) }
 }
 
 function saveConfig(config) {
@@ -309,10 +317,15 @@ function buildMenu() {
     },
     // 설정 — 값은 userData 의 config.json 에 저장하고, 바뀌면 화면(렌더러)에 알린다(settings:changed). 규칙: electron/settingsMenu.js
     createSettingsMenu({
-      getSortFlip: () => loadConfig().sortFlip === true,
+      getSortFlip: () => readSettings().sortFlip,
       onSortFlipChange: (sortFlip) => {
         saveConfig({ ...loadConfig(), sortFlip })
-        mainWindow?.webContents.send('settings:changed', { sortFlip })
+        mainWindow?.webContents.send('settings:changed', readSettings())
+      },
+      getTypewriterZone: () => readSettings().typewriterZone,
+      onTypewriterZoneChange: (typewriterZone) => {
+        saveConfig({ ...loadConfig(), typewriterZone })
+        mainWindow?.webContents.send('settings:changed', readSettings())
       },
     }),
     {
@@ -396,7 +409,7 @@ ipcMain.handle('workspace:getLast', () => {
 })
 
 // 화면이 시작할 때 읽는 설정(메뉴 "설정"에서 바꾼 값). 아직 저장된 것이 없으면 꺼짐(false)이다.
-ipcMain.handle('settings:get', () => ({ sortFlip: loadConfig().sortFlip === true }))
+ipcMain.handle('settings:get', () => readSettings())
 
 // 화면이 첫 색인(문서 읽기)을 끝냈다는 알림 — 이제 폴더 감시를 예약한다. 다른 폴더가 선택돼 있으면 무시한다.
 ipcMain.handle('workspace:watch', (_event, workspacePath) => {
