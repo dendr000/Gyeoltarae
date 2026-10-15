@@ -9,22 +9,18 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
+// @electron/asar 는 @electron/packager 가 이미 쓰는 의존이라 따로 설치하지 않는다(패키징 결과를 점검하는 데만 쓴다).
+import asar from '@electron/asar'
+import { EXTRA_TOP_LEVEL_ENTRIES, copyDistributionExtras } from './distributionExtras.js'
+import { collectRuntimeModules, createIgnore, findMainProcessDependencies } from './packageIgnore.js'
+import { checkAsarFiles, listAsarFiles } from './verifyPackage.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 
-const IGNORE_PATTERNS = [
-  /^\/src(\/|$)/,
-  /^\/scripts(\/|$)/,
-  /^\/tests(\/|$)/,
-  /^\/\.claude(\/|$)/,
-  /^\/\.git(\/|$)/,
-  /^\/release(-packager)?(\/|$)/,
-  /^\/index\.html$/,
-  /^\/vite\.config\.js$/,
-  /^\/CHANGELOG\.md$/,
-  /^\/README\.md$/,
-]
+// 배포에 넣을 node_modules 는 메인 프로세스가 실제로 가져오는 모듈(지금은 chokidar 와 그 의존 readdirp)뿐이다. 화면(React 등)은 vite 가
+// dist 에 묶어 넣었다. 걸러내는 규칙은 scripts/packageIgnore.js, 문서: docs/features/distribution.md.
+const runtimeModules = collectRuntimeModules(root, findMainProcessDependencies(root))
 
 // `overwrite: true` below makes @electron/packager delete the existing
 // output folder outright (fs.rm(outDir, {recursive:true,force:true}) in its
@@ -42,8 +38,14 @@ const IGNORE_PATTERNS = [
 // 그래서 실행파일·폴더 이름 등 "경로로 쓰이는" 곳은 로마자 Gyeoltarae로 고정하고, 화면에
 // 보이는 텍스트(창 제목, 사이드바 등)만 결타래를 씀 — Galpi 프로젝트도 저장소/폴더명은
 // 로마자, 실제 브랜드 표기는 한글을 쓰는 것과 같은 방식.
-const outDir = path.join(root, 'release-packager', 'Gyeoltarae-win32-x64')
+// 환경 변수 GYELTARAE_PACKAGE_OUT 으로 출력 위치를 바꿀 수 있다 — 실행 중인 앱 폴더를 건드리지 않고 임시 위치에 빌드해서 내용을 확인할 때 쓴다.
+// 이때는 프로젝트 루트의 바로가기(결타래.lnk)를 다시 만들지 않는다.
+const customOut = process.env.GYELTARAE_PACKAGE_OUT
+const outRoot = customOut ? path.resolve(customOut) : path.join(root, 'release-packager')
+const outDir = path.join(outRoot, 'Gyeoltarae-win32-x64')
 const KNOWN_TOP_LEVEL_ENTRIES = new Set([
+  // 빌드 뒤에 우리가 따로 두는 파일들(라이선스, 고지, 글꼴) — 다음 빌드의 안전 점검이 정상 산출물로 알아야 한다.
+  ...EXTRA_TOP_LEVEL_ENTRIES,
   'LICENSE',
   'LICENSES.chromium.html',
   'Gyeoltarae.exe',
@@ -79,7 +81,7 @@ if (fs.existsSync(outDir)) {
 
 const appPaths = await packager({
   dir: root,
-  out: path.join(root, 'release-packager'),
+  out: outRoot,
   platform: 'win32',
   arch: 'x64',
   overwrite: true,
@@ -96,7 +98,7 @@ const appPaths = await packager({
     InternalName: 'Gyeoltarae',
     OriginalFilename: 'Gyeoltarae.exe',
   },
-  ignore: (file) => IGNORE_PATTERNS.some((re) => re.test(file)),
+  ignore: createIgnore(runtimeModules),
   // create-workspace-shortcut.ps1 gets run by spawning a real powershell.exe
   // process (see ensureWorkspaceShortcut in electron/main.js), which can't
   // read a script packed inside app.asar — only Electron's own patched fs
@@ -107,10 +109,27 @@ const appPaths = await packager({
 
 console.log('Packaged app(s):', appPaths)
 
+// 패키징 결과 점검: 앱이 켜지는 데 필요한 파일이 다 있는지, 배포에 넣지 않기로 한 파일(docs, 바로가기, 임시 파일, 쓰지 않는 모듈)이 새어
+// 들어가지 않았는지 app.asar 안을 본다. 어긋나면 빌드를 실패로 끝낸다(점검 목록: scripts/verifyPackage.js).
+const asarPath = path.join(outDir, 'resources', 'app.asar')
+const { missing, forbidden } = checkAsarFiles(listAsarFiles(asar, asarPath), runtimeModules)
+if (missing.length > 0 || forbidden.length > 0) {
+  if (missing.length > 0) console.error(`\n빌드 실패: app.asar 에 필요한 파일이 없습니다 — ${missing.join(', ')}`)
+  if (forbidden.length > 0) console.error(`\n빌드 실패: app.asar 에 넣지 않기로 한 파일이 들어 있습니다 — ${forbidden.slice(0, 10).join(', ')}${forbidden.length > 10 ? ` 외 ${forbidden.length - 10}개` : ''}`)
+  process.exit(1)
+}
+console.log(`app.asar 점검 통과 (${(fs.statSync(asarPath).size / 1048576).toFixed(1)} MB, 쓰는 node_modules: ${[...runtimeModules].join(', ')})`)
+
+// exe 옆에 라이선스·제3자 고지·D2Coding 글꼴 파일을 둔다(앱 안에 묻히지 않게).
+copyDistributionExtras(root, outDir)
+console.log(`함께 둔 파일: ${EXTRA_TOP_LEVEL_ENTRIES.join(', ')}`)
+
 // Refresh the project-root shortcut so the exe can be launched without
 // digging into release-packager\Gyeoltarae-win32-x64\.
-execFileSync(
-  'powershell',
-  ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'create-shortcut.ps1')],
-  { stdio: 'inherit' },
-)
+if (!customOut) {
+  execFileSync(
+    'powershell',
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'create-shortcut.ps1')],
+    { stdio: 'inherit' },
+  )
+}

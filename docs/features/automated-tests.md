@@ -83,6 +83,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/electron/snippetOrders.test.js` | 메인이 폴더별 순서 목록 파일을 읽어 주는지(없는 폴더, 상용구로 안 섞임) | **진짜 디스크**(임시 폴더) |
 | `tests/store/snippetOrder.test.js` | 순서 목록이 상용구 후보의 순서(rank)로 붙고 추천에서 SELECT 가 SET 보다 위로 오는지 | mockApi |
 | `tests/scripts/snippetPack.test.js` | SQL 키워드 묶음 데이터(중복·파일 이름 글자·대문자·개수)와 설치(전부 만들기, 미리보기는 아무것도 안 씀, 두 번 실행해도 안전, 기존 상용구 덮어쓰지 않음, 대소문자만 다른 폴더) | **진짜 디스크**(임시 폴더) |
+| `tests/scripts/packageIgnore.test.js` | 배포 빌드 규칙: 뺄 파일·넣을 파일, node_modules 에서 메인 프로세스가 쓰는 모듈만 남기기(의존 따라가기·순환·선택 의존·범위 모듈·새 의존 누락 방지), 빌드 뒤 app.asar 점검(필요한 파일·넣지 않기로 한 파일·빈 폴더 껍데기), 라이선스·고지·글꼴 복사 | **진짜 디스크**(임시 폴더) · 순수 함수 · 소스 검사 |
 | `tests/electron/snippetCase.test.js` | `MYSQL`/`mysql` 처럼 대소문자만 다른 상용구가 서로 덮어쓰지 않는지, 인코딩된 파일 이름 복원 | **진짜 디스크**(Windows 에서만 충돌이 재현됨) |
 | `tests/lib/codeCopy.test.js` | 복사 버튼 동작(본문 읽기, "복사됨" 표시와 되돌리기, 실패 표시, 클립보드가 응답 없을 때 옛 방식으로 전환) | 가짜 버튼·가짜 클립보드 |
 | `tests/lib/snippetShortcuts.test.js` | 상용구 단축키 판별(Alt+T / Alt+Shift+T, 한글 입력 상태, Ctrl 조합 제외) | 순수 함수 |

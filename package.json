@@ -47,7 +47,8 @@
     "productName": "결타래",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "shared/**/*"
     ],
     "directories": {
       "output": "release"

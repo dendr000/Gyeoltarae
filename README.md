@@ -40,6 +40,11 @@ npm run dist:win:packager   # 권장 — release-packager\Gyeoltarae-win32-x64\G
 npm run dist:win            # electron-builder (nsis 설치파일 + portable) — 환경에 따라 실패할 수 있음
 ```
 
+**다른 사람에게 줄 때**는 `release-packager\Gyeoltarae-win32-x64` 폴더 **전체**를 zip 으로 묶어 줍니다(exe 하나만으로는 실행되지 않음).
+받는 사람은 압축을 풀고 `Gyeoltarae.exe` 를 실행하면 됩니다. 폴더에는 계획서(docs)·임시 메모가 들어가지 않고, 라이선스와
+D2Coding 글꼴 파일(`fonts\`)이 exe 옆에 함께 들어갑니다. 빌드는 끝나면 `app.asar` 안을 스스로 점검합니다.
+자세히: [`docs/features/distribution.md`](docs/features/distribution.md)
+
 `build/icon.ico`는 저장소에 커밋돼 있어 평소엔 손댈 필요 없습니다. `build/icon.svg`를 고친 경우에만 다시 만듭니다:
 
 ```bash
