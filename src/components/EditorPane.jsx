@@ -44,6 +44,7 @@ import { atomicDeleteRange, atomicStep } from '../lib/atomicTokens.js'
 import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
+import { sortLinesEdit } from '../lib/lineSort.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
@@ -1156,6 +1157,21 @@ export function EditorPane({ text, onChange, disabled }) {
         })
         return
       }
+    }
+    // Ctrl+` — 선택에 걸친 줄들을 이름순(가나다·ABC·숫자 크기순)으로 정렬하고, 이미 오름차순이면 내림차순으로 뒤집는다. 선택이
+    // 없거나 한 줄뿐이거나 코드블록 여는·닫는 줄이 들어 있으면 sortLinesEdit 가 null 을 줘서 지나간다(규칙은 lib/lineSort.js).
+    // 백틱은 키보드 배열에 따라 e.key 가 다를 수 있어 물리 키(e.code)도 본다.
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '`' || e.code === 'Backquote')) {
+      const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
+      e.preventDefault()
+      if (edit) {
+        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd)
+        })
+      }
+      return
     }
     // Ctrl+D — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 아래에 복제한다. MySQL Workbench 의 줄 복제와 같고
     // 문서 어디서나 된다(처음에는 코드블록 안만 됐다). 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키
