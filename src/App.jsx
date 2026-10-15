@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useAppStore } from './store/useAppStore.js'
 import { isSidebarToggleKey } from './lib/sidebarShortcut.js'
+import { decodeFileNameChars } from '../shared/fileNameChars.js'
 import { modeShortcutTarget } from './lib/modeShortcut.js'
 import { getApi } from './lib/api.js'
 import { FileTree } from './components/FileTree.jsx'
@@ -201,7 +202,7 @@ export default function App() {
     const own = await api.readDefaultTemplate?.(workspacePath, folderPath, true)
     const inherited = own ? null : await api.readDefaultTemplate?.(workspacePath, folderPath)
     const inheritedNote = inherited
-      ? ` (지금은 윗 폴더 ${inherited.folderPath.split(/[\\/]/).pop()} 의 설정 "${inherited.template}" 이 적용 중이며, 여기에 정하면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다)`
+      ? ` (지금은 윗 폴더 ${decodeFileNameChars(inherited.folderPath.split(/[\\/]/).pop())} 의 설정 "${inherited.template}" 이 적용 중이며, 여기에 정하면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다)`
       : ''
     const options = [{ value: '', label: '(설정 안 함)' }, ...names.map((n) => ({ value: n, label: n }))]
     // 정해 둔 틀이 지워졌거나 이름이 바뀌었으면 목록에 없는 이름이라도 그대로 보여 준다(고르면 새로 정하는 것).
@@ -256,7 +257,7 @@ export default function App() {
     const own = await api.readAutoCategory?.(workspacePath, folderPath, true)
     const inherited = own ? null : await api.readAutoCategory?.(workspacePath, folderPath)
     const inheritedNote = inherited
-      ? ` — 지금은 윗 폴더(${inherited.folderPath.split(/[\\/]/).pop()})의 설정(${inherited.keywords.join(', ')})이 적용 중이며, 여기에 적으면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다`
+      ? ` — 지금은 윗 폴더(${decodeFileNameChars(inherited.folderPath.split(/[\\/]/).pop())})의 설정(${inherited.keywords.join(', ')})이 적용 중이며, 여기에 적으면 이 폴더 아래에서는 그 설정 대신 이 설정을 씁니다`
       : ''
     const result = await requestPrompt({
       title: `자동 분류 — ${folderName}`,

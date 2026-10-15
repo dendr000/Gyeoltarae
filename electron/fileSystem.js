@@ -1,6 +1,7 @@
 // File-system helpers for the workspace tree: scanning, CRUD on .md documents.
 import fs from 'node:fs'
 import path from 'node:path'
+import { decodeFileNameChars, encodeFileNameChars } from '../shared/fileNameChars.js'
 
 const IGNORED_DIRS = new Set(['.git', 'node_modules', '.wikidesk-trash'])
 const DOC_EXT = '.md'
@@ -11,10 +12,13 @@ const DOC_EXT = '.md'
 // mkdirSync/renameSync with no handling anywhere between here and the UI,
 // so the create/rename just silently does nothing from the user's side.
 // Replacing instead of rejecting means the operation still succeeds.
+// 상용구 제목은 이 규칙이 아니라 아래 %XX 인코딩을 쓰므로 이 정규식은 그쪽에서만 쓴다.
 const ILLEGAL_FILENAME_CHARS_RE = /[<>:"/\\|?*\x00-\x1f]/g
 
+// 못 쓰는 글자는 모양이 같은 전각 글자로 저장한다(":" -> "：", "/" -> "／" ...). 앱에 보여 줄 때는 scan* 함수들이
+// decodeFileNameChars 로 원래 글자로 되돌린다(shared/fileNameChars.js). 예전에는 전부 "_" 로 바꿔서 되돌릴 수 없었다.
 function sanitizeFileNameSegment(segment) {
-  return segment.replace(ILLEGAL_FILENAME_CHARS_RE, '_').trim()
+  return encodeFileNameChars(segment).trim()
 }
 
 // For a plain file/folder name, where "/" is never meaningful.
@@ -85,14 +89,14 @@ export function scanTree(dirPath) {
         if (IGNORED_DIRS.has(entry.name)) continue
         nodes.push({
           type: 'dir',
-          name: entry.name,
+          name: decodeFileNameChars(entry.name),
           path: fullPath,
           children: walk(fullPath),
         })
       } else if (entry.isFile() && isDocFile(entry.name)) {
         nodes.push({
           type: 'file',
-          name: entry.name.slice(0, -DOC_EXT.length),
+          name: decodeFileNameChars(entry.name.slice(0, -DOC_EXT.length)),
           path: fullPath,
         })
       }
@@ -202,9 +206,9 @@ export function scanCategoryPages(workspacePath) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name)
       if (entry.isDirectory()) {
-        walk(fullPath, [...relSegments, entry.name])
+        walk(fullPath, [...relSegments, decodeFileNameChars(entry.name, { keepSlash: true })])
       } else if (entry.isFile() && isDocFile(entry.name)) {
-        const name = [...relSegments, entry.name.slice(0, -DOC_EXT.length)].join('/')
+        const name = [...relSegments, decodeFileNameChars(entry.name.slice(0, -DOC_EXT.length), { keepSlash: true })].join('/')
         results.push({ type: 'file', name, path: fullPath })
       }
     }
@@ -247,8 +251,8 @@ export function scanDataEntries(workspacePath) {
     for (const fileEntry of fs.readdirSync(typeDir, { withFileTypes: true })) {
       if (!fileEntry.isFile() || !isDocFile(fileEntry.name)) continue
       entries.push({
-        type: typeEntry.name,
-        name: fileEntry.name.slice(0, -DOC_EXT.length),
+        type: decodeFileNameChars(typeEntry.name, { keepSlash: true }),
+        name: decodeFileNameChars(fileEntry.name.slice(0, -DOC_EXT.length), { keepSlash: true }),
         path: path.join(typeDir, fileEntry.name),
       })
     }
@@ -297,7 +301,7 @@ export function scanSnippets(workspacePath) {
     for (const fileEntry of fs.readdirSync(catDir, { withFileTypes: true })) {
       if (!fileEntry.isFile() || !isDocFile(fileEntry.name)) continue
       entries.push({
-        category: catEntry.name,
+        category: decodeFileNameChars(catEntry.name, { keepSlash: true }),
         title: decodeSnippetFileName(fileEntry.name.slice(0, -DOC_EXT.length)),
         path: path.join(catDir, fileEntry.name),
       })
@@ -418,7 +422,7 @@ export function readSnippetOrders(workspacePath) {
   for (const catEntry of fs.readdirSync(root, { withFileTypes: true })) {
     if (!catEntry.isDirectory()) continue
     const orderPath = path.join(root, catEntry.name, SNIPPET_ORDER_FILE_NAME)
-    if (fs.existsSync(orderPath)) orders[catEntry.name] = fs.readFileSync(orderPath, 'utf-8')
+    if (fs.existsSync(orderPath)) orders[decodeFileNameChars(catEntry.name, { keepSlash: true })] = fs.readFileSync(orderPath, 'utf-8')
   }
   return orders
 }
@@ -526,9 +530,9 @@ export function scanTemplates(workspacePath) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name)
       if (entry.isDirectory()) {
-        walk(fullPath, [...relSegments, entry.name])
+        walk(fullPath, [...relSegments, decodeFileNameChars(entry.name, { keepSlash: true })])
       } else if (entry.isFile() && isDocFile(entry.name)) {
-        const name = [...relSegments, entry.name.slice(0, -DOC_EXT.length)].join('/')
+        const name = [...relSegments, decodeFileNameChars(entry.name.slice(0, -DOC_EXT.length), { keepSlash: true })].join('/')
         results.push({ type: 'file', name, path: fullPath })
       }
     }
@@ -581,7 +585,7 @@ export function scanImages(workspacePath) {
     .map((entry) => {
       const filePath = path.join(dir, entry.name)
       const ext = path.extname(entry.name)
-      return { name: entry.name.slice(0, -ext.length), ext, path: filePath, dataUrl: toDataUrl(filePath) }
+      return { name: decodeFileNameChars(entry.name.slice(0, -ext.length)), ext, path: filePath, dataUrl: toDataUrl(filePath) }
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
 }
@@ -609,7 +613,7 @@ export function importImage(workspacePath, sourcePath) {
   const baseName = path.basename(sourcePath, ext) || '이미지'
   const destPath = nextAvailableImagePath(dir, baseName, ext)
   fs.copyFileSync(sourcePath, destPath)
-  return { name: path.basename(destPath, ext), ext, path: destPath, dataUrl: toDataUrl(destPath) }
+  return { name: decodeFileNameChars(path.basename(destPath, ext)), ext, path: destPath, dataUrl: toDataUrl(destPath) }
 }
 
 // Same as importImage, but for bytes handed over from the renderer (drag &
@@ -623,7 +627,7 @@ export function importImageData(workspacePath, fileName, buffer) {
   const baseName = path.basename(fileName, ext) || '이미지'
   const destPath = nextAvailableImagePath(dir, baseName, ext)
   fs.writeFileSync(destPath, buffer)
-  return { name: path.basename(destPath, ext), ext, path: destPath, dataUrl: toDataUrl(destPath) }
+  return { name: decodeFileNameChars(path.basename(destPath, ext)), ext, path: destPath, dataUrl: toDataUrl(destPath) }
 }
 
 // Renames just the registered image's own file, keeping its original
@@ -639,7 +643,7 @@ export function renameImage(workspacePath, oldName, newName) {
       (entry) =>
         entry.isFile() &&
         IMAGE_EXTENSIONS.includes(path.extname(entry.name).toLowerCase()) &&
-        entry.name.slice(0, -path.extname(entry.name).length) === oldName,
+        decodeFileNameChars(entry.name.slice(0, -path.extname(entry.name).length)) === oldName,
     )
   if (!match) throw new Error(`이미지를 찾을 수 없습니다: ${oldName}`)
   const ext = path.extname(match.name)
@@ -647,5 +651,5 @@ export function renameImage(workspacePath, oldName, newName) {
   const safeName = sanitizeFileName(newName, oldName)
   const destPath = nextAvailableImagePath(dir, safeName, ext, oldPath)
   fs.renameSync(oldPath, destPath)
-  return { name: path.basename(destPath, ext), ext, path: destPath, dataUrl: toDataUrl(destPath) }
+  return { name: decodeFileNameChars(path.basename(destPath, ext)), ext, path: destPath, dataUrl: toDataUrl(destPath) }
 }

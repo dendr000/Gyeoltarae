@@ -19,6 +19,7 @@ import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
+import { decodeFileNameChars } from '../../shared/fileNameChars.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -260,8 +261,9 @@ const PROTAGONIST_DOC_PREFIX = '00 '
 // track their structure. SCAFFOLD_TRIGGER_NAMES folders get both.
 const CATEGORY_ONLY_TRIGGER_NAMES = new Set(['포켓몬스터'])
 
+// 디스크의 이름은 못 쓰는 글자가 전각(：／ 등)으로 저장돼 있어서, 사용자가 쓴 원래 글자로 풀어서 쓴다(shared/fileNameChars.js).
 function basename(filePath) {
-  return filePath.split(/[\\/]/).pop()
+  return decodeFileNameChars(filePath.split(/[\\/]/).pop())
 }
 
 function dirnameOf(filePath) {
@@ -287,7 +289,8 @@ function dirnameOf(filePath) {
 //    the trigger IS the work folder (e.g. "…/포켓몬스터/전국도감" → work
 //    folder "포켓몬스터" itself, "전국도감" is just a subfolder under it).
 function findWorkFolderContext(dirPath) {
-  const segments = dirPath.split(/[\\/]/)
+  // 폴더 이름이 분류 이름이 되므로 전각만 풀고 슬래시(／)는 둔다 — "/" 는 분류의 계층 구분자라서 풀면 한 이름이 둘로 갈라진다.
+  const segments = dirPath.split(/[\\/]/).map((seg) => decodeFileNameChars(seg, { keepSlash: true }))
   for (let i = 0; i < segments.length; i += 1) {
     if (CATEGORY_ONLY_TRIGGER_NAMES.has(segments[i])) {
       return { workFolderName: segments[i], relSubPath: segments.slice(i + 1).join('/') }

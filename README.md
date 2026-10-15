@@ -155,6 +155,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/mono-font.md`](docs/features/mono-font.md)
 - **Ctrl+E / Ctrl+1·2·3 (화면 모드)**: Ctrl+E 는 뷰어 <-> 편집(듀얼 제외), Ctrl+1/2/3 은 뷰어/듀얼/편집으로 바로 이동. 창(모달)이 떠 있으면 무시. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
 - **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬하고, 다시 누르면 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
+- **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)
 - **Ctrl+M (사이드바 열기·닫기)**: 왼쪽 문서/폴더 목록 사이드바를 열고 닫음. 편집 중에도 됨. [`docs/features/sidebar-toggle.md`](docs/features/sidebar-toggle.md)
 - **Ctrl+D (줄 복제)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 문서 어디서나
   됨(문단·표 줄·목록·코드블록). 코드블록 구조를 깨는 줄(여는/닫는 ``` 줄만)은 복제하지 않음.

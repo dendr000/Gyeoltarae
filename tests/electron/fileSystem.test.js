@@ -147,12 +147,12 @@ describe('renamePath — 이름 변경', () => {
     expect(fs.readFileSync(path.join(renamed, '능력.md'), 'utf-8')).toBe('능력')
   })
 
-  it('Windows에서 쓸 수 없는 글자("?", ":" 등)는 밑줄로 바뀌어 이름 변경이 실패하지 않는다', () => {
+  it('Windows에서 쓸 수 없는 글자("?", ":" 등)는 모양이 같은 전각 글자로 저장되어 이름 변경이 실패하지 않는다', () => {
     const src = put('A/문서.md')
 
     const renamed = renamePath(src, '질문? 부제: 이야기')
 
-    expect(path.basename(renamed)).toBe('질문_ 부제_ 이야기.md')
+    expect(path.basename(renamed)).toBe('질문？ 부제： 이야기.md')
     expect(fs.existsSync(renamed)).toBe(true)
   })
 })

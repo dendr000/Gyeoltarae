@@ -6,6 +6,7 @@
 //   → [[분류:DBMS]] [[분류:외래키]].
 // 항목을 `글자>분류이름`(예: 외래키>DBMS/외래키)으로 적으면 글자를 찾았을 때 분류는 그 분류 이름으로 넣는다.
 // 작품 폴더(소설·웹툰·만화)의 구조 기반 자동 분류(store/useAppStore.js 의 findWorkFolderContext)와는 별개다.
+import { decodeFileNameChars } from '../../shared/fileNameChars.js'
 
 // 설정은 그 폴더 안의 숨김 파일 하나에 저장한다 — 폴더를 옮기거나 이름을 바꿔도 설정이 같이 따라가도록.
 // (electron/fileSystem.js 의 AUTO_CATEGORY_FILE_NAME 과 같은 이름이어야 하며 시험이 확인한다.)
@@ -61,7 +62,11 @@ export function relativeSegments(configFolderPath, dirPath) {
   const base = normalizePath(configFolderPath)
   const dir = normalizePath(dirPath)
   if (dir === base || !dir.startsWith(`${base}/`)) return []
-  return dir.slice(base.length + 1).split('/')
+  // 디스크의 전각 글자(：／ 등)를 사용자가 쓴 원래 글자로 풀어서 글자를 찾는다(shared/fileNameChars.js).
+  return dir
+    .slice(base.length + 1)
+    .split('/')
+    .map((segment) => decodeFileNameChars(segment))
 }
 
 // 이름들(폴더 이름들 + 문서 이름, 이 순서) 중에서 읽어들일 글자가 들어 있는 것을 찾아 **넣을 분류 이름들**을 돌려준다.

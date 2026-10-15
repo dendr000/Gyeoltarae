@@ -86,6 +86,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/snippetScope.test.js` | 상용구 활성 폴더 범위 선별, 모달을 닫은 뒤의 활성 폴더 | 순수 함수 |
 | `tests/store/modals.test.js` | 상용구·사전 모달 열림 상태와 선택 글자 미리 채우기, 추천 팝업 토글, 닫으면 '전체'로 복귀(켜짐/꺼짐) | mockApi |
 | `tests/electron/fileSystem.test.js` | 문서·폴더 이동, 이름 변경, 새 문서 기본 틀, 사이드바 트리 읽기, 상용구 단축어 파일 이름(`*` 등 못 쓰는 글자) | **진짜 디스크**(임시 폴더를 만들고 끝나면 지움) |
+| `tests/electron/fileNameChars.test.js` | 못 쓰는 글자 9개의 전각 변환·왕복·제어 문자, 문서·폴더·분류·틀·자료·상용구 카테고리·이미지의 저장과 읽기(분류 계층 `/` 유지), 화면 쪽 연결 소스 점검 | **진짜 디스크**(임시 폴더) · 순수 함수 · 소스 검사 |
 | `tests/store/fileOperations.test.js` | 작품 폴더 스캐폴드, 주인공 폴더 ↔ `00` 문서 연동, 분류 태그 갱신, 폴더 이동, 삭제 | mockApi |
 | `tests/store/tabs.test.js` | 탭 열기·닫기, 전환 시 저장 안 된 입력 보존, 폴더 이동·이름 변경 시 탭 경로 갱신 | mockApi |
 
