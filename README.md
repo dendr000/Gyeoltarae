@@ -165,6 +165,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Ctrl+Shift+` (묶음 정렬)**: 선택한 줄들을 묶음(맨 윗줄 + 딸린 들여쓴 줄) 단위로 이름순 정렬. `* 항목`·`1. 항목`·들여쓰기·빈 줄로 묶음을 나누고, 번호 목록은 번호를 제자리에 둠. [`docs/features/block-sort.md`](docs/features/block-sort.md)
 - **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)
 - **Ctrl+M (사이드바 열기·닫기)**: 왼쪽 문서/폴더 목록 사이드바를 열고 닫음. 편집 중에도 됨. [`docs/features/sidebar-toggle.md`](docs/features/sidebar-toggle.md)
+- **문서 찾기·바꾸기의 줄바꿈**: 찾을 내용·바꿀 내용 칸에서 Shift+Enter 로 줄바꿈을 넣거나 여러 줄을 붙여 넣어 줄바꿈까지 찾고 바꿈(`
+` 표기 없이 보이는 대로). 이전 찾기는 Ctrl+Enter/Shift+F3, 다음은 Enter/F3. 현재 찾은 글을 노란 배경으로 표시, 모두 바꾸기는 Ctrl+Z 한 번으로 되돌림. [`docs/features/doc-find-multiline.md`](docs/features/doc-find-multiline.md)
 - **Ctrl+D (줄 복제)**: 현재 줄(여러 줄을 선택했으면 그 줄들)을 바로 아래에 복제 — MySQL Workbench 와 같음. 문서 어디서나
   됨(문단·표 줄·목록·코드블록). 코드블록 구조를 깨는 줄(여는/닫는 ``` 줄만)은 복제하지 않음.
   자세히: [`docs/features/code-line-duplicate.md`](docs/features/code-line-duplicate.md)

@@ -46,6 +46,7 @@ import { moveToLineEdge } from '../lib/lineEdge.js'
 import { indentLinesEdit } from '../lib/lineIndent.js'
 import { sortLinesEdit } from '../lib/lineSort.js'
 import { blockSortEdit } from '../lib/blockSort.js'
+import { findAllMatches, isMatchCurrent, nearestMatchIndex, offsetToLineColumn, replaceAllEdit } from '../lib/docFind.js'
 import { canTypewrite, isTypewriterNavKey, typewriterScrollTop } from '../lib/typewriterScroll.js'
 import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
@@ -212,32 +213,6 @@ function detectFileRefQuery(textarea) {
   const afterOpen = upToCursor.slice(openIdx + FILE_REF_OPEN_TOKEN.length)
   if (afterOpen.includes('[[') || afterOpen.includes(']]') || afterOpen.includes('|')) return null
   return { start: lineStart + openIdx + FILE_REF_OPEN_TOKEN.length, end: pos, query: afterOpen }
-}
-
-// 현재 문서 안 찾기/찾아 바꾸기(Ctrl+F / Ctrl+Shift+F)용 — 사이드바의 "제목·내용 검색"은
-// 워크스페이스 전체를 뒤지는 전역 검색이라 이거랑 별개. 대소문자 구분 안 함, 일반 부분
-// 문자열 매치(정규식 아님) — 찾기 기능 대부분이 그렇듯 이 정도면 충분하고, 사용자가 입력한
-// 문자를 정규식 특수문자로 오인할 걱정도 없앰.
-function findAllMatches(haystack, query) {
-  if (!query) return []
-  const lowerHay = haystack.toLowerCase()
-  const lowerQuery = query.toLowerCase()
-  const matches = []
-  let idx = 0
-  while (true) {
-    const found = lowerHay.indexOf(lowerQuery, idx)
-    if (found === -1) break
-    matches.push({ start: found, end: found + query.length })
-    idx = found + query.length
-  }
-  return matches
-}
-
-// cursorPos 바로 뒤(또는 그 자리)의 첫 매치, 없으면(전부 커서보다 앞이면) 처음으로 순환.
-function nearestMatchIndex(matches, cursorPos) {
-  if (matches.length === 0) return -1
-  const idx = matches.findIndex((m) => m.start >= cursorPos)
-  return idx === -1 ? 0 : idx
 }
 
 // 상용구 자동완성(추천 팝업) — 규칙은 lib/snippetMatch.js. 선택 영역이 있으면 찾지 않는다.
@@ -499,6 +474,15 @@ function renderHighlightLines(text, marks) {
       </div>
     )
   })
+}
+
+// 글 안의 위치(offset)에 해당하는 배경판(줄마다 <div> 하나)의 지점 [노드, 칸]. 빈 줄(<br>)이면 그 줄 요소의 맨 앞이다. 없으면 null.
+function backdropPoint(backdrop, text, offset) {
+  const { line, column } = offsetToLineColumn(text, offset)
+  const row = backdrop.children[line]
+  if (!row) return null
+  const node = row.firstChild
+  return node && node.nodeType === Node.TEXT_NODE ? [node, Math.min(column, node.length)] : [row, 0]
 }
 
 function ToolbarButton({ icon: Icon, label, title, onClick, active = false }) {
@@ -851,11 +835,14 @@ export function EditorPane({ text, onChange, disabled }) {
   // 위치가 보이게 스크롤 — 텍스트가에어리어엔 "이 매치들 전부 하이라이트" 같은 기능이
   // 없어서(플레인 텍스트 요소라 오버레이 없이는 불가능), 브라우저 기본 선택 하이라이트로
   // 현재 매치 하나만 표시하는 식으로 단순화함(대부분의 찾기 기능이 실제로 이렇게 동작함).
+  //
+  // 편집기로 포커스를 옮기지 않는다 — 옮기면 찾기 칸에서 글을 칠 때 첫 글자에서 포커스가 편집기로 넘어가 다음 글자가 문서의 선택된
+  // 글을 덮어쓰고, Enter(다음 찾기)를 거듭 누르면 문서에 줄바꿈이 들어갔다(2026-10-15 발견). 포커스가 없는 입력칸은 선택 색이
+  // 그려지지 않으므로, 현재 찾은 글은 아래 effect(find-current)가 편집기 뒤쪽 표시층에 따로 칠한다.
   function selectFindMatch(index, matches) {
     const textarea = textareaRef.current
     const match = matches[index]
     if (!textarea || !match) return
-    textarea.focus()
     textarea.setSelectionRange(match.start, match.end)
     const contentTop = getContentTopOffset(textarea, match.start)
     textarea.scrollTop = Math.max(0, contentTop - textarea.clientHeight / 3)
@@ -887,6 +874,23 @@ export function EditorPane({ text, onChange, disabled }) {
     })
   }
 
+  // 현재 찾은 글을 편집기 뒤쪽 표시층(배경판)에 칠한다 — 찾기 칸에 포커스가 있어도 어디가 찾은 글인지 보이게 하려는 것이다.
+  // CSS 사용자 지정 강조(CSS.highlights)로 칠하고(스타일: App.css 의 ::highlight(find-current)), 찾기 바를 닫거나 글이 바뀌어 그 자리가
+  // 더 이상 찾은 글이 아니면 지운다. 규칙: lib/docFind.js 의 isMatchCurrent·offsetToLineColumn.
+  useEffect(() => {
+    const backdrop = backdropRef.current
+    const match = findBar?.matches[findBar.currentIndex]
+    if (!backdrop || !isMatchCurrent(text, match, findBar?.query) || typeof Highlight === 'undefined' || !CSS.highlights) return undefined
+    const start = backdropPoint(backdrop, text, match.start)
+    const end = backdropPoint(backdrop, text, match.end)
+    if (!start || !end) return undefined
+    const range = document.createRange()
+    range.setStart(...start)
+    range.setEnd(...end)
+    CSS.highlights.set('find-current', new Highlight(range))
+    return () => CSS.highlights.delete('find-current')
+  }, [findBar, text])
+
   function closeFindBar() {
     setFindBar(null)
     textareaRef.current?.focus()
@@ -914,26 +918,35 @@ export function EditorPane({ text, onChange, disabled }) {
     setFindBar((prev) => prev && { ...prev, currentIndex })
   }
 
+  // replaceRange 는 편집기에 포커스를 줘야 글을 바꿀 수 있어서(execCommand), 바꾼 뒤에 포커스를 원래 입력칸으로 돌려 놓는다 —
+  // 그러지 않으면 바꿀 내용 칸에서 Enter 를 거듭 눌렀을 때 두 번째부터 문서에 줄바꿈이 들어간다.
+  function restoreFocus(element) {
+    if (element && element !== textareaRef.current && element.isConnected) element.focus()
+  }
+
   function replaceCurrentMatch() {
     const textarea = textareaRef.current
     if (!textarea || !findBar || findBar.currentIndex === -1) return
+    const previousFocus = document.activeElement
     const { start, end } = findBar.matches[findBar.currentIndex]
     replaceRange(textarea, start, end, findBar.replaceQuery, onChange)
     const matches = findAllMatches(textarea.value, findBar.query)
     const currentIndex = nearestMatchIndex(matches, start + findBar.replaceQuery.length)
     if (currentIndex !== -1) selectFindMatch(currentIndex, matches)
     setFindBar((prev) => prev && { ...prev, matches, currentIndex })
+    restoreFocus(previousFocus)
   }
 
   function replaceAllMatches() {
     const textarea = textareaRef.current
     if (!textarea || !findBar || findBar.matches.length === 0) return
-    // 뒤에서부터 바꿔야 앞쪽을 바꿔도 아직 처리 안 한 뒤쪽 매치의 오프셋이 안 밀림.
-    for (let i = findBar.matches.length - 1; i >= 0; i -= 1) {
-      const { start, end } = findBar.matches[i]
-      replaceRange(textarea, start, end, findBar.replaceQuery, onChange)
-    }
+    // 모두 바꾸기는 한 번의 편집으로 한다(lib/docFind.js 의 replaceAllEdit) — 줄바꿈처럼 매치가 수천 개여도 느리지 않고, Ctrl+Z 한 번으로
+    // 전부 되돌아온다. 예전에는 매치마다 따로 바꿔서 매치 수만큼 느리고 되돌리기도 그만큼 눌러야 했다.
+    const previousFocus = document.activeElement
+    const edit = replaceAllEdit(textarea.value, findBar.matches, findBar.replaceQuery)
+    if (edit) replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
     setFindBar((prev) => prev && { ...prev, matches: [], currentIndex: -1 })
+    restoreFocus(previousFocus)
   }
 
   // 타자기 스크롤 — 커서 줄의 가운데가 편집창의 고른 구역(typewriterZone)에 오도록 편집창을 스크롤한다. 끔(0)이면 아무것도 하지 않는다.
