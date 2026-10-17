@@ -659,6 +659,39 @@
   font-size: 17px;
 }
 
+/* 문단 접기(뷰어): 접을 수 있는 제목(.wiki-foldable)은 왼쪽에 화살표가 있고 누르면 바로 뒤의 구역 본문(.wiki-section-body)이 접힌다.
+   접힘 상태는 data-folded 가 정한다(글의 ==# 제목 #== 은 처음부터 "true"). 화살표는 CSS 로 그린 꺾쇠다. */
+.wiki-rendered .wiki-foldable {
+  position: relative;
+  padding-left: 22px;
+  cursor: pointer;
+}
+
+.wiki-rendered .wiki-foldable::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0.5;
+  transform: translateY(-75%) rotate(45deg);
+}
+
+.wiki-rendered .wiki-foldable:hover::before {
+  opacity: 1;
+}
+
+.wiki-rendered .wiki-foldable[data-folded='true']::before {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.wiki-rendered .wiki-foldable[data-folded='true'] + .wiki-section-body {
+  display: none;
+}
+
 .wiki-rendered p {
   margin: 10px 0;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { parseWikiText, groupByChoseong, extractCategories } from '../lib/wikiParser.js'
 import { FloatingToc } from './FloatingToc.jsx'
 import { ContextMenu } from './ContextMenu.jsx'
@@ -7,6 +7,7 @@ import { getApi } from '../lib/api.js'
 import { getViewerScroll, setViewerScroll } from '../lib/scrollMemory.js'
 import { copyCodeBlock } from '../lib/codeCopy.js'
 import { toStraightQuotes } from '../lib/smartQuotes.js'
+import { applyFoldOverrides, findFoldHeading, toggleFold, unfoldAncestors } from '../lib/sectionFoldDom.js'
 
 function dirnameOf(filePath) {
   const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
@@ -19,7 +20,18 @@ function dirnameOf(filePath) {
 // real page/entry/template/doc file exists for the target.
 function handleWikiContentClick(
   e,
-  { onOpenCategory, onOpenDataEntry, onOpenTemplate, onOpenDoc, onCreateLinkedDoc, onAmbiguousLink, onAnchorLink, onEditHeading },
+  {
+    onOpenCategory,
+    onOpenDataEntry,
+    onOpenTemplate,
+    onOpenDoc,
+    onCreateLinkedDoc,
+    onAmbiguousLink,
+    onAnchorLink,
+    onEditHeading,
+    onFoldChange,
+    onJumpToHeading,
+  },
 ) {
   // Only the main document view passes onEditHeading (see ViewerPane's
   // own parseWikiText call and requestEditorJump) — category/data/template
@@ -84,6 +96,21 @@ function handleWikiContentClick(
     e.preventDefault()
     getApi().softRefocusWindow?.()
     onAmbiguousLink(ambiguousLink.dataset.docTarget, e.clientX, e.clientY)
+    return
+  }
+  // 본문의 목차 링크: 접힌 문단 안의 제목이면 먼저 펴고 이동한다(메인 문서 화면만 onJumpToHeading 을 넘긴다).
+  const tocLink = e.target.closest('.wiki-toc a')
+  if (tocLink && onJumpToHeading) {
+    e.preventDefault()
+    onJumpToHeading(tocLink.getAttribute('href').slice(1))
+    return
+  }
+  // 문단 접기: 접을 수 있는 제목(.wiki-foldable)을 누르면 접고 펼친다. 글자를 드래그해서 고른 직후의 클릭은 접지 않는다.
+  const foldHeading = findFoldHeading(e.target)
+  if (foldHeading) {
+    const selection = window.getSelection?.()
+    if (selection && !selection.isCollapsed) return
+    onFoldChange?.(foldHeading.id, toggleFold(foldHeading))
   }
 }
 
@@ -424,6 +451,27 @@ function TemplateView({
   )
 }
 
+// 문단 접기: 사용자가 접거나 편 상태를 문서 경로별로 기억한다(id -> 접힘 여부). 듀얼 모드에서 글을 고칠 때마다 html 이 다시 그려져 모든 제목이
+// 글에 적힌 처음 상태로 돌아가므로, 그릴 때마다 이 값을 다시 입힌다(아래 useLayoutEffect).
+const foldOverridesByPath = new Map()
+
+function rememberFold(id, folded) {
+  const path = useAppStore.getState().openPath ?? ''
+  if (!foldOverridesByPath.has(path)) foldOverridesByPath.set(path, new Map())
+  foldOverridesByPath.get(path).set(id, folded)
+}
+
+// 목차·[[문서#제목]] 이동: 대상이 접힌 문단 안에 숨어 있으면 먼저 펴고(기억해 둔다) 스크롤한다.
+function revealAndScroll(element) {
+  for (const heading of unfoldAncestors(element)) rememberFold(heading.id, false)
+  element.scrollIntoView({ behavior: 'auto', block: 'start' })
+}
+
+function jumpToHeadingId(id) {
+  const element = document.getElementById(id)
+  if (element) revealAndScroll(element)
+}
+
 export function ViewerPane({ text, emptyHint }) {
   const openPath = useAppStore((s) => s.openPath)
   const workspacePath = useAppStore((s) => s.workspacePath)
@@ -503,7 +551,7 @@ export function ViewerPane({ text, emptyHint }) {
   const scrollToAnchor = useCallback((anchorName, attemptsLeft = 10) => {
     const el = document.getElementById(`h-${anchorName}`) ?? document.getElementById(`anchor-${anchorName}`)
     if (el) {
-      el.scrollIntoView({ behavior: 'auto', block: 'start' })
+      revealAndScroll(el)
       return
     }
     if (attemptsLeft <= 0) return
@@ -538,6 +586,11 @@ export function ViewerPane({ text, emptyHint }) {
     () => parseWikiText(text, { dataIndex, templateIndex, docIndex, imageIndex, editableOffsets: true }),
     [text, dataIndex, templateIndex, docIndex, imageIndex],
   )
+
+  // 글이 다시 그려지면 접힌 상태가 글에 적힌 처음 상태로 돌아가므로, 사용자가 접거나 편 상태를 다시 입힌다(화면에 그려지기 전에).
+  useLayoutEffect(() => {
+    applyFoldOverrides(scrollRef.current?.querySelector('.wiki-rendered'), foldOverridesByPath.get(openPath ?? ''))
+  }, [html, openPath])
 
   const categoryEntry = useMemo(() => {
     const base = categoryIndex[viewingCategory] ?? {
@@ -574,6 +627,8 @@ export function ViewerPane({ text, emptyHint }) {
         onAmbiguousLink: handleAmbiguousLink,
         onAnchorLink: handleAnchorLink,
         onEditHeading: requestEditorJump,
+        onFoldChange: rememberFold,
+        onJumpToHeading: jumpToHeadingId,
       }),
     [
       openCategory,
@@ -711,7 +766,7 @@ export function ViewerPane({ text, emptyHint }) {
       >
         <div className="wiki-rendered" dangerouslySetInnerHTML={{ __html: html }} />
       </div>
-      <FloatingToc toc={toc} />
+      <FloatingToc toc={toc} onJump={jumpToHeadingId} />
       {linkMenuEl}
     </div>
   )

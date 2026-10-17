@@ -6,6 +6,7 @@ import { matchCodeFenceOpen, isCodeFenceClose } from './codeFence.js'
 import { resolveCodeLanguage, highlightCode } from './codeHighlight.js'
 import { applySmartQuotes } from './smartQuotes.js'
 import { preserveSpaces } from './preserveSpaces.js'
+import { wrapSections } from './sectionFold.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -474,7 +475,9 @@ function applyInline(text, footnotes, docIndex = {}) {
 const TOC_PLACEHOLDER = '@@WIKIDESK_TOC_PLACEHOLDER@@'
 const TAG_LINE_RE = /^(?:\s*#[^\s#]+)+\s*$/
 const TAG_TOKEN_RE = /#([^\s#]+)/g
-const HEADING_EQ_RE = /^(={1,6})[ \t]*(.+?)[ \t]*\1$/
+// 제목: `== 제목 ==` (펼친 채로), `==# 제목 #==` (처음부터 접힌 채로 — 나무위키와 같음). 두 번째 묶음이 접힘 표시(#)이고, 닫는 쪽에도
+// 같은 표시가 있어야 접힌 제목이다(한쪽에만 있으면 # 는 제목 글자로 본다).
+const HEADING_EQ_RE = /^(={1,6})(#?)[ \t]*(.+?)[ \t]*\2\1$/
 // 대시 3~7개. 나무위키 문법은 4~7개(굵기 4단계)인데, 마크다운처럼 3개만 써도 구분선이
 // 되도록 3개도 받는다(굵기는 4개와 같은 가장 얇은 것).
 const HR_RE = /^(-{3,7})$/
@@ -612,13 +615,13 @@ function slugifyHeading(text) {
 // wrong place (or nowhere) for it and everything after.
 function createRawHeadingOffsetFinder(rawSource) {
   const source = rawSource ?? ''
-  const re = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/gm
+  const re = /^[ \t]*(={1,6})(#?)[ \t]*(.+?)[ \t]*\2\1[ \t]*$/gm
   let cursor = 0
   return function find(level, text) {
     re.lastIndex = cursor
     let m
     while ((m = re.exec(source))) {
-      if (m[1].length === level && m[2] === text) {
+      if (m[1].length === level && m[3] === text) {
         cursor = re.lastIndex
         return m.index
       }
@@ -1575,7 +1578,8 @@ export function parseWikiText(
     if (heading) {
       flush()
       const level = heading[1].length
-      const text = heading[2]
+      const startsFolded = heading[2] === '#'
+      const text = heading[3]
       const id = slugifyHeading(text)
       const number = nextHeadingNumber(level)
       toc.push({ level, text, id, number })
@@ -1584,9 +1588,16 @@ export function parseWikiText(
         rawOffset === undefined
           ? ''
           : ` <a href="#" class="wiki-heading-edit-link" data-source-offset="${rawOffset}">[편집]</a>`
-      htmlParts.push(
-        `<h${level} id="${id}"><span class="wiki-heading-number">${number}.</span> ${applyInline(text, footnotes, docIndex)}${editLink}</h${level}>`,
-      )
+      const headingInner = `<span class="wiki-heading-number">${number}.</span> ${applyInline(text, footnotes, docIndex)}${editLink}`
+      // 제목 아래 내용이 있어서 접을 수 있을 때만 접기 표시를 붙인다(wrapSections 가 알려 준다). 구역 묶기는 본문을 다 읽은 뒤에 한다.
+      htmlParts.push({
+        heading: true,
+        level,
+        build: (foldable) =>
+          foldable
+            ? `<h${level} id="${id}" class="wiki-heading wiki-foldable" data-folded="${startsFolded}">${headingInner}</h${level}>`
+            : `<h${level} id="${id}">${headingInner}</h${level}>`,
+      })
       continue
     }
 
@@ -1637,6 +1648,9 @@ export function parseWikiText(
   }
 
   flush()
+
+  // 제목과 그 아래 내용을 구역으로 묶는다(뷰어 문단 접기, lib/sectionFold.js). 각주 목록은 구역 밖(맨 아래)이라 아래에서 붙인다.
+  htmlParts.splice(0, htmlParts.length, ...wrapSections(htmlParts))
 
   if (footnotes.length > 0) {
     const items = footnotes
