@@ -52,6 +52,7 @@ import { INDENT } from '../lib/indentUnit.js'
 import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
 import { lineIndexAt } from '../lib/lineMarks.js'
+import { headingLineFlags } from '../lib/editorHeading.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -453,19 +454,19 @@ const NO_MARKS = []
 // 줄 여백(점·줄 번호)이 차지하는 왼쪽 폭(px) — 이 안을 누르면 글 커서 대신 줄 강조를 켜고 끈다. App.css 의 --editor-pad-left 보다 작아야 한다.
 const GUTTER_WIDTH = 56
 
-const HEADING_LINE_RE = /^[ \t]*(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$/
-
 // 입력칸(textarea) 뒤에 같은 글을 보이지 않게 겹쳐 그리는 "배경판"의 내용. 글 한 줄(논리 줄)마다 block 하나(div.eline)를
 // 만든다 — 줄바꿈 문자를 따로 넣지 않으므로(block 은 앞뒤가 자동으로 줄 경계) 이전에 제목 span 안의 줄바꿈 문자가 빈 줄을
 // 하나 더 만들어 높이가 어긋나던 문제(docs/troubleshooting.md 2026-10-02)가 생기지 않는다. 줄마다 block 이면
 // 줄 번호(CSS counter)를 그 줄의 첫 화면 줄 옆에 붙이고, 줄 위치(offsetTop)를 바로 읽어 점 클릭의 줄을 찾을 수 있다.
 // 입력칸과 같은 폭·글꼴·줄 높이·여백이어야 줄 위치가 맞는다(App.css 의 .editor-highlight-backdrop 와
 // tests/components/editorLayers.test.js 참고).
-function renderHighlightLines(text, marks) {
+function renderHighlightLines(text, marks, headingOn = true) {
   const marked = new Set(marks)
+  // 제목 줄 판단은 lib/editorHeading.js — 코드블록(```) 안의 줄은 제목처럼 생겨도 제외한다. 설정(메뉴 "설정" > "제목 강조")을 끄면 제목 줄도 자동 강조가 없다.
+  const headingFlags = headingLineFlags(text)
   return text.split('\n').map((line, i) => {
-    const heading = HEADING_LINE_RE.test(line)
-    // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
+    const heading = headingOn && headingFlags[i]
+    // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄(코드블록 안 포함)은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
     const className = heading ? 'eline eline-on eline-heading' : marked.has(i) ? 'eline eline-on' : 'eline'
     // 빈 줄은 <br> 로 한 줄 높이를 만든다(내용이 없으면 block 의 높이가 0 이 되어 입력칸과 줄 수가 어긋난다).
     return (
@@ -510,7 +511,9 @@ export function EditorPane({ text, onChange, disabled }) {
   const toggleLineMark = useAppStore((s) => s.toggleLineMark)
   const lineMarks = useAppStore((s) => (s.openPath ? s.lineMarks[s.openPath] : undefined) ?? NO_MARKS)
   const [gutterHover, setGutterHover] = useState(null) // { line, top, on } — 점이 보일 줄
-  const highlightLines = useMemo(() => renderHighlightLines(text, lineMarks), [text, lineMarks])
+  // 메뉴 "설정" > "제목 강조": 꺼 두면 제목 줄(=제목=)에 배경을 얹지 않는다(기본 켜짐).
+  const headingHighlight = useAppStore((s) => s.headingHighlight)
+  const highlightLines = useMemo(() => renderHighlightLines(text, lineMarks, headingHighlight), [text, lineMarks, headingHighlight])
   const [tableModal, setTableModal] = useState(null)
   const [gradientModal, setGradientModal] = useState(null)
   const [fileSuggest, setFileSuggest] = useState(null)

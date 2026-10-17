@@ -22,6 +22,8 @@ export function createSettingsMenu({
   onSortFlipChange,
   getTypewriterZone = () => 0,
   onTypewriterZoneChange = () => {},
+  getHeadingHighlight = () => true,
+  onHeadingHighlightChange = () => {},
 }) {
   return {
     label: '설정',
@@ -32,6 +34,13 @@ export function createSettingsMenu({
         checked: getSortFlip() === true,
         // Electron 이 클릭하면 체크 상태를 먼저 바꾼 뒤 menuItem 을 넘겨 주므로 menuItem.checked 가 바뀐 값이다.
         click: (menuItem) => onSortFlipChange(menuItem.checked === true),
+      },
+      {
+        // 편집 모드에서 제목 줄(=제목=)에 배경을 얹어 강조할지(기본 켜짐). 끄면 제목 줄도 일반 줄처럼 보인다.
+        label: '제목 강조',
+        type: 'checkbox',
+        checked: getHeadingHighlight() !== false,
+        click: (menuItem) => onHeadingHighlightChange(menuItem.checked === true),
       },
       { type: 'separator' },
       {

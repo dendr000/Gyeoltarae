@@ -99,7 +99,11 @@ function loadConfig() {
 // 화면(settings:get)과 메뉴가 같은 값을 보도록 읽는 곳을 여기 하나로 둔다.
 function readSettings() {
   const config = loadConfig()
-  return { sortFlip: config.sortFlip === true, typewriterZone: normalizeTypewriterZone(config.typewriterZone) }
+  return {
+    sortFlip: config.sortFlip === true,
+    typewriterZone: normalizeTypewriterZone(config.typewriterZone),
+    headingHighlight: config.headingHighlight !== false, // 제목 강조는 기본 켜짐 — 꺼 둔(false) 때만 꺼짐
+  }
 }
 
 function saveConfig(config) {
@@ -325,6 +329,11 @@ function buildMenu() {
       getTypewriterZone: () => readSettings().typewriterZone,
       onTypewriterZoneChange: (typewriterZone) => {
         saveConfig({ ...loadConfig(), typewriterZone })
+        mainWindow?.webContents.send('settings:changed', readSettings())
+      },
+      getHeadingHighlight: () => readSettings().headingHighlight,
+      onHeadingHighlightChange: (headingHighlight) => {
+        saveConfig({ ...loadConfig(), headingHighlight })
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
     }),
