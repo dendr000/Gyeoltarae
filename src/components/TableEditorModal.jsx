@@ -22,6 +22,8 @@ import { TableFindBar } from './TableFindBar.jsx'
 import { useTableFind } from './useTableFind.js'
 import { useAutoFillDrag } from './useAutoFillDrag.js'
 import { useGridHistory } from './useGridHistory.js'
+import { TableEditorHelp } from './TableEditorHelp.jsx'
+import { BOLD_MARK, UNDERLINE_MARK, toggleInlineMark } from '../lib/tableInline.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
 import { useTableFormat } from './useTableFormat.js'
 
@@ -193,6 +195,14 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // 다시 그려진 뒤(아래 useEffect)에 포커스를 준다.
   const inputRefs = useRef({})
   const pendingFocusRef = useRef(null)
+  // 글자 서식 단축키(applyInlineMark)로 글이 바뀐 뒤, 다시 그려진 입력칸에 원래 선택(씌운 글자)을 되돌려 이어서 누를 수 있게 한다.
+  const pendingSelectionRef = useRef(null)
+  useEffect(() => {
+    const pending = pendingSelectionRef.current
+    if (!pending) return
+    pendingSelectionRef.current = null
+    if (pending.element.isConnected) pending.element.setSelectionRange(pending.start, pending.end)
+  })
 
   function focusCellInput(r, c) {
     const input = inputRefs.current[`${r}:${c}`]
@@ -441,6 +451,34 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // not a native DOM edit — see EditorPane.jsx's replaceRange for the same
   // class of bug and why execCommand-based edits avoid it), so Ctrl+Z
   // afterward didn't restore the pre-paste text either.
+  // 창 바깥(어두운 배경)을 빠르게 두 번 클릭해야 닫힌다 — 한 번 클릭으로 닫히면 작업 중이던 표가 실수로 날아간다. 창 안쪽에서 일어난
+  // 더블클릭(칸의 글자를 더블클릭해 고르는 등)은 여기까지 올라오므로, 배경 자체를 눌렀을 때만 닫는다.
+  function handleBackdropDoubleClick(e) {
+    if (e.target === e.currentTarget) onCancel()
+  }
+
+  // 칸 안에서 선택한 글자에 굵게('''…''')·밑줄(__…__)을 씌우거나 벗긴다(lib/tableInline.js). 글자를 고르지 않았을 때 Ctrl+B 는 선택 범위
+  // 전체 굵게(툴바의 굵게 단추와 같음), Ctrl+U 는 표시 한 쌍을 넣고 그 사이에 커서를 둔다. 바꾼 뒤 선택은 다시 그려진 뒤(위의 useEffect) 되돌린다.
+  function applyInlineMark(kind) {
+    const toggleWholeBold = () => updateRange({ bold: !focusedCellData?.bold })
+    const el = document.activeElement
+    const inGridCell = el?.tagName === 'INPUT' && Boolean(el.closest('.table-editor-grid'))
+    const inContentBox = el?.id === 'table-editor-cell-content-input'
+    if (!inGridCell && !inContentBox) {
+      if (kind === 'bold') toggleWholeBold()
+      return
+    }
+    const mark = kind === 'bold' ? BOLD_MARK : UNDERLINE_MARK
+    const result = toggleInlineMark(el.value, el.selectionStart, el.selectionEnd, mark, { insertEmpty: kind === 'underline' })
+    if (!result) {
+      toggleWholeBold()
+      return
+    }
+    const [r, c] = inGridCell ? el.closest('td').dataset.cell.split(':').map(Number) : [focusCell.r, focusCell.c]
+    pendingSelectionRef.current = { element: el, start: result.selStart, end: result.selEnd }
+    updateCell(r, c, { text: result.text })
+  }
+
   function handleGridKeyDown(e) {
     const mod = (e.ctrlKey || e.metaKey) && !e.altKey
     // Ctrl+F — 찾아 바꾸기 열기(Ctrl+Shift+F 도 같음, 문서 편집기와 같은 키). 입력칸에 글자를 골라 둔 채 누르면 그 글자로 찾는다.
@@ -475,6 +513,17 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     if (mod && !e.shiftKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
       e.preventDefault()
       if (ops.fillDown.enabled) runOp(ops.fillDown)
+      return
+    }
+    // Ctrl+B 굵게 / Ctrl+U 밑줄 — 문서 편집기와 같은 키. 한글 자판이면 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
+    if (mod && !e.shiftKey && (e.key.toLowerCase() === 'b' || e.code === 'KeyB')) {
+      e.preventDefault()
+      applyInlineMark('bold')
+      return
+    }
+    if (mod && !e.shiftKey && (e.key.toLowerCase() === 'u' || e.code === 'KeyU')) {
+      e.preventDefault()
+      applyInlineMark('underline')
       return
     }
     const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c'
@@ -525,13 +574,20 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   const { html: renderedHtml } = useMemo(() => parseWikiText(markup), [markup])
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
+    <div className="modal-backdrop" onDoubleClick={handleBackdropDoubleClick}>
       <div className="modal-panel table-editor-modal-panel" onClick={(e) => e.stopPropagation()} onKeyDown={handleGridKeyDown}>
+        {/* 헤더는 스크롤해도 맨 위에 고정된다(App.css) — 행이 많아져도 "적용"을 바로 누를 수 있다. */}
         <div className="modal-header">
           <h2>표 편집기</h2>
-          <button className="modal-close-btn" onClick={onCancel}>
-            ✕
-          </button>
+          <div className="modal-header-actions">
+            <TableEditorHelp />
+            <button type="button" className="modal-confirm-btn" title="표를 문서에 넣고 닫기" onClick={() => onConfirm(markup)}>
+              적용
+            </button>
+            <button type="button" className="modal-close-btn" title="적용하지 않고 닫기" onClick={onCancel}>
+              ✕
+            </button>
+          </div>
         </div>
 
         <label className="modal-checkbox-row">
@@ -610,14 +666,6 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         <TableStructureToolbar ops={ops} onRun={runOp} history={{ undo, redo, canUndo, canRedo }} findOpen={find.open} onToggleFind={() => (find.open ? find.closeBar() : find.openBar())} />
         <TableFormatPanels format={format} />
         {find.open && <TableFindBar find={find} />}
-        <div className="cell-style-hint">
-          Shift+클릭이나 행 번호·열 글자 클릭으로 여러 셀을 범위 선택해서 한꺼번에 배경색·글자색·정렬을 적용하거나 병합할 수
-          있습니다. 범위를 고르면 표 아래에 합계·평균이 보입니다. Ctrl+C / Ctrl+V 로 셀 범위를 복사·붙여넣기(엑셀 등 외부 표에서
-          붙여넣기도 가능), Ctrl+D 로 아래로 채우기, Ctrl+F 로 찾아 바꾸기를 할 수 있습니다. 고른 범위의 오른쪽 아래 모서리에 있는 작은
-          네모(핸들)를 아래·오른쪽으로 끌면 1, 2 → 3, 4…, 날짜, 요일 등을 이어서 자동으로 채웁니다. 둘째 줄 툴바는 행·열
-          삽입·이동·복제, 채우기, 정렬, 행·열 바꾸기 단추이고(단추에 마우스를 올리면 설명과, 꺼져 있을 때는 그 이유가 보입니다), 셋째 줄
-          "서식" 툴바는 숫자 서식·조건부 색·열 너비·줄무늬 도구입니다.
-        </div>
 
         {!isMultiCell && (
           <div className="table-editor-cell-content">
@@ -799,14 +847,6 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           <pre>{markup}</pre>
         </div>
 
-        <div className="modal-actions">
-          <button className="modal-cancel-btn" onClick={onCancel}>
-            취소
-          </button>
-          <button className="modal-confirm-btn" onClick={() => onConfirm(markup)}>
-            적용
-          </button>
-        </div>
       </div>
     </div>
   )
