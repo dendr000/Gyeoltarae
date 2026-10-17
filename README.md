@@ -158,6 +158,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
 - **편집·코드 글꼴**: D2Coding 글꼴 파일이 앱에 들어 있어서 어느 PC 에서나 한글이 영문 2칸 폭으로 보이고(열 맞춤), 헤더의 "글꼴" 단추에서 다른 고정폭 글꼴로 바꿀 수 있음(설치된 글꼴만, 직접 입력 가능). 라이선스(OFL 1.1)는 `THIRD_PARTY_NOTICES.md`.
   [`docs/features/mono-font.md`](docs/features/mono-font.md)
+- **기본 화면 모드**: 앱을 켜면 편집 모드로 시작(모드는 저장하지 않음). 아직 페이지가 없는 분류·자료·틀을 열면 "만들기" 단추가 보이도록 자동으로 듀얼로 바뀜. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
 - **Ctrl+E / Ctrl+1·2·3 (화면 모드)**: Ctrl+E 는 뷰어 <-> 편집(듀얼 제외), Ctrl+1/2/3 은 뷰어/듀얼/편집으로 바로 이동. 창(모달)이 떠 있으면 무시. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
 - **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "다시 누르면 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
 - **타자기 스크롤**: 메뉴 "설정" > "타자기 스크롤"에서 편집창 세로 5등분 구역을 고르면 글 쓰는 줄이 그 구역 한가운데에 머물도록 자동 스크롤(기본 끔, 30만 자 넘는 글에서는 동작 안 함). [`docs/features/typewriter-scroll.md`](docs/features/typewriter-scroll.md)

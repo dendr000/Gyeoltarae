@@ -21,6 +21,7 @@ import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCa
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
 import { normalizeTypewriterZone } from '../../shared/typewriterZone.js'
+import { DEFAULT_MODE, modeForDocFields } from '../lib/viewMode.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -123,6 +124,13 @@ function resolveTabsAfterRemoval(tabs, activeWasRemoved, closedIndex) {
     }
   }
   return { ...docFieldsOf(next), tabs, activeTabId: next.id }
+}
+
+// 문서 화면 값을 바꾸는 변경(patch)에, 필요하면 모드를 듀얼로 바꾸는 것을 덧붙인다. 편집 모드에서는 뷰어가 가려져서, 아직 페이지가 없는
+// 분류·자료·틀의 "만들기" 단추(뷰어에만 있다)가 보이지 않기 때문이다(lib/viewMode.js). showInTab·switchTab·탭 닫기가 같이 쓴다.
+function withViewerIfNeeded(state, patch) {
+  const mode = modeForDocFields(state.mode, patch)
+  return mode === state.mode ? patch : { ...patch, mode }
 }
 
 function applyTheme(theme) {
@@ -413,7 +421,7 @@ export const useAppStore = create((set, get) => ({
   // 갈아끼우는 식으로 동기화됨. 재시작하면 초기화됨(워크스페이스 자체처럼 영속시키진 않음).
   tabs: [],
   activeTabId: null,
-  mode: 'dual', // 'preview' | 'dual' | 'focus'
+  mode: DEFAULT_MODE, // 'preview' | 'dual' | 'focus' — 기본은 편집(focus). 규칙: lib/viewMode.js
   // Set by a heading's [편집] link (see wikiParser.js's editableOffsets and
   // ViewerPane.jsx's handleWikiContentClick) to the character offset in the
   // CURRENT document's raw text where that heading starts. EditorPane.jsx
@@ -1357,7 +1365,7 @@ export const useAppStore = create((set, get) => ({
       tabs = tabs.some((t) => t.id === id)
         ? tabs.map((t) => (t.id === id ? { id, title, ...fields } : t))
         : [...tabs, { id, title, ...fields }]
-      return { ...fields, tabs, activeTabId: id }
+      return withViewerIfNeeded(state, { ...fields, tabs, activeTabId: id })
     })
   },
 
@@ -1367,11 +1375,13 @@ export const useAppStore = create((set, get) => ({
     await get().flushActiveTabToDisk()
     const target = get().tabs.find((t) => t.id === id)
     if (!target) return
-    set((s) => ({
-      ...docFieldsOf(target),
-      tabs: s.activeTabId ? s.tabs.map((t) => (t.id === s.activeTabId ? { ...t, ...docFieldsOf(s) } : t)) : s.tabs,
-      activeTabId: id,
-    }))
+    set((s) =>
+      withViewerIfNeeded(s, {
+        ...docFieldsOf(target),
+        tabs: s.activeTabId ? s.tabs.map((t) => (t.id === s.activeTabId ? { ...t, ...docFieldsOf(s) } : t)) : s.tabs,
+        activeTabId: id,
+      }),
+    )
   },
 
   async closeTab(id) {
@@ -1381,7 +1391,7 @@ export const useAppStore = create((set, get) => ({
     set((state) => {
       const closedIndex = state.tabs.findIndex((t) => t.id === id)
       const tabs = state.tabs.filter((t) => t.id !== id)
-      return resolveTabsAfterRemoval(tabs, wasActive, closedIndex)
+      return withViewerIfNeeded(state, resolveTabsAfterRemoval(tabs, wasActive, closedIndex))
     })
   },
 
@@ -1393,7 +1403,7 @@ export const useAppStore = create((set, get) => ({
       const closedIndex = state.tabs.findIndex((t) => t.openPath === filePath)
       for (const t of state.tabs) if (t.openPath === filePath) clearScroll(t.id)
       const tabs = state.tabs.filter((t) => t.openPath !== filePath)
-      return resolveTabsAfterRemoval(tabs, state.openPath === filePath, closedIndex)
+      return withViewerIfNeeded(state, resolveTabsAfterRemoval(tabs, state.openPath === filePath, closedIndex))
     })
   },
 
@@ -1404,7 +1414,7 @@ export const useAppStore = create((set, get) => ({
       const closedIndex = state.tabs.findIndex((t) => isPathUnder(t.openPath, filePath))
       for (const t of state.tabs) if (isPathUnder(t.openPath, filePath)) clearScroll(t.id)
       const tabs = state.tabs.filter((t) => !isPathUnder(t.openPath, filePath))
-      return resolveTabsAfterRemoval(tabs, isPathUnder(state.openPath, filePath), closedIndex)
+      return withViewerIfNeeded(state, resolveTabsAfterRemoval(tabs, isPathUnder(state.openPath, filePath), closedIndex))
     })
   },
 
