@@ -24,6 +24,8 @@ import {
   fillDown,
   fillRight,
   insertColumn,
+  insertIndexAfterColumn,
+  insertIndexAfterRow,
   insertRow,
   moveColumns,
   moveRows,
@@ -183,6 +185,9 @@ export function buildStructureOps(ctx) {
     insertBelow: op(true, '아래에 행 삽입 (고른 범위의 마지막 행 아래)', () => insertRowAt(ins.r2 + 1)),
     insertLeft: op(true, '왼쪽에 열 삽입 (고른 범위의 첫 열 왼쪽)', () => insertColumnAt(ins.c1)),
     insertRight: op(true, '오른쪽에 열 삽입 (고른 범위의 마지막 열 오른쪽)', () => insertColumnAt(ins.c2 + 1)),
+    // 행·열마다 있는 "+" 단추: r 행 아래 / c 열 오른쪽에 하나 끼운다(병합이 걸친 행·열이면 병합 뒤). 고른 범위와 무관하다. 돌려주는 값은 run() 과 같다.
+    insertRowAfter: (r) => insertRowAt(insertIndexAfterRow(grid, r)),
+    insertColumnAfter: (c) => insertColumnAt(insertIndexAfterColumn(grid, c)),
     moveRowUp: op(canMoveUp, canMoveUp ? '고른 행을 위로 한 칸 이동' : rowMoveReason(-1), () => moveRowsBy(-1)),
     moveRowDown: op(canMoveDown, canMoveDown ? '고른 행을 아래로 한 칸 이동' : rowMoveReason(1), () => moveRowsBy(1)),
     moveColumnLeft: op(canMoveLeft, canMoveLeft ? '고른 열을 왼쪽으로 한 칸 이동' : columnMoveReason(-1), () => moveColumnsBy(-1)),

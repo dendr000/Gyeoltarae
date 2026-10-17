@@ -24,6 +24,7 @@ import { useAutoFillDrag } from './useAutoFillDrag.js'
 import { useGridHistory } from './useGridHistory.js'
 import { useKeepPosition } from './useKeepPosition.js'
 import { isJumpKey, jumpTarget } from '../lib/tableJump.js'
+import { displayToStored, storedToDisplay } from '../lib/cellText.js'
 import { TableEditorHelp } from './TableEditorHelp.jsx'
 import { BOLD_MARK, UNDERLINE_MARK, toggleInlineMark } from '../lib/tableInline.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
@@ -274,7 +275,6 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
       goToCell(target)
     }
   }
-  const addColumn = () => setGrid((g) => g.map((row) => [...row, emptyCell()]))
 
   // 구조 작업(삽입·이동·복제·채우기·정렬): tableStructureOps.js 가 격자와 고른 범위를 보고 단추별 켜짐·안내 글·동작을 만든다.
   const ops = buildStructureOps({ grid, setGrid, range, isMultiCell, focusCell, setAnchor, setFocusCell, headerRow, setGridAndHeader })
@@ -484,7 +484,8 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     }
     const [r, c] = inGridCell ? el.closest('td').dataset.cell.split(':').map(Number) : [focusCell.r, focusCell.c]
     pendingSelectionRef.current = { element: el, start: result.selStart, end: result.selEnd }
-    updateCell(r, c, { text: result.text })
+    // 넓은 칸은 줄바꿈을 실제 줄바꿈으로 보여 주므로 저장할 때 [br] 로 되돌린다(lib/cellText.js).
+    updateCell(r, c, { text: inContentBox ? displayToStored(result.text) : result.text })
   }
 
   function jumpBetweenCellAndContent() {
@@ -708,8 +709,8 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
             </label>
             <textarea
               id="table-editor-cell-content-input"
-              value={focusedCellData?.text ?? ''}
-              onChange={(e) => updateCell(focusCell.r, focusCell.c, { text: e.target.value })}
+              value={storedToDisplay(focusedCellData?.text)}
+              onChange={(e) => updateCell(focusCell.r, focusCell.c, { text: displayToStored(e.target.value) })}
             />
           </div>
         )}
@@ -725,7 +726,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                   </button>
                 </td>
                 {grid[0]?.map((_, c) => (
-                  <td key={c} className="table-editor-head-cell">
+                  <td key={c} className="table-editor-head-cell table-editor-col-head">
                     <button
                       type="button"
                       className={isMultiCell && c >= range.c1 && c <= range.c2 ? 'in-range' : ''}
@@ -734,21 +735,18 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                     >
                       {columnLabel(c)}
                     </button>
+                    {/* 이 열 오른쪽에 빈 열을 끼운다. 마지막 열의 "+" 는 맨 오른쪽에 열을 붙이고, 눌러도 단추 자리는 그대로라 계속 누를 수 있다. */}
+                    <button
+                      type="button"
+                      className="table-editor-col-insert"
+                      title={`${columnLabel(c)}열 오른쪽에 열 삽입`}
+                      onClick={() => runOp({ run: () => ops.insertColumnAfter(c) })}
+                    >
+                      +
+                    </button>
                   </td>
                 ))}
-                <td className="table-editor-add-col">
-                  <button
-                    type="button"
-                    data-anchor="add-col"
-                    title="열 추가 (오른쪽 끝에 새 열)"
-                    onClick={(e) => {
-                      keepPosition('add-col', e.currentTarget)
-                      addColumn()
-                    }}
-                  >
-                    +
-                  </button>
-                </td>
+                <td />
               </tr>
               {grid.map((row, r) => (
                 <tr key={r}>
@@ -827,6 +825,15 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                     )
                   })}
                   <td className="table-editor-row-actions">
+                    {/* 이 행 아래에 빈 행을 끼운다. 눌러도 단추 자리는 그대로라(새 행은 그 아래) 같은 자리를 계속 눌러 여러 행을 끼울 수 있다. */}
+                    <button
+                      type="button"
+                      className="table-editor-row-insert"
+                      title={`${r + 1}행 아래에 행 삽입`}
+                      onClick={() => runOp({ run: () => ops.insertRowAfter(r) })}
+                    >
+                      +
+                    </button>
                     <button
                       type="button"
                       title="행 삭제"

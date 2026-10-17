@@ -74,6 +74,17 @@ export function insertColumn(grid, index) {
   return rows.map((row, r) => [...row.slice(0, at), added[r], ...row.slice(at)])
 }
 
+// 행·열마다 있는 "+" 단추가 끼울 자리. r 행 "아래"(c 열 "오른쪽")에 끼우되, 그 행(열)이 병합에 걸쳐 있으면 병합 전체의 뒤로 미뤄서
+// 병합 한가운데에 끼워 병합이 늘어나는 일이 없게 한다(툴바의 "아래에 행 삽입" 과 같은 규칙). 돌려주는 값은 insertRow / insertColumn 에 넘기는 index 다.
+export function insertIndexAfterRow(grid, r) {
+  const lastCol = Math.max((grid[0]?.length ?? 1) - 1, 0)
+  return expandToMerges(grid, { r1: r, r2: r, c1: 0, c2: lastCol }).r2 + 1
+}
+
+export function insertIndexAfterColumn(grid, c) {
+  return expandToMerges(grid, { r1: 0, r2: Math.max(grid.length - 1, 0), c1: c, c2: c }).c2 + 1
+}
+
 // (r, c) 자리의 입력칸이 있는 칸의 자리. 다른 칸의 병합에 가려진 자리면 그 병합의 대표 칸 자리를 돌려준다.
 // 표 밖의 자리는 가장 가까운 칸으로 맞춘다. 키보드 포커스를 줄 칸을 정할 때 쓴다(가려진 칸에는 입력칸이 없다).
 export function visibleCellAt(grid, r, c) {

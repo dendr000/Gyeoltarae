@@ -75,11 +75,10 @@ describe('행·열 추가 단추의 자리와 위치 고정', () => {
     expect(css).not.toMatch(/\.table-editor-toolbar\b/)
   })
 
-  it('행 추가는 표의 마지막 행 바로 아래(격자 안)에, 열 추가는 열 글자 줄의 오른쪽 끝(격자 안)에 있다', () => {
+  it('맨 아래에 행을 붙이는 "+ 행 추가"는 마지막 행 바로 아래(격자 안)에 있다 (열 쪽은 열마다 있는 "+" 가 맡는다)', () => {
     const grid = modal.slice(modal.indexOf('<table className="table-editor-grid">'), modal.indexOf('</table>'))
     expect(grid).toContain('data-anchor="add-row"')
-    expect(grid).toContain('data-anchor="add-col"')
-    expect(grid.indexOf('data-anchor="add-col"')).toBeLessThan(grid.indexOf('grid.map((row, r)'))
+    expect(grid).not.toContain('data-anchor="add-col"')
     expect(grid.indexOf('data-anchor="add-row"')).toBeGreaterThan(grid.indexOf('grid.map((row, r)'))
     expect(grid.indexOf('data-anchor="add-row"')).toBeLessThan(grid.indexOf('table-editor-col-actions'))
   })
@@ -87,7 +86,6 @@ describe('행·열 추가 단추의 자리와 위치 고정', () => {
   it('행·열 추가와 행·열 삭제 단추는 누른 자리를 기억해 표가 바뀐 뒤에도 같은 화면 위치에 남게 한다', () => {
     expect(modal).toContain("from './useKeepPosition.js'")
     expect(modal).toMatch(/keepPosition\('add-row', e\.currentTarget\)/)
-    expect(modal).toMatch(/keepPosition\('add-col', e\.currentTarget\)/)
     expect(modal).toMatch(/keepPosition\(`row-del:\$\{/)
     expect(modal).toMatch(/keepPosition\(`col-del:\$\{/)
     expect(modal).toContain('data-anchor={`row-del:${r}`}')
@@ -105,6 +103,31 @@ describe('행·열 추가 단추의 자리와 위치 고정', () => {
   it('행·열을 지우는 단추는 지울 게 하나뿐일 때 위치를 기억하지 않는다 (지워지지 않아 보정할 일이 없다)', () => {
     expect(modal).toMatch(/grid\.length > 1/)
     expect(modal).toMatch(/\(grid\[0\]\?\.length \?\? 0\) > 1/)
+  })
+})
+
+describe('선택한 셀 내용(넓은 칸)의 줄바꿈', () => {
+  it('저장된 [br] 을 실제 줄바꿈으로 보여 주고, 쳐진 줄바꿈은 [br] 로 저장한다', () => {
+    expect(modal).toContain("from '../lib/cellText.js'")
+    expect(modal).toMatch(/value=\{storedToDisplay\(focusedCellData\?\.text\)\}/)
+    expect(modal).toMatch(/updateCell\(focusCell\.r, focusCell\.c, \{ text: displayToStored\(e\.target\.value\) \}\)/)
+  })
+
+  it('넓은 칸에서 Ctrl+B / Ctrl+U 로 바뀐 글도 줄바꿈을 [br] 로 되돌려 저장한다', () => {
+    expect(modal).toMatch(/updateCell\(r, c, \{ text: inContentBox \? displayToStored\(result\.text\) : result\.text \}\)/)
+  })
+})
+
+describe('행·열 중간 삽입 단추', () => {
+  it('행마다 "−" 왼쪽에 아래에 행을 끼우는 "+" 가 있다', () => {
+    const actions = modal.slice(modal.indexOf('<td className="table-editor-row-actions">'), modal.indexOf('<td className="table-editor-add-row"'))
+    expect(actions).toContain('insertRowAfter(r)')
+    expect(actions.indexOf('insertRowAfter(r)')).toBeLessThan(actions.indexOf('removeRow(r)'))
+  })
+
+  it('열마다 열 글자 줄에 오른쪽에 열을 끼우는 "+" 가 있다', () => {
+    const header = modal.slice(modal.indexOf('<td className="table-editor-head-cell">'), modal.indexOf('grid.map((row, r)'))
+    expect(header).toContain('insertColumnAfter(c)')
   })
 })
 

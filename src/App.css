@@ -1955,14 +1955,13 @@
 }
 
 .table-editor-row-actions,
-.table-editor-col-actions,
-.table-editor-add-col {
+.table-editor-col-actions {
   text-align: center;
+  white-space: nowrap;
 }
 
 .table-editor-row-actions button,
 .table-editor-col-actions button,
-.table-editor-add-col button,
 .table-editor-add-row button {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1979,14 +1978,28 @@
   border-style: dashed;
 }
 
-.table-editor-add-col button {
+/* 행마다 "−" 왼쪽의 "+"(아래에 행 삽입)와 열 글자 줄의 열마다 "+"(오른쪽에 열 삽입): 점선 테두리로 삭제 단추와 구분한다. */
+.table-editor-row-insert {
+  margin-right: 4px;
+  border-style: dashed !important;
+}
+
+.table-editor-col-head {
+  position: relative;
+}
+
+.table-editor-col-head .table-editor-col-insert {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 22px;
   border-style: dashed;
-  padding: 3px 12px;
-  font-size: 14px;
 }
 
 .table-editor-add-row button:hover,
-.table-editor-add-col button:hover {
+.table-editor-row-insert:hover,
+.table-editor-col-head .table-editor-col-insert:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
