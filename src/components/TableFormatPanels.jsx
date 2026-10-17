@@ -162,6 +162,14 @@ function WidthPanel({ f }) {
         options={[['px', 'px (픽셀)'], ['%', '% (표 너비의 비율)']]}
         onChange={(unit) => f.setWidthForm((state) => ({ ...state, unit }))}
       />
+      <button
+        type="button"
+        className="table-format-apply"
+        title="표에서 글자가 가장 긴 칸의 너비를 재서 입력칸에 넣습니다 (적용은 따로). 모든 열을 고르고 적용하면 열 너비가 같아집니다"
+        onClick={f.fillWidestWidth}
+      >
+        가장 긴 칸 기준
+      </button>
       <button type="button" className="table-format-apply" onClick={() => f.applyWidth(false)}>
         적용
       </button>

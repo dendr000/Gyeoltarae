@@ -80,6 +80,18 @@
 - **가로로 병합된 칸**은 어느 열의 너비인지 알 수 없어 붙이지 않는다. 열 전체가 병합에 걸려 있으면 "붙일 수 있는 칸이 없습니다"가 보인다.
 - 편집기의 칸 입력창 폭은 그대로다. 적용 결과는 아래 **뷰어 미리보기**와 실제 뷰어에서 보인다. 글자가 길면 브라우저가 칸을 더 넓히므로 너비는 "원하는 폭"에 가깝다.
 
+### "가장 긴 칸 기준" 단추 (0.117.0)
+
+열 너비 패널의 **가장 긴 칸 기준** 단추를 누르면 **표 전체에서 글자가 가장 넓은 칸**의 너비(px)를 재서 너비 입력칸에 넣고 단위를 `px` 로 바꾼다. **적용은 따로 누른다**(어느 열에 쓸지 고를 수 있게).
+
+- 쓰는 법: 단추를 누른다 -> 표 왼쪽 위 모서리 단추(표 전체 선택)나 열 글자로 열을 고른다 -> **적용**. 모든 열을 고르고 적용하면 **모든 열의 너비가 같아진다**(`| x | = | 10 |` 처럼 칸 글자 길이가 달라 열 너비가 제각각일 때).
+- 너비는 칸 글을 **실제 표 문법으로 렌더링해서 화면 밖의 숨긴 표에서 한 줄로 그려 재므로**(글꼴·굵기·한글/영문 차이 반영, 칸 안쪽 여백·테두리 포함) 글자 수로 어림하지 않는다. 숫자는 올림해서 정수로 넣는다(잘려서 줄바꿈되지 않게).
+- 굵은 칸(칸 굵게, 첫 행을 헤더로 쓰는 표의 맨 윗줄)은 굵게 그려서 잰다. `[br]`(칸 안 줄바꿈)이 있으면 가장 긴 줄이 기준이다.
+- 빈 칸, 다른 칸의 병합에 가려진 칸, **가로로 합친 칸**(여러 열에 걸친 너비라 한 열의 너비를 알 수 없음)은 재지 않는다. 글자가 있는 칸이 하나도 없으면 "글자가 있는 칸이 없어서 잴 수 없습니다" 안내만 나온다.
+- 입력칸에 넣은 뒤에는 숫자를 고쳐서(예: 여유로 +10) 적용해도 된다. 뷰어의 글꼴 설정이 편집기와 다르면 실제 폭이 조금 다를 수 있다.
+- 확인(실제 Electron 창): `x | = | 10` / `저장공간의 이름 | 대입 연산자 | 값(상수)` 표에서 열 너비가 처음 102.6 / 80.1 / 63.2px 로 제각각 -> 단추로 입력칸 104 -> 모든 열 적용 후 세 열 모두 104px, 가장 긴 칸은 줄바꿈 없이 들어감. 측정용 숨은 요소는 남지 않음.
+- 규칙은 `src/lib/tableWidest.js`(순수 함수), 너비 재기는 `src/components/measureCellWidth.js`다.
+
 ## 행 높이
 
 고른 범위가 걸친 **행**의 높이를 정한다. 열 너비와 같은 방식이다.
@@ -127,6 +139,7 @@
 - `src/lib/tableNumberFormat.js` — `formatNumberText`, `formatNumbersInRange`(숫자 서식).
 - `src/lib/tableConditional.js` — `matchRule`(맞는 칸 찾기), `isRuleReady`, `applyRuleStyle`, `clearRuleStyle`(조건부 색).
 - `src/lib/tableStyle.js` — `stripeRows`, `clearStripes`(줄무늬), `normalizeWidth`, `getColumnWidth`, `setColumnWidth`(열 너비).
+- `src/lib/tableWidest.js` — `measurableCells`, `widestCellWidth`(가장 긴 칸 찾기). `src/components/measureCellWidth.js` — 칸 너비 재기(화면 밖 숨긴 표).
 - `src/lib/tableTranspose.js` — `transposeGrid`(전치). 전치 단추 동작은 `src/components/tableStructureOps.js`.
 - `src/components/useTableFormat.js` — 네 패널의 상태·동작·안내 글. `TableFormatPanels.jsx` — 서식 툴바와 패널 그리기. `TableEditorModal.jsx` — 조건 미리 보기 표시(`cell-rule-preview`).
 - 테스트: `tests/lib/tableNumberParts.test.js`, `tableNumberFormat.test.js`, `tableConditional.test.js`, `tableStyle.test.js`, `tableTranspose.test.js`. 화면은 미리보기에서 직접 눌러 확인했다.

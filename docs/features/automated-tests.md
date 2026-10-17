@@ -78,6 +78,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/typewriterScroll.test.js` | 타자기 스크롤: 구역 -> 높이 비율, 커서 줄이 구역에 오는 스크롤 값(위·아래 끝 보정, 짧은 글, 반올림), 설정값 검증(0~5 정수만), 길이 한도, 커서 이동 키, 편집기 연결 소스 점검 | 순수 함수 · 소스 검사 |
 | `tests/lib/docFind.test.js` | 문서 찾기·바꾸기: 줄바꿈이 든 찾기(한 줄바꿈·빈 줄·여러 줄·글자 `
 | `tests/store/viewMode.test.js` | 기본 화면 모드(편집으로 시작, 문서를 열어도·직접 고른 모드는 유지), 페이지 없는 분류·자료·틀을 열면(탭 전환·탭 닫기 포함) 편집 -> 듀얼 자동 전환과 그 예외(이미 뷰어·듀얼, 페이지가 있는 분류), 판단 규칙(`modeForDocFields`) | 스토어(가짜 API) · 순수 함수 · 소스 검사 |
+| `tests/lib/tableWidest.test.js`, `tests/components/widestWidthWiring.test.js` | 열 너비 "가장 긴 칸 기준": 잴 칸 고르기(빈 칸·병합·가로 합친 칸 제외, 굵은 칸, 줄바꿈), 가장 넓은 칸 찾기(올림·동률·없음), 화면 연결(소스 점검) | 순수 함수·소스 점검 |
 | `tests/lib/editorHeading.test.js`, `tests/electron/headingSetting.test.js` | 편집 모드 제목 줄 판단(코드블록 안 제외·닫히지 않은 블록·4백틱·`==# #==`·윈도 줄바꿈), 설정 메뉴 "제목 강조"(체크 항목·기본 켜짐·클릭 알림), 스토어의 `headingHighlight`, 메인·편집기 연결 소스 점검 | 순수 함수·소스 점검 |
 | `tests/lib/sectionFold.test.js`, `tests/lib/sectionFoldDom.test.js`, `tests/lib/wikiParserFold.test.js`, `tests/components/viewerFold.test.js` | 뷰어 문단 접기: 제목과 내용을 구역으로 묶는 규칙(같은 급·하위·건너뛴 급·내용 없음), DOM 규칙(접기·링크 제외·숨은 제목 펴기·기억한 상태 입히기), 제목 문법(`==# #==`·# 가 글자인 경우·`[편집]` 위치·각주·목차), 화면 연결(소스 점검) | 순수 함수·소스 점검 |
 | `tests/lib/tableJump.test.js` | 표 편집기 F2/Ctrl+Enter 오가기: 키 판별(F2·Ctrl/Cmd+Enter, 다른 조합 제외), 갈 곳(칸 -> 큰 입력칸 -> 기억한 칸, 여러 칸 선택 때 없음, 왕복) | 순수 함수 |

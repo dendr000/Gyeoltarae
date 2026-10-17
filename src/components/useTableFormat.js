@@ -9,6 +9,8 @@ import { useState } from 'react'
 import { applyRuleSet, clearRuleSet, isRuleReady, matchRuleSet } from '../lib/tableConditional.js'
 import { formatNumbersInRange } from '../lib/tableNumberFormat.js'
 import { columnLabel } from '../lib/tableStats.js'
+import { widestCellWidth } from '../lib/tableWidest.js'
+import { createCellMeasure } from './measureCellWidth.js'
 import {
   clearStripes,
   getColumnWidth,
@@ -136,6 +138,25 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     )
   }
 
+  // "가장 긴 칸 기준": 표 전체에서 글자가 가장 넓은 칸의 너비(px)를 재서 너비 입력칸에 넣는다(적용은 하지 않는다 — 열을 고르고 적용을 눌러 쓴다).
+  // 모든 열을 고른 뒤 적용하면 열 너비가 같아진다. 합친 칸·빈 칸은 재지 않는다(규칙은 lib/tableWidest.js).
+  function fillWidestWidth() {
+    const measurer = createCellMeasure()
+    let widest
+    try {
+      widest = widestCellWidth(grid, headerRow, measurer.measure)
+    } finally {
+      measurer.dispose()
+    }
+    if (!widest) {
+      setMessage('글자가 있는 칸이 없어서 잴 수 없습니다')
+      return
+    }
+    const width = Math.min(9999, Math.max(1, widest.width))
+    setWidthForm({ value: String(width), unit: 'px' })
+    setMessage(`가장 긴 칸(${columnLabel(widest.c)}${widest.r + 1})의 너비 ${width}px 를 넣었습니다. 열을 고르고 적용을 누르세요`)
+  }
+
   function applyHeight(clear) {
     const height = clear ? null : normalizeHeight(heightValue)
     if (!clear && height === null) {
@@ -185,6 +206,7 @@ export function useTableFormat({ grid, setGrid, range, isMultiCell, headerRow })
     currentWidth,
     widthColumns: range.c1 === range.c2 ? columnLabel(range.c1) : `${columnLabel(range.c1)}~${columnLabel(range.c2)}`,
     applyWidth,
+    fillWidestWidth,
     heightValue,
     setHeightValue,
     currentHeight,
