@@ -22,6 +22,8 @@ import { TableFindBar } from './TableFindBar.jsx'
 import { useTableFind } from './useTableFind.js'
 import { useAutoFillDrag } from './useAutoFillDrag.js'
 import { useGridHistory } from './useGridHistory.js'
+import { useKeepPosition } from './useKeepPosition.js'
+import { isJumpKey, jumpTarget } from '../lib/tableJump.js'
 import { TableEditorHelp } from './TableEditorHelp.jsx'
 import { BOLD_MARK, UNDERLINE_MARK, toggleInlineMark } from '../lib/tableInline.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
@@ -149,6 +151,12 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   const anchor = clampCell(anchorRaw)
   const focusCell = clampCell(focusRaw)
   const clipboardRef = useRef(null) // full-fidelity {text,bg,color,align} grid for in-app paste
+  const panelRef = useRef(null)
+  const gridWrapRef = useRef(null)
+  // 칸에서 큰 입력칸으로 건너갈 때 돌아올 칸을 기억한다(F2 / Ctrl+Enter, 규칙은 lib/tableJump.js).
+  const jumpOriginRef = useRef(null)
+  // 행·열 추가/삭제 단추를 눌러 표가 바뀌어도 그 단추가 같은 화면 위치에 남게 한다(마우스를 안 움직이고 계속 누르도록).
+  const keepPosition = useKeepPosition(panelRef, gridWrapRef, grid)
 
   const range = normalizeRange(anchor, focusCell)
   const isMultiCell = range.r1 !== range.r2 || range.c1 !== range.c2
@@ -479,6 +487,25 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     updateCell(r, c, { text: result.text })
   }
 
+  function jumpBetweenCellAndContent() {
+    const active = document.activeElement
+    const inCell = active?.tagName === 'INPUT' && Boolean(active.closest('.table-editor-grid'))
+    const where = inCell ? 'cell' : active?.id === 'table-editor-cell-content-input' ? 'content' : 'other'
+    const activeCell = inCell ? (([r, c]) => ({ r, c }))(active.closest('td').dataset.cell.split(':').map(Number)) : null
+    const target = jumpTarget({ where, activeCell, origin: jumpOriginRef.current, focusCell, contentVisible: !isMultiCell })
+    if (!target) return
+    if (target.to === 'content') {
+      jumpOriginRef.current = target.origin
+      const box = document.getElementById('table-editor-cell-content-input')
+      if (!box) return
+      box.focus()
+      box.setSelectionRange(box.value.length, box.value.length)
+    } else {
+      const back = clampCell(target)
+      focusCellInput(back.r, back.c)
+    }
+  }
+
   function handleGridKeyDown(e) {
     const mod = (e.ctrlKey || e.metaKey) && !e.altKey
     // Ctrl+F — 찾아 바꾸기 열기(Ctrl+Shift+F 도 같음, 문서 편집기와 같은 키). 입력칸에 글자를 골라 둔 채 누르면 그 글자로 찾는다.
@@ -495,6 +522,12 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
     }
     // 찾기 바·서식 패널 안의 입력칸에서는 아래의 표 단축키(복사·붙여넣기·채우기·되돌리기)를 쓰지 않는다 — 글자 입력칸의 평소 동작이어야 한다.
     if (e.target.closest?.('.table-find-bar, .table-format-panel')) return
+    // F2 / Ctrl+Enter — 칸에서 "선택한 셀 내용" 큰 입력칸으로 건너가고, 다시 누르면 원래 칸으로 돌아온다(한 손으로 오가기).
+    if (!e.nativeEvent.isComposing && isJumpKey(e)) {
+      e.preventDefault()
+      jumpBetweenCellAndContent()
+      return
+    }
     // Ctrl+Z 되돌리기, Ctrl+Y / Ctrl+Shift+Z 다시 실행 — 칸에 치는 글자를 포함해 표 편집기 안의 변경을 기록으로 되돌린다(칸 입력창의 글자
     // 자체 되돌리기 대신). 한글 자판이면 e.key 가 자모일 수 있어 물리 키(e.code)도 본다.
     const isZ = e.key.toLowerCase() === 'z' || e.code === 'KeyZ'
@@ -575,7 +608,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
 
   return (
     <div className="modal-backdrop" onDoubleClick={handleBackdropDoubleClick}>
-      <div className="modal-panel table-editor-modal-panel" onClick={(e) => e.stopPropagation()} onKeyDown={handleGridKeyDown}>
+      <div ref={panelRef} className="modal-panel table-editor-modal-panel" onClick={(e) => e.stopPropagation()} onKeyDown={handleGridKeyDown}>
         {/* 헤더는 스크롤해도 맨 위에 고정된다(App.css) — 행이 많아져도 "적용"을 바로 누를 수 있다. */}
         <div className="modal-header">
           <h2>표 편집기</h2>
@@ -681,7 +714,7 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
           </div>
         )}
 
-        <div className="table-editor-grid-wrap">
+        <div ref={gridWrapRef} className="table-editor-grid-wrap">
           <table className="table-editor-grid">
             <tbody>
               {/* 열 글자(A, B, ...) — 누르면 그 열 전체가 범위로 잡힌다. 왼쪽 위 모서리는 표 전체. */}
@@ -703,7 +736,19 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                     </button>
                   </td>
                 ))}
-                <td />
+                <td className="table-editor-add-col">
+                  <button
+                    type="button"
+                    data-anchor="add-col"
+                    title="열 추가 (오른쪽 끝에 새 열)"
+                    onClick={(e) => {
+                      keepPosition('add-col', e.currentTarget)
+                      addColumn()
+                    }}
+                  >
+                    +
+                  </button>
+                </td>
               </tr>
               {grid.map((row, r) => (
                 <tr key={r}>
@@ -782,17 +827,49 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
                     )
                   })}
                   <td className="table-editor-row-actions">
-                    <button title="행 삭제" onClick={() => removeRow(r)}>
+                    <button
+                      type="button"
+                      title="행 삭제"
+                      data-anchor={`row-del:${r}`}
+                      onClick={(e) => {
+                        // 지운 자리에는 아래 행이 올라오므로, 같은 번호(맨 아래 행이면 하나 위)의 단추가 눌렀던 자리에 남게 한다.
+                        if (grid.length > 1) keepPosition(`row-del:${Math.min(r, grid.length - 2)}`, e.currentTarget)
+                        removeRow(r)
+                      }}
+                    >
                       −
                     </button>
                   </td>
                 </tr>
               ))}
               <tr>
+                <td className="table-editor-add-row" colSpan={(grid[0]?.length ?? 0) + 2}>
+                  <button
+                    type="button"
+                    data-anchor="add-row"
+                    title="행 추가 (맨 아래에 새 행)"
+                    onClick={(e) => {
+                      keepPosition('add-row', e.currentTarget)
+                      addRow()
+                    }}
+                  >
+                    + 행 추가
+                  </button>
+                </td>
+              </tr>
+              <tr>
                 <td />
                 {grid[0]?.map((_, c) => (
                   <td key={c} className="table-editor-col-actions">
-                    <button title="열 삭제" onClick={() => removeColumn(c)}>
+                    <button
+                      type="button"
+                      title="열 삭제"
+                      data-anchor={`col-del:${c}`}
+                      onClick={(e) => {
+                        if ((grid[0]?.length ?? 0) > 1) keepPosition(`col-del:${Math.min(c, (grid[0]?.length ?? 0) - 2)}`, e.currentTarget)
+                        removeColumn(c)
+                      }}
+                    >
                       −
                     </button>
                   </td>
@@ -830,11 +907,6 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
               {stats.skippedHeader && <span className="stats-hint">첫 행(헤더)은 계산에서 뺐습니다</span>}
             </>
           )}
-        </div>
-
-        <div className="table-editor-toolbar">
-          <button onClick={addRow}>+ 행 추가</button>
-          <button onClick={addColumn}>+ 열 추가</button>
         </div>
 
         <div className="table-editor-preview">

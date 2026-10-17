@@ -27,7 +27,7 @@ describe('설정 메뉴 항목 (electron/settingsMenu.js)', () => {
   it('정렬 뒤집기 항목은 체크 표시가 있는 항목(checkbox)이다', () => {
     const { item } = make()
     expect(item.type).toBe('checkbox')
-    expect(item.label).toContain('뒤집기')
+    expect(item.label).toBe('정렬 뒤집기')
   })
 
   it('체크 상태는 저장된 값을 따른다 (기본 꺼짐)', () => {
@@ -71,13 +71,13 @@ describe('설정 메뉴: 타자기 스크롤 (구역 고르기)', () => {
     const { items } = zoneMenu(0)
     expect(items).toHaveLength(6)
     expect(items.every((item) => item.type === 'radio')).toBe(true)
-    expect(items[0].label).toBe('끔')
-    expect(items.slice(1).map((item) => item.label.slice(0, 4))).toEqual(['구역 1', '구역 2', '구역 3', '구역 4', '구역 5'])
   })
 
-  it('구역 설명이 붙어 있다 (맨 위쪽·위쪽·가운데·아래쪽·맨 아래쪽)', () => {
-    const { items } = zoneMenu(0)
-    expect(items.slice(1).map((item) => item.label.match(/\((.+)\)/)?.[1])).toEqual(['맨 위쪽', '위쪽', '가운데', '아래쪽', '맨 아래쪽'])
+  it('항목 이름은 짧게 기능만 적는다 (설명 문장·괄호 없음)', () => {
+    const { parent, items } = zoneMenu(0)
+    expect(parent.label).toBe('타자기 스크롤')
+    expect(items.map((item) => item.label)).toEqual(['끔', '1 · 맨 위', '2 · 위', '3 · 가운데', '4 · 아래', '5 · 맨 아래'])
+    expect(items.every((item) => !item.label.includes('(') && item.label.length <= 8)).toBe(true)
   })
 
   it('저장된 구역 하나만 체크되어 있다 (기본은 끔)', () => {

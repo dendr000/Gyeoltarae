@@ -160,9 +160,9 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/mono-font.md`](docs/features/mono-font.md)
 - **기본 화면 모드**: 앱을 켜면 편집 모드로 시작(모드는 저장하지 않음). 아직 페이지가 없는 분류·자료·틀을 열면 "만들기" 단추가 보이도록 자동으로 듀얼로 바뀜. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
 - **Ctrl+E / Ctrl+1·2·3 (화면 모드)**: Ctrl+E 는 뷰어 <-> 편집(듀얼 제외), Ctrl+1/2/3 은 뷰어/듀얼/편집으로 바로 이동. 창(모달)이 떠 있으면 무시. [`docs/features/mode-shortcuts.md`](docs/features/mode-shortcuts.md)
-- **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "다시 누르면 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
+- **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "정렬 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
 - **타자기 스크롤**: 메뉴 "설정" > "타자기 스크롤"에서 편집창 세로 5등분 구역을 고르면 글 쓰는 줄이 그 구역 한가운데에 머물도록 자동 스크롤(기본 끔, 30만 자 넘는 글에서는 동작 안 함). [`docs/features/typewriter-scroll.md`](docs/features/typewriter-scroll.md)
-- **설정 메뉴**: 창 맨 위 메뉴의 "설정"에서 정렬 단축키 "다시 누르면 뒤집기"를 켜고 끔(기본 꺼짐 = 항상 오름차순)과 "타자기 스크롤"을 고름. [`docs/features/settings-menu.md`](docs/features/settings-menu.md)
+- **설정 메뉴**: 창 맨 위 메뉴의 "설정"에서 "정렬 뒤집기"를 켜고 끔(기본 꺼짐 = 항상 오름차순)과 "타자기 스크롤"을 고름. [`docs/features/settings-menu.md`](docs/features/settings-menu.md)
 - **Ctrl+Shift+` (묶음 정렬)**: 선택한 줄들을 묶음(맨 윗줄 + 딸린 들여쓴 줄) 단위로 이름순 정렬. `* 항목`·`1. 항목`·들여쓰기·빈 줄로 묶음을 나누고, 번호 목록은 번호를 제자리에 둠. [`docs/features/block-sort.md`](docs/features/block-sort.md)
 - **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)
 - **Ctrl+M (사이드바 열기·닫기)**: 왼쪽 문서/폴더 목록 사이드바를 열고 닫음. 편집 중에도 됨. [`docs/features/sidebar-toggle.md`](docs/features/sidebar-toggle.md)
@@ -188,7 +188,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
 - **툴바 휠 스크롤**: 편집 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤됨(스크롤바를 잡지 않아도 됨).
   [`docs/features/toolbar-wheel-scroll.md`](docs/features/toolbar-wheel-scroll.md)
-- **표 편집기 창**: 맨 위 오른쪽의 `도움말`(마우스를 올리면 주제별 큰 글씨 팝업)·`적용`(스크롤해도 따라옴)·`✕`. `취소` 단추는 없고 창 바깥은 빠르게 두 번 클릭해야 닫힘. 칸 안에서 Ctrl+B(굵게)·Ctrl+U(밑줄). [`docs/features/table-editor-modal.md`](docs/features/table-editor-modal.md)
+- **표 편집기 창**: 맨 위 오른쪽의 `도움말`(마우스를 올리면 주제별 큰 글씨 팝업)·`적용`(스크롤해도 따라옴)·`✕`. `취소` 단추는 없고 창 바깥은 빠르게 두 번 클릭해야 닫힘. 칸 안에서 Ctrl+B(굵게)·Ctrl+U(밑줄). 행 추가는 마지막 행 아래·열 추가는 열 글자 줄 오른쪽 끝(눌러도 같은 자리에 남음), F2/Ctrl+Enter 로 칸 <-> 큰 입력칸 오가기. [`docs/features/table-editor-modal.md`](docs/features/table-editor-modal.md)
 - **표 편집기의 셀 키**: Tab = 오른쪽 셀(행의 끝이면 아래 행의 첫 번째 셀), Shift+Tab = 그 반대, Enter = 바로 아래 셀(없으면
   새 행을 만듦), Shift+Enter = 셀 안 줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
 - **표 편집기의 합계·평균 표시줄**: 행 번호·열 글자를 누르거나 Shift+클릭으로 칸을 여러 개 고르면 표 아래에 합계·평균·개수·최소·최대가
