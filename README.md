@@ -191,7 +191,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   [`docs/features/toolbar-wheel-scroll.md`](docs/features/toolbar-wheel-scroll.md)
 - **표 편집기 창**: 맨 위 오른쪽의 `도움말`(마우스를 올리면 주제별 큰 글씨 팝업)·`적용`(스크롤해도 따라옴)·`✕`. `취소` 단추는 없고 창 바깥은 빠르게 두 번 클릭해야 닫힘. 칸 안에서 Ctrl+B(굵게)·Ctrl+U(밑줄). 행마다 `−` 왼쪽의 `+` 는 그 행 아래에, 열 글자 줄의 열마다 `+` 는 그 열 오른쪽에 끼움(눌러도 단추 자리는 그대로). 맨 아래 `+ 행 추가`는 맨 끝에 붙임. F2/Ctrl+Enter 로 칸 <-> 큰 입력칸 오가기, 큰 입력칸에서는 칸 안 줄바꿈이 `[br]` 이 아닌 실제 줄바꿈으로 보임. [`docs/features/table-editor-modal.md`](docs/features/table-editor-modal.md)
 - **표 편집기의 셀 키**: Tab = 오른쪽 셀(행의 끝이면 아래 행의 첫 번째 셀), Shift+Tab = 그 반대, Enter = 바로 아래 셀(없으면
-  새 행을 만듦), Shift+Enter(또는 숫자패드 Enter, 노트북의 Fn+Enter 가 숫자패드 Enter 로 오는 키보드에서는 Fn+Enter) = 셀 안 줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
+  새 행을 만듦), Shift+Enter 또는 Alt+Enter(엑셀과 같음) = 셀 안 줄바꿈(`[br]`). [`docs/features/table-editor-keys.md`](docs/features/table-editor-keys.md)
 - **표 편집기의 합계·평균 표시줄**: 행 번호·열 글자를 누르거나 Shift+클릭으로 칸을 여러 개 고르면 표 아래에 합계·평균·개수·최소·최대가
   보임(보기용, 문서에는 쓰지 않음). 값을 누르면 숫자만 복사됨. [`docs/features/table-editor-stats.md`](docs/features/table-editor-stats.md)
 - **표 편집기의 행·열 삽입**: 툴바의 삽입 단추로 고른 범위의 위·아래·왼쪽·오른쪽에 빈 행/열을 하나 끼움. 병합 셀 한가운데에 끼우면 병합이
