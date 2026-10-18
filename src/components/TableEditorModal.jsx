@@ -25,6 +25,7 @@ import { useGridHistory } from './useGridHistory.js'
 import { useKeepPosition } from './useKeepPosition.js'
 import { isJumpKey, jumpTarget } from '../lib/tableJump.js'
 import { displayToStored, storedToDisplay } from '../lib/cellText.js'
+import { isLineBreakKey } from '../lib/lineBreakKey.js'
 import { TableEditorHelp } from './TableEditorHelp.jsx'
 import { BOLD_MARK, UNDERLINE_MARK, toggleInlineMark } from '../lib/tableInline.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
@@ -259,7 +260,8 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
       }
       return
     }
-    if (e.key === 'Enter' && e.shiftKey) {
+    // Shift+Enter 또는 숫자패드 Enter(노트북의 Fn+Enter 가 대개 이 키)는 칸 안 줄바꿈(lib/lineBreakKey.js).
+    if (isLineBreakKey(e)) {
       e.preventDefault()
       // execCommand 로 넣어야 입력칸의 되돌리기(Ctrl+Z)가 이어진다 — EditorPane.jsx 의 replaceRange 와 같은 이유.
       document.execCommand('insertText', false, '[br]')
