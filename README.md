@@ -163,6 +163,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "정렬 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
 - **타자기 스크롤**: 메뉴 "설정" > "타자기 스크롤"에서 편집창 세로 5등분 구역을 고르면 글 쓰는 줄이 그 구역 한가운데에 머물도록 자동 스크롤(기본 끔, 30만 자 넘는 글에서는 동작 안 함). [`docs/features/typewriter-scroll.md`](docs/features/typewriter-scroll.md)
 - **제목 강조 끄기**: 메뉴 "설정" > "제목 강조"를 끄면 편집 모드에서 제목 줄에 배경이 입혀지지 않음(기본 켜짐). 코드블록 안의 줄은 제목 모양이어도 강조하지 않고, 필요한 줄만 줄 여백의 점으로 직접 켜고 끔. [`docs/features/editor-gutter.md`](docs/features/editor-gutter.md)
+- **숫자패드 Enter 로 [br] 입력**: 문서 편집 모드에서 숫자패드 Enter 를 누르면 커서 자리에 `[br]` 이 들어감(그냥 Enter·Shift+Enter·Alt+Enter 는 그대로, 노트북의 Fn+Enter 는 키보드에 따라 됨). [`docs/features/br-shortcut.md`](docs/features/br-shortcut.md)
 - **설정 메뉴**: 창 맨 위 메뉴의 "설정"에서 "정렬 뒤집기"를 켜고 끔(기본 꺼짐 = 항상 오름차순)과 "타자기 스크롤"을 고름. [`docs/features/settings-menu.md`](docs/features/settings-menu.md)
 - **Ctrl+Shift+` (묶음 정렬)**: 선택한 줄들을 묶음(맨 윗줄 + 딸린 들여쓴 줄) 단위로 이름순 정렬. `* 항목`·`1. 항목`·들여쓰기·빈 줄로 묶음을 나누고, 번호 목록은 번호를 제자리에 둠. [`docs/features/block-sort.md`](docs/features/block-sort.md)
 - **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)

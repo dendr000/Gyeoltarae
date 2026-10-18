@@ -78,6 +78,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/typewriterScroll.test.js` | 타자기 스크롤: 구역 -> 높이 비율, 커서 줄이 구역에 오는 스크롤 값(위·아래 끝 보정, 짧은 글, 반올림), 설정값 검증(0~5 정수만), 길이 한도, 커서 이동 키, 편집기 연결 소스 점검 | 순수 함수 · 소스 검사 |
 | `tests/lib/docFind.test.js` | 문서 찾기·바꾸기: 줄바꿈이 든 찾기(한 줄바꿈·빈 줄·여러 줄·글자 `
 | `tests/store/viewMode.test.js` | 기본 화면 모드(편집으로 시작, 문서를 열어도·직접 고른 모드는 유지), 페이지 없는 분류·자료·틀을 열면(탭 전환·탭 닫기 포함) 편집 -> 듀얼 자동 전환과 그 예외(이미 뷰어·듀얼, 페이지가 있는 분류), 판단 규칙(`modeForDocFields`) | 스토어(가짜 API) · 순수 함수 · 소스 검사 |
+| `tests/lib/numpadEnter.test.js`, `tests/components/editorBrKey.test.js` | 문서 편집기 숫자패드 Enter -> [br]: 키 판단(조합키 제외), 연결·처리 순서(링크·목록 이어쓰기 앞, 추천 팝업 뒤, 한글 조합 제외, replaceRange) | 순수 함수·소스 점검 |
 | `tests/lib/tableInsertAfter.test.js`, `tests/components/structureInsertAfter.test.js`, `tests/lib/cellText.test.js` | 행·열 `+` 단추: 끼울 자리 계산(병합 뒤로 미룸)과 동작(그 행 아래·열 오른쪽, 포커스 대상), 넓은 칸의 줄바꿈 <-> `[br]` 변환(왕복·\r\n·대문자 제외) | 순수 함수 |
 | `tests/lib/tableWidest.test.js`, `tests/components/widestWidthWiring.test.js` | 열 너비 "가장 긴 칸 기준": 잴 칸 고르기(빈 칸·병합·가로 합친 칸 제외, 굵은 칸, 줄바꿈), 가장 넓은 칸 찾기(올림·동률·없음), 화면 연결(소스 점검) | 순수 함수·소스 점검 |
 | `tests/lib/editorHeading.test.js`, `tests/electron/headingSetting.test.js` | 편집 모드 제목 줄 판단(코드블록 안 제외·닫히지 않은 블록·4백틱·`==# #==`·윈도 줄바꿈), 설정 메뉴 "제목 강조"(체크 항목·기본 켜짐·클릭 알림), 스토어의 `headingHighlight`, 메인·편집기 연결 소스 점검 | 순수 함수·소스 점검 |

@@ -53,6 +53,7 @@ import { listContinueEdit } from '../lib/listContinue.js'
 import { wordCandidates } from '../lib/scopeWords.js'
 import { lineIndexAt } from '../lib/lineMarks.js'
 import { headingLineFlags } from '../lib/editorHeading.js'
+import { isNumpadEnterKey } from '../lib/numpadEnter.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -1271,6 +1272,13 @@ export function EditorPane({ text, onChange, disabled }) {
         return
       }
       replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, INDENT, onChange)
+      return
+    }
+    // 숫자패드 Enter: 그 자리에 [br](줄 안 줄바꿈)을 넣는다(lib/numpadEnter.js). 그냥 Enter·Shift+Enter 는 그대로다. 아래 위키 링크·목록 이어쓰기 처리가 숫자패드
+    // Enter 도 Enter 로 받으므로 그보다 먼저 본다. 한글 조합 중에는 건드리지 않는다. 입력칸의 되돌리기가 이어지도록 replaceRange 로 넣는다.
+    if (isNumpadEnterKey(e) && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, '[br]', onChange)
       return
     }
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && isInsideWikiLink(textarea)) {
