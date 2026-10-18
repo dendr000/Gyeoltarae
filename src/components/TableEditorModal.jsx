@@ -25,7 +25,6 @@ import { useGridHistory } from './useGridHistory.js'
 import { useKeepPosition } from './useKeepPosition.js'
 import { isJumpKey, jumpTarget } from '../lib/tableJump.js'
 import { displayToStored, storedToDisplay } from '../lib/cellText.js'
-import { isLineBreakKey } from '../lib/lineBreakKey.js'
 import { TableEditorHelp } from './TableEditorHelp.jsx'
 import { BOLD_MARK, UNDERLINE_MARK, toggleInlineMark } from '../lib/tableInline.js'
 import { TableFormatPanels } from './TableFormatPanels.jsx'
@@ -243,13 +242,6 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
   // 건드리지 않는다.
   function handleCellKeyDown(e, r, c) {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
-    // Shift+Enter 또는 Alt+Enter(엑셀과 같은 키)는 칸 안 줄바꿈 [br] 이다(lib/lineBreakKey.js). Alt 가 든 조합을 건드리지 않는 아래 규칙보다 먼저 본다.
-    if (isLineBreakKey(e)) {
-      e.preventDefault()
-      // execCommand 로 넣어야 입력칸의 되돌리기(Ctrl+Z)가 이어진다 — EditorPane.jsx 의 replaceRange 와 같은 이유.
-      document.execCommand('insertText', false, '[br]')
-      return
-    }
     if (e.ctrlKey || e.metaKey || e.altKey) return
     // 방향키: 위·아래는 늘 다른 칸으로, 왼쪽·오른쪽은 입력창 안의 커서가 글자의 맨 앞·맨 뒤에 있을 때만 다른 칸으로 간다(글자 사이를 움직이는
     // 평소 동작을 해치지 않게). Shift 가 든 조합은 글자 선택이라 건드리지 않는다. 표 끝이면 평소 동작에 맡긴다.
@@ -265,6 +257,12 @@ export function TableEditorModal({ initialRows, initialHeaderRow, onCancel, onCo
         // 오른쪽으로 들어온 칸은 글자의 맨 앞에, 왼쪽·위·아래는 맨 뒤에 커서를 둔다(방금 지나온 쪽에서 이어 가도록).
         if (arrow === 'right') inputRefs.current[`${target.r}:${target.c}`]?.setSelectionRange(0, 0)
       }
+      return
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault()
+      // execCommand 로 넣어야 입력칸의 되돌리기(Ctrl+Z)가 이어진다 — EditorPane.jsx 의 replaceRange 와 같은 이유.
+      document.execCommand('insertText', false, '[br]')
       return
     }
     if (e.key === 'Enter') {

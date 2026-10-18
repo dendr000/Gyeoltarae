@@ -48,7 +48,7 @@ export const TABLE_EDITOR_HELP = [
       { keys: 'Tab / Shift+Tab', text: '오른쪽 칸 / 왼쪽 칸으로 갑니다. 마지막 칸에서 Tab 을 누르면 새 행이 생깁니다.' },
       { keys: 'Enter', text: '바로 아래 칸으로 갑니다. 마지막 행이면 새 행이 생깁니다.' },
       { keys: '방향키', text: '글자 끝에서 누르면 옆 칸으로 넘어갑니다.' },
-      { keys: 'Shift+Enter / Alt+Enter', text: '칸 안에서 줄을 바꿉니다(Alt+Enter 는 엑셀과 같은 키). 문서에는 [br] 로 저장됩니다.' },
+      { keys: 'Shift+Enter', text: '칸 안에서 줄을 바꿉니다. 문서에는 [br] 로 저장됩니다.' },
       { keys: '선택한 셀 내용 칸', text: '넓은 칸에서는 Enter 로 줄을 바꾸면 됩니다(칸에는 [br] 로 저장됩니다). Ctrl+B·Ctrl+U 도 쓸 수 있습니다.' },
       { keys: 'F2 / Ctrl+Enter', text: '칸에서 "선택한 셀 내용" 큰 입력칸으로 건너갑니다. 한 번 더 누르면 원래 칸으로 돌아옵니다(칸 하나만 골랐을 때).' },
     ],

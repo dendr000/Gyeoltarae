@@ -118,20 +118,6 @@ describe('선택한 셀 내용(넓은 칸)의 줄바꿈', () => {
   })
 })
 
-describe('칸 안 줄바꿈 키', () => {
-  it('Shift+Enter 와 Alt+Enter 를 isLineBreakKey 로 판단해 [br] 을 넣는다', () => {
-    expect(modal).toContain("from '../lib/lineBreakKey.js'")
-    expect(modal).toMatch(/if \(isLineBreakKey\(e\)\) \{\s*e\.preventDefault\(\)[\s\S]{0,200}insertText', false, '\[br\]'\)/)
-  })
-
-  it('줄바꿈 키 판단은 Alt 조합을 건드리지 않는 규칙과 그냥 Enter(아래 칸 이동) 처리보다 앞에 있다', () => {
-    const handler = modal.slice(modal.indexOf('function handleCellKeyDown'))
-    expect(handler.indexOf('isLineBreakKey(e)')).toBeGreaterThan(-1)
-    expect(handler.indexOf('isLineBreakKey(e)')).toBeLessThan(handler.indexOf('if (e.ctrlKey || e.metaKey || e.altKey) return'))
-    expect(handler.indexOf('isLineBreakKey(e)')).toBeLessThan(handler.indexOf("if (e.key === 'Enter') {"))
-  })
-})
-
 describe('행·열 중간 삽입 단추', () => {
   it('행마다 "−" 왼쪽에 아래에 행을 끼우는 "+" 가 있다', () => {
     const actions = modal.slice(modal.indexOf('<td className="table-editor-row-actions">'), modal.indexOf('<td className="table-editor-add-row"'))
