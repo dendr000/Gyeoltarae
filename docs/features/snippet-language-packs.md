@@ -26,7 +26,7 @@ node scripts/install-snippet-pack.mjs langs --workspace D:\WikiDesk
 | `Java` | `Java`, `자바` | 471 | 키워드, `java.util` 등 표준 클래스·메서드, 어노테이션, 틀 61 |
 | `HTML` | `HTML`, `htm` | 370 | 태그, 속성, 속성 값, 특수 문자(`&nbsp;`), 틀 73 |
 | `CSS` | `CSS` | 386 | 속성, 값, 함수, 가상 클래스·요소, `@규칙`, 틀 44 |
-| `Python` | `Python`, `py`, `파이썬` | 454 | 키워드, 내장 함수, 예외, 특수 메서드, 표준 모듈, 틀 75 |
+| `Python` | `Python`, `py`, `파이썬` | 456 | 키워드, 내장 함수, 예외, 특수 메서드, 표준 모듈, 틀 75 |
 | `JavaScript` | `JavaScript`, `js` | 415 | 키워드, 내장 객체, 배열·문자열·DOM 메서드, Node.js, 틀 69 |
 | `TypeScript` | `TypeScript`, `ts` | 270 | 타입 문법, 유틸리티 타입, 데코레이터, 틀 48 |
 | `C#` | `C#`, `csharp`, `cs` | 408 | 키워드, .NET 기본 클래스, LINQ, 틀 72 |
@@ -34,11 +34,11 @@ node scripts/install-snippet-pack.mjs langs --workspace D:\WikiDesk
 | `Kotlin` | `Kotlin`, `kt` | 408 | 키워드, 컬렉션·코루틴, 안드로이드·Compose 이름, 틀 75 |
 | `Rust` | `Rust`, `rs` | 390 | 키워드, 표준 타입·메서드, 매크로(`println!`), 어트리뷰트, 틀 73 |
 | `Swift` | `Swift` | 415 | 키워드, Foundation·SwiftUI·UIKit 이름, 틀 91 |
-| `PHP` | `PHP` | 427 | 키워드, 내장 함수, 슈퍼글로벌, PDO·Laravel, 틀 75 |
+| `PHP` | `PHP` | 428 | 키워드, 내장 함수, 슈퍼글로벌, PDO·Laravel, 틀 75 |
 | `Ruby` | `Ruby`, `rb` | 409 | 키워드, 내장 메서드, Rails, 틀 72 |
 | `Bash` | `Bash`, `sh`, `shell` | 335 | 키워드, 리눅스 명령, 특수 변수(`$1`, `$@`), 틀 74 |
 
-합계 6259개. 단어·틀의 전체 목록은 `scripts/snippet-packs/lang/<언어>.js`.
+합계 6262개. 이 PC 의 `D:\WikiDesk` 에는 16개 폴더 전부를 설치했다(설치에 1분 반쯤 걸린다). 단어·틀의 전체 목록은 `scripts/snippet-packs/lang/<언어>.js`.
 
 ## 두 종류의 항목
 

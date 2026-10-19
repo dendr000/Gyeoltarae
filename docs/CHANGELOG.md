@@ -18,7 +18,7 @@
 ## [0.123.0] - 2026-10-19 16:10
 
 ### 추가 (Added)
-- C++·Java·HTML·Python·JavaScript·TypeScript·C·C#·Go·Kotlin·Rust·Swift·PHP·Ruby·Bash·CSS 16개 언어의 상용구 묶음을 추가했다. 언어마다 폴더 하나에 키워드·표준 라이브러리 이름(`namespace`, `ArrayList`, `enumerate` 등)과 `for` 반복문·`main` 함수·클래스 뼈대 같은 틀(`fori`, `psvm`, `ifmain`, `html5` 등) 6,259개가 들어 있다. 설치는 `node scripts/install-snippet-pack.mjs langs`(언어 하나만은 `cpp`, `java` 처럼 이름을 적는다)이고, 이미 있는 상용구는 덮어쓰지 않는다
+- C++·Java·HTML·Python·JavaScript·TypeScript·C·C#·Go·Kotlin·Rust·Swift·PHP·Ruby·Bash·CSS 16개 언어의 상용구 묶음을 추가했다. 언어마다 폴더 하나에 키워드·표준 라이브러리 이름(`namespace`, `ArrayList`, `enumerate` 등)과 `for` 반복문·`main` 함수·클래스 뼈대 같은 틀(`fori`, `psvm`, `ifmain`, `html5` 등) 6,262개가 들어 있다. 설치는 `node scripts/install-snippet-pack.mjs langs`(언어 하나만은 `cpp`, `java` 처럼 이름을 적는다)이고, 이미 있는 상용구는 덮어쓰지 않는다
 - 코드블록 언어 이름 별명을 늘렸다: `C/C++`·`hpp`(C++), `xhtml`(HTML), `mjs`·`cjs`(JavaScript), `mts`(TypeScript), `pyw`(Python), `dotnet`(C#), `kts`(Kotlin), `shellscript`(Bash)
 
 ### 변경 (Changed)

@@ -242,7 +242,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   쓰는 "활성 폴더"(그 폴더 + '공통'의 상용구만 자동 치환에 사용)가 되고, "닫으면 '전체'로 자동 복귀"
   체크박스(기본 켜짐)가 켜져 있으면 창을 닫을 때 '전체'로 돌아가 모든 폴더의 상용구를 다시 씀
 - **언어 상용구 묶음**: C++·Java·HTML·Python·JavaScript·TypeScript·C·C#·Go·Kotlin·Rust·Swift·PHP·Ruby·Bash·CSS 16개 언어의
-  키워드·표준 라이브러리·자주 쓰는 틀 6천여 개를 언어별 폴더로 설치 — `node scripts/install-snippet-pack.mjs langs`.
+  키워드·표준 라이브러리·자주 쓰는 틀 6,262개를 언어별 폴더로 설치 — `node scripts/install-snippet-pack.mjs langs`.
   폴더 이름이 언어 이름이면 그 언어의 코드블록(` ```C++ ` 등) 안에서만 추천·치환에 쓰임(글에는 안 뜸).
   자세히: [`docs/features/snippet-language-packs.md`](docs/features/snippet-language-packs.md)
 - **상용구 묶음**: SQL 키워드 147개(SELECT, NULL, NOT NULL, PRIMARY KEY 등)를 `SQL` 폴더로 한꺼번에 만들어 두는 스크립트가
