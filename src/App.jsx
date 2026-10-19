@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useAppStore } from './store/useAppStore.js'
 import { isSidebarToggleKey } from './lib/sidebarShortcut.js'
 import { decodeFileNameChars } from '../shared/fileNameChars.js'
 import { modeShortcutTarget } from './lib/modeShortcut.js'
+import { isNewDocKey, newDocTargetDir } from './lib/newDocShortcut.js'
 import { getApi } from './lib/api.js'
 import { FileTree } from './components/FileTree.jsx'
 import { SearchBar } from './components/SearchBar.jsx'
@@ -35,6 +36,8 @@ function isUnderPokedexFolder(dirPath) {
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Ctrl+N 이 부르는 "새 문서 만들기"(사이드바 단추와 같은 handleCreateDoc). 키 처리는 한 번만 등록해 두고, 항상 최신 함수를 부르도록 ref 로 넘긴다.
+  const createDocRef = useRef(null)
   // 편집기·코드블록 글꼴: 고른 글꼴을 CSS 변수 --mono 에 넣는다(index.css 의 기본값을 덮어씀). 기본이면 index.css 의 값 그대로다.
   const monoFont = useAppStore((s) => s.monoFont)
   useEffect(() => {
@@ -96,59 +99,6 @@ export default function App() {
     closeTab,
   } = useAppStore()
 
-  useEffect(() => {
-    initTheme()
-    initSettings()
-    initWorkspace()
-  }, [initTheme, initSettings, initWorkspace])
-
-  useEffect(() => {
-    const unsubscribe = getApi().onMenuChooseWorkspace?.(() => chooseWorkspace())
-    return unsubscribe
-  }, [chooseWorkspace])
-
-  // Ctrl+W — 탭 닫기. electron/main.js가 "창" 메뉴의 role:'close' 기본 가속기(Ctrl+W)를
-  // Alt+F4로 옮겨 뒀으니 여기까지 살아서 도착함 — 그거 없이는 Ctrl+W가 창(=앱) 자체를
-  // 닫아버렸음("Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네" 제보). PromptModal이 떠 있는
-  // 동안은 무시 — 문서 이름 입력 중에 실수로 그 아래 탭이 닫히는 걸 막기 위함.
-  useEffect(() => {
-    function handleGlobalKeyDown(e) {
-      if (promptRequest) return
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') {
-        e.preventDefault()
-        if (activeTabId) closeTab(activeTabId)
-      }
-      // Ctrl+M — 왼쪽 사이드바(문서/폴더 목록 등) 열기·닫기. 편집 중에도 동작한다.
-      if (isSidebarToggleKey(e)) {
-        e.preventDefault()
-        setSidebarCollapsed((v) => !v)
-      }
-      // Ctrl+1/2/3 뷰어·듀얼·편집으로 이동, Ctrl+E 뷰어 <-> 편집(듀얼 제외). 규칙은 lib/modeShortcut.js.
-      // 모달(표 편집기 등)이 떠 있으면 무시한다 — 뷰어로 바뀌면 편집 창이 사라져서 모달 안의 작업이 날아간다.
-      if (!document.querySelector('.modal-backdrop')) {
-        const target = modeShortcutTarget(e, mode)
-        if (target) {
-          e.preventDefault()
-          if (target !== mode) setMode(target)
-        }
-      }
-    }
-    window.addEventListener('keydown', handleGlobalKeyDown)
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [activeTabId, closeTab, promptRequest, mode, setMode])
-
-  if (!workspacePath) {
-    return (
-      <div className="welcome-screen">
-        <h1>결타래</h1>
-        <p>나무위키 스타일로 세계관·설정을 정리하는 로컬 메모 앱입니다.</p>
-        <button className="primary-btn" onClick={chooseWorkspace}>
-          워크스페이스 폴더 선택
-        </button>
-      </div>
-    )
-  }
-
   const handleCreateDoc = async (dirPath) => {
     const availableSkeletons = Object.keys(templateIndex).filter((n) => templateIndex[n].path)
     const fields = [{ key: 'name', label: '문서 이름', placeholder: '새 문서' }]
@@ -187,6 +137,70 @@ export default function App() {
     } catch (err) {
       window.alert(`문서를 만들지 못했습니다.\n\n${err.message}`)
     }
+  }
+
+  // Ctrl+N 의 전역 키 처리(아래)가 항상 최신 handleCreateDoc 를 부르도록 그릴 때마다 ref 에 넣는다.
+  useEffect(() => {
+    createDocRef.current = handleCreateDoc
+  })
+
+  useEffect(() => {
+    initTheme()
+    initSettings()
+    initWorkspace()
+  }, [initTheme, initSettings, initWorkspace])
+
+  useEffect(() => {
+    const unsubscribe = getApi().onMenuChooseWorkspace?.(() => chooseWorkspace())
+    return unsubscribe
+  }, [chooseWorkspace])
+
+  // Ctrl+W — 탭 닫기. electron/main.js가 "창" 메뉴의 role:'close' 기본 가속기(Ctrl+W)를
+  // Alt+F4로 옮겨 뒀으니 여기까지 살아서 도착함 — 그거 없이는 Ctrl+W가 창(=앱) 자체를
+  // 닫아버렸음("Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네" 제보). PromptModal이 떠 있는
+  // 동안은 무시 — 문서 이름 입력 중에 실수로 그 아래 탭이 닫히는 걸 막기 위함.
+  useEffect(() => {
+    function handleGlobalKeyDown(e) {
+      if (promptRequest) return
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault()
+        if (activeTabId) closeTab(activeTabId)
+      }
+      // Ctrl+M — 왼쪽 사이드바(문서/폴더 목록 등) 열기·닫기. 편집 중에도 동작한다.
+      if (isSidebarToggleKey(e)) {
+        e.preventDefault()
+        setSidebarCollapsed((v) => !v)
+      }
+      // Ctrl+1/2/3 뷰어·듀얼·편집으로 이동, Ctrl+E 뷰어 <-> 편집(듀얼 제외). 규칙은 lib/modeShortcut.js.
+      // 모달(표 편집기 등)이 떠 있으면 무시한다 — 뷰어로 바뀌면 편집 창이 사라져서 모달 안의 작업이 날아간다.
+      if (!document.querySelector('.modal-backdrop')) {
+        // Ctrl+N — 지금 열린 문서가 있는 폴더에 새 문서 만들기(없으면 작업 폴더). 폴더를 찾아 스크롤해서 그 폴더의 "새 문서"를 누르지 않아도 된다. 규칙은 lib/newDocShortcut.js.
+        if (isNewDocKey(e)) {
+          e.preventDefault()
+          createDocRef.current?.(newDocTargetDir(openPath, workspacePath))
+          return
+        }
+        const target = modeShortcutTarget(e, mode)
+        if (target) {
+          e.preventDefault()
+          if (target !== mode) setMode(target)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [activeTabId, closeTab, promptRequest, mode, setMode, openPath, workspacePath])
+
+  if (!workspacePath) {
+    return (
+      <div className="welcome-screen">
+        <h1>결타래</h1>
+        <p>나무위키 스타일로 세계관·설정을 정리하는 로컬 메모 앱입니다.</p>
+        <button className="primary-btn" onClick={chooseWorkspace}>
+          워크스페이스 폴더 선택
+        </button>
+      </div>
+    )
   }
 
   // 폴더 우클릭 → "기본 틀 설정…": 이 폴더 아래에서 새 문서를 만들 때 자동으로 고를 글양식(틀)을 정한다(규칙은
