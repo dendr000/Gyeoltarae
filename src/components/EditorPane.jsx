@@ -41,6 +41,7 @@ import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from 
 import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../lib/snippetLanguage.js'
 import { fenceAutoCloseEdit, isInCodeFenceAt, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
+import { isLineMoveKey, moveLinesEdit } from '../lib/lineMove.js'
 import { atomicDeleteRange, atomicStep } from '../lib/atomicTokens.js'
 import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
@@ -1239,6 +1240,22 @@ export function EditorPane({ text, onChange, disabled }) {
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd)
+        })
+      }
+      return
+    }
+    // Ctrl+Alt+↑/↓ — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다(VS Code 의 줄 이동). 맨 윗줄·맨 아랫줄에서는 아무 일도 없다.
+    // 규칙은 lib/lineMove.js. 한글 조합 중 여부는 nativeEvent 에 있다. 선택 방향(앞->뒤/뒤->앞)은 옮긴 뒤에도 유지한다.
+    const lineMoveDirection = isLineMoveKey(e.nativeEvent)
+    if (lineMoveDirection !== null) {
+      e.preventDefault()
+      const selectionDirection = textarea.selectionDirection
+      const edit = moveLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, lineMoveDirection)
+      if (edit) {
+        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(edit.selStart, edit.selEnd, selectionDirection)
         })
       }
       return
