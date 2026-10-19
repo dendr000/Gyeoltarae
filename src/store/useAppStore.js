@@ -22,6 +22,7 @@ import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
 import { normalizeTypewriterZone } from '../../shared/typewriterZone.js'
 import { DEFAULT_MODE, modeForDocFields } from '../lib/viewMode.js'
+import { moveTabById } from '../lib/tabOrder.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -1395,6 +1396,14 @@ export const useAppStore = create((set, get) => ({
       const closedIndex = state.tabs.findIndex((t) => t.id === id)
       const tabs = state.tabs.filter((t) => t.id !== id)
       return withViewerIfNeeded(state, resolveTabsAfterRemoval(tabs, wasActive, closedIndex))
+    })
+  },
+
+  // 탭을 왼쪽(-1)·오른쪽(+1)으로 한 칸 옮긴다(탭 순서만 바뀌고 활성 탭과 탭 내용은 그대로). 규칙은 lib/tabOrder.js.
+  moveTab(id, direction) {
+    set((state) => {
+      const tabs = moveTabById(state.tabs, id, direction)
+      return tabs === state.tabs ? {} : { tabs }
     })
   },
 

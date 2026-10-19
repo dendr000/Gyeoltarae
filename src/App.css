@@ -378,6 +378,7 @@
 
 .tab-bar-item {
   flex-shrink: 0;
+  user-select: none; /* 탭을 누른 채 방향키로 옮길 때 탭 글자가 선택되지 않게 */
   display: flex;
   align-items: center;
   gap: 6px;
