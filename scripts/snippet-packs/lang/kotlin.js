@@ -132,5 +132,6 @@ export const KOTLIN_PACK = languagePack({
     'false', 'this', 'object', 'interface', 'override', 'private', 'public', 'open', 'data', 'import', 'package',
     'println', 'String', 'Int', 'Boolean', 'List', 'listOf', 'mutableListOf', 'map', 'filter', 'forEach',
     'ktmain', 'fori', 'dataclass',
+    'do', 'break', 'continue', 'throw', 'try', 'catch', 'finally', 'companion', 'init', 'constructor', 'abstract', 'sealed', 'enum', 'inline', 'lateinit', 'lazy', 'by', 'out', 'vararg', 'typealias', 'suspend', 'internal', 'protected', 'const', 'operator', 'infix', 'Unit', 'Any', 'Nothing', 'Char', 'Long', 'Double', 'Float', 'Short', 'Byte', 'Array', 'Set', 'Map', 'MutableList', 'MutableMap', 'Pair', 'Sequence', 'Result', 'print', 'readLine', 'setOf', 'mapOf', 'arrayOf', 'emptyList', 'size', 'isEmpty', 'isNotEmpty', 'first', 'last', 'add', 'remove', 'contains', 'get', 'let', 'apply', 'also', 'run', 'with', 'takeIf', 'joinToString', 'toString', 'toInt', 'toList', 'sorted', 'sortedBy', 'groupBy', 'launch', 'async', 'delay', 'runBlocking', 'Dispatchers', 'Flow', 'Composable',
   ],
 })

@@ -49,8 +49,12 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, g
     // SELECT 인 후보)는 내지 않는다. 키워드를 상용구로 많이 등록해 두면 다 친 글자에 대해서도 후보가
     // 뜨고 Enter 가 그걸 확정해 버리기 때문. 걸리는 게 전부 그런 후보면 더 짧은 글자로 되돌아가 다른
     // 후보를 찾지 않고 팝업을 닫는다 — "NOT NULL" 을 다 쳤는데 끝의 "NULL" 로 "NULLIF" 를 찾으면 안 되므로.
-    const matches = prefixMatches.filter((entry) => entry.content !== suffix)
-    if (matches.length === 0) return null
+    const changing = prefixMatches.filter((entry) => entry.content !== suffix)
+    if (changing.length === 0) return null
+    // 코드블록 안에서는 친 글자와 똑같은 단어(`int`)도 후보에 남겨 맨 위에 보여 준다. 빼 버리면 `int` 를 다 쳤을 때
+    // int8_t·int16_t 같은 긴 이름만 보여서 `int` 자체는 없는 것처럼 보인다(Tab 으로 확정해도 글자는 그대로다).
+    // 위의 "전부 그런 후보면 팝업을 닫는다"는 그대로라서 `NOT NULL` 을 다 쳤을 때 `NULLIF` 가 뜨지는 않는다.
+    const matches = wordStartOnly ? [...prefixMatches] : changing
     // 순서 목록(_순서.txt)에 있는 후보(entry.rank 가 있는 것)를 목록에 없는 후보보다 먼저, 그다음 대소문자까지
     // 같은 것 우선, 그다음 정확히 일치하는 제목, 그다음 rank(작을수록 위), 그다음 제목이 짧은 순 — 정확
     // 일치와 짧은 순은 Galpi와 동일. 목록에 적은 것은 사용자가 직접 고른 순서라서, 소문자로 `create` 를 쳤을 때
@@ -65,6 +69,13 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, g
       const aListed = Number.isFinite(a.rank) ? 0 : 1
       const bListed = Number.isFinite(b.rank) ? 0 : 1
       if (aListed !== bListed) return aListed - bListed
+      // 코드블록에서는 순서 목록에 없을 때 단어(int, include)를 틀(fori, incio 같은 줄임말)보다 먼저 보여 준다.
+      // 한두 글자만 쳤을 때 틀 줄임말이 짧다는 이유로 키워드보다 위에 뜨는 것을 막는다.
+      if (grammar !== null) {
+        const aTemplate = a.content !== a.title && folderGrammar(a.category) === grammar ? 1 : 0
+        const bTemplate = b.content !== b.title && folderGrammar(b.category) === grammar ? 1 : 0
+        if (aTemplate !== bTemplate) return aTemplate - bTemplate
+      }
       // 폴더 범위 영어 단어(word: true, lib/scopeWords.js)는 상용구보다 뒤에 둔다 — 직접 등록한 것이 우선.
       const aWord = a.word ? 1 : 0
       const bWord = b.word ? 1 : 0

@@ -231,6 +231,42 @@ describe('설치 (임시 폴더)', () => {
     expect(scanSnippets(root)).toHaveLength(LANGUAGE_PACKS.java.entries.length)
   })
 
+  it('--merge-order: 이미 있는 순서 파일을 고치지 않고 없는 제목만 뒤에 덧붙인다', () => {
+    const dir = path.join(snippetsDirPath(root), 'Java')
+    fs.mkdirSync(dir, { recursive: true })
+    const orderPath = path.join(dir, '_순서.txt')
+    fs.writeFileSync(orderPath, '# 내가 고침\nvoid\npublic\n', 'utf-8')
+
+    const merged = install('java', { mergeOrder: true })
+
+    expect(merged.orderFile).toBe('merged')
+    const lines = fs.readFileSync(orderPath, 'utf-8').split('\n')
+    expect(lines.slice(0, 3)).toEqual(['# 내가 고침', 'void', 'public'])
+    expect(lines.filter((l) => l === 'void')).toHaveLength(1)
+    expect(lines).toContain('class')
+    expect(merged.orderAdded).toBe(LANGUAGE_PACKS.java.order.length - 2)
+
+    const again = install('java', { mergeOrder: true })
+    expect(again.orderFile).toBe('kept')
+  })
+
+  it('--merge-order 가 없으면 이미 있는 순서 파일은 그대로 둔다', () => {
+    const dir = path.join(snippetsDirPath(root), 'Java')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, '_순서.txt'), 'void\n', 'utf-8')
+    expect(install('java').orderFile).toBe('kept')
+    expect(fs.readFileSync(path.join(dir, '_순서.txt'), 'utf-8')).toBe('void\n')
+  })
+
+  it('순서 파일을 미리보기(dryRun)로 합쳐 보면 파일은 그대로이고 덧붙일 개수만 알려 준다', () => {
+    const dir = path.join(snippetsDirPath(root), 'Java')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, '_순서.txt'), 'void\n', 'utf-8')
+    const result = install('java', { mergeOrder: true, dryRun: true })
+    expect(result.orderFile).toBe('merged')
+    expect(fs.readFileSync(path.join(dir, '_순서.txt'), 'utf-8')).toBe('void\n')
+  })
+
   it('다른 폴더(영어 등)는 건드리지 않는다', () => {
     const other = path.join(snippetsDirPath(root), '영어')
     fs.mkdirSync(other, { recursive: true })

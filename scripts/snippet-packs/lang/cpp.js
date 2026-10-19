@@ -136,5 +136,6 @@ export const CPP_PACK = languagePack({
     'private', 'const', 'auto', 'string', 'vector', 'cout', 'cin', 'endl', 'std', 'namespace', 'using', 'template',
     'typename', 'static', 'new', 'delete', 'true', 'false', 'nullptr', 'size_t', 'map', 'sort',
     'cppbase', 'fori', 'forrange', 'mainfn',
+    'do', 'break', 'continue', 'switch', 'case', 'default', 'inline', 'virtual', 'override', 'final', 'explicit', 'friend', 'operator', 'enum', 'union', 'typedef', 'this', 'throw', 'try', 'catch', 'noexcept', 'constexpr', 'volatile', 'bool', 'char', 'short', 'long', 'float', 'double', 'unsigned', 'signed', 'wchar_t', 'int8_t', 'int16_t', 'int32_t', 'int64_t', 'uint8_t', 'uint32_t', 'uint64_t', 'pair', 'tuple', 'set', 'unordered_map', 'unordered_set', 'queue', 'stack', 'deque', 'list', 'array', 'string_view', 'shared_ptr', 'unique_ptr', 'make_unique', 'make_shared', 'push_back', 'pop_back', 'emplace_back', 'size', 'empty', 'begin', 'end', 'find', 'insert', 'erase', 'clear', 'front', 'back', 'first', 'second', 'swap', 'move', 'min', 'max', 'abs', 'reverse', 'getline', 'printf', 'scanf', 'puts', 'memset', 'strlen', 'fixed', 'setprecision', 'nullptr_t', 'iostream', 'algorithm', 'cmath', 'cstdio', 'cstdlib', 'cstring', 'bits/stdc++.h', 'INT_MAX', 'INT_MIN', 'LLONG_MAX',
   ],
 })

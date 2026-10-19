@@ -136,5 +136,6 @@ export const PHP_PACK = languagePack({
     'echo', 'function', 'return', 'if', 'else', 'elseif', 'for', 'foreach', 'while', 'class', 'public', 'private',
     'protected', 'static', 'new', 'array', 'null', 'true', 'false', 'isset', 'empty', 'count', 'require_once',
     'include', 'namespace', 'use', '$this', '$_POST', '$_GET', '$_SESSION', 'phptag', 'fore', 'fori',
+    'switch', 'case', 'default', 'break', 'continue', 'do', 'try', 'catch', 'finally', 'throw', 'clone', 'instanceof', 'abstract', 'final', 'interface', 'trait', 'extends', 'implements', 'self', 'parent', 'const', 'global', 'var', 'list', 'unset', 'die', 'exit', 'print', 'include_once', 'require', 'int', 'float', 'string', 'bool', 'object', 'callable', 'iterable', 'void', 'mixed', 'strlen', 'strpos', 'substr', 'str_replace', 'trim', 'explode', 'implode', 'sprintf', 'printf', 'in_array', 'array_merge', 'array_map', 'array_filter', 'array_keys', 'array_values', 'array_push', 'array_pop', 'array_slice', 'sort', 'usort', 'json_encode', 'json_decode', 'date', 'time', 'file_get_contents', 'file_put_contents', 'preg_match', 'intval', 'is_array', 'is_null', 'var_dump', 'print_r', 'htmlspecialchars', 'password_hash', 'session_start', 'header', '$_SERVER', 'PDO', 'Exception',
   ],
 })

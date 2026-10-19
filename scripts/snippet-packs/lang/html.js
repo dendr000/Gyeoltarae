@@ -128,5 +128,6 @@ export const HTML_PACK = languagePack({
     'div', 'span', 'p', 'a', 'img', 'ul', 'li', 'table', 'tr', 'td', 'form', 'input', 'button', 'class', 'id', 'href',
     'src', 'style', 'script', 'link', 'meta', 'title', 'head', 'body', 'html', 'h1', 'h2', 'h3', 'label', 'select',
     'option', 'textarea', 'section', 'header', 'footer', 'nav', 'html5',
+    'main', 'article', 'aside', 'h4', 'h5', 'h6', 'br', 'hr', 'ol', 'dl', 'dt', 'dd', 'pre', 'code', 'strong', 'em', 'b', 'i', 'u', 'small', 'sub', 'sup', 'thead', 'tbody', 'th', 'caption', 'fieldset', 'legend', 'video', 'audio', 'iframe', 'canvas', 'svg', 'alt', 'type', 'name', 'value', 'placeholder', 'required', 'disabled', 'checked', 'selected', 'action', 'method', 'target', 'rel', 'width', 'height', 'lang', 'charset', 'content', 'data-id', 'role', 'tabindex', 'onclick', 'onchange', 'onsubmit', 'onload', 'text', 'number', 'email', 'password', 'checkbox', 'radio', 'submit', 'file', 'hidden', 'date',
   ],
 })

@@ -114,5 +114,6 @@ export const CSS_PACK = languagePack({
     'none', 'block', 'flex', 'auto', 'center', 'relative', 'absolute', 'hidden', 'transition', 'transform',
     'opacity', 'overflow', 'cursor', 'box-sizing', 'border-radius', 'gap', 'z-index',
     'flexc', 'rule', 'mediamax', 'cssreset',
+    'background-image', 'background-size', 'background-position', 'box-shadow', 'text-decoration', 'line-height', 'letter-spacing', 'font-family', 'text-transform', 'white-space', 'overflow-x', 'overflow-y', 'top', 'left', 'right', 'bottom', 'float', 'clear', 'flex-direction', 'flex-wrap', 'flex-grow', 'align-content', 'grid-template-columns', 'grid-template-rows', 'min-width', 'max-width', 'min-height', 'max-height', 'animation', 'visibility', 'outline', 'content', 'list-style', 'object-fit', 'aspect-ratio', 'inline-block', 'inline', 'fixed', 'sticky', 'static', 'flex-start', 'flex-end', 'space-between', 'space-around', 'wrap', 'nowrap', 'column', 'row', 'solid', 'dashed', 'dotted', 'bold', 'italic', 'underline', 'uppercase', 'transparent', 'inherit', 'initial', 'rgb', 'rgba', 'hsl', 'url', 'var', 'calc', 'linear-gradient', 'translate', 'rotate', 'scale', 'hover', 'focus', 'active', 'first-child', 'last-child', 'nth-child', 'before', 'after', 'root',
   ],
 })

@@ -121,5 +121,6 @@ export const RUBY_PACK = languagePack({
     'def', 'end', 'class', 'module', 'if', 'elsif', 'else', 'unless', 'case', 'when', 'while', 'do', 'return', 'puts',
     'nil', 'true', 'false', 'self', 'require', 'require_relative', 'attr_accessor', 'each', 'map', 'select', 'new',
     'initialize', 'rescue', 'yield', 'rbdef', 'rbclass', 'rbeach',
+    'then', 'until', 'begin', 'ensure', 'retry', 'redo', 'break', 'next', 'super', 'alias', 'undef', 'defined?', 'and', 'or', 'not', 'print', 'p', 'pp', 'gets', 'load', 'include', 'extend', 'raise', 'lambda', 'proc', 'loop', 'attr_reader', 'attr_writer', 'private', 'public', 'protected', 'Integer', 'Float', 'String', 'Symbol', 'Array', 'Hash', 'Range', 'Struct', 'Set', 'Time', 'File', 'Dir', 'Math', 'Comparable', 'Enumerable', 'each_with_index', 'reject', 'reduce', 'inject', 'find', 'any?', 'all?', 'include?', 'empty?', 'size', 'length', 'first', 'last', 'push', 'pop', 'shift', 'unshift', 'join', 'split', 'strip', 'gsub', 'sub', 'to_s', 'to_i', 'to_a', 'to_h', 'keys', 'values', 'fetch', 'merge', 'sort', 'sort_by', 'uniq', 'flatten', 'compact', 'zip', 'freeze', 'nil?', 'is_a?', 'respond_to?', 'send',
   ],
 })

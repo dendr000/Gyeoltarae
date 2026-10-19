@@ -151,5 +151,6 @@ export const SWIFT_PACK = languagePack({
     'for', 'in', 'while', 'switch', 'case', 'import', 'self', 'nil', 'true', 'false', 'init', 'private', 'public',
     'static', 'override', 'String', 'Int', 'Bool', 'Double', 'Array', 'print', 'some', 'View', 'Text',
     'swprint', 'swfori', 'swfunc',
+    'default', 'break', 'continue', 'fallthrough', 'where', 'do', 'try', 'catch', 'throw', 'throws', 'rethrows', 'defer', 'is', 'as', 'Any', 'AnyObject', 'Self', 'super', 'deinit', 'subscript', 'typealias', 'associatedtype', 'internal', 'fileprivate', 'open', 'final', 'mutating', 'lazy', 'weak', 'unowned', 'inout', 'optional', 'required', 'convenience', 'indirect', 'async', 'await', 'actor', 'any', 'Int8', 'Int16', 'Int32', 'Int64', 'UInt', 'Float', 'Character', 'Dictionary', 'Set', 'Optional', 'Result', 'Date', 'Data', 'URL', 'count', 'isEmpty', 'first', 'last', 'append', 'remove', 'contains', 'map', 'filter', 'reduce', 'sorted', 'forEach', 'joined', 'hasPrefix', 'hasSuffix', 'uppercased', 'lowercased', 'Button', 'VStack', 'HStack', 'ZStack', 'List', 'ForEach', 'NavigationStack', 'State', 'Binding', 'Published', 'ObservableObject', 'body', 'padding', 'font', 'frame', 'onAppear',
   ],
 })

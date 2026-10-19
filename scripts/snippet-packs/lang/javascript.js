@@ -133,5 +133,6 @@ export const JAVASCRIPT_PACK = languagePack({
     'export', 'default', 'async', 'await', 'try', 'catch', 'true', 'false', 'null', 'undefined', 'console',
     'document', 'window', 'length', 'push', 'map', 'filter', 'forEach', 'then', 'JSON', 'Promise', 'Math',
     'clg', 'arrowf', 'fori', 'forof',
+    'do', 'switch', 'case', 'break', 'continue', 'finally', 'throw', 'delete', 'typeof', 'instanceof', 'in', 'of', 'yield', 'extends', 'super', 'static', 'get', 'set', 'NaN', 'Infinity', 'from', 'require', 'module', 'exports', 'log', 'error', 'warn', 'Object', 'Array', 'String', 'Number', 'Boolean', 'Date', 'Map', 'Set', 'Symbol', 'RegExp', 'Error', 'parseInt', 'parseFloat', 'isNaN', 'pop', 'shift', 'unshift', 'slice', 'splice', 'concat', 'join', 'indexOf', 'includes', 'find', 'findIndex', 'reduce', 'some', 'every', 'sort', 'reverse', 'keys', 'values', 'entries', 'assign', 'freeze', 'split', 'trim', 'replace', 'match', 'toString', 'toFixed', 'getElementById', 'querySelector', 'querySelectorAll', 'addEventListener', 'createElement', 'appendChild', 'innerHTML', 'textContent', 'classList', 'style', 'setAttribute', 'fetch', 'resolve', 'reject', 'setTimeout', 'setInterval', 'localStorage',
   ],
 })

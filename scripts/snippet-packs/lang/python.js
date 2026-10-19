@@ -146,5 +146,6 @@ export const PYTHON_PACK = languagePack({
     'print', 'len', 'range', 'self', 'None', 'True', 'False', 'try', 'except', 'with', 'as', 'lambda', 'pass',
     'int', 'str', 'list', 'dict', 'set', 'input', 'open', 'enumerate', 'zip', 'sorted', '__init__', '__name__',
     'ifmain', 'forr', 'fore', 'deff', 'clsp',
+    'finally', 'raise', 'assert', 'del', 'global', 'nonlocal', 'yield', 'async', 'await', 'is', 'break', 'continue', 'float', 'bool', 'tuple', 'bytes', 'type', 'isinstance', 'map', 'filter', 'reversed', 'sum', 'min', 'max', 'abs', 'round', 'any', 'all', 'super', 'property', 'staticmethod', 'classmethod', 'append', 'extend', 'insert', 'remove', 'pop', 'index', 'count', 'sort', 'keys', 'values', 'items', 'get', 'update', 'join', 'split', 'strip', 'replace', 'format', 'startswith', 'endswith', 'upper', 'lower', 'read', 'write', 'close', 'os', 'sys', 're', 'json', 'math', 'random', 'time', 'datetime', 'Path', 'List', 'Dict', 'Optional', 'Tuple', 'Any', 'Exception', 'ValueError', 'TypeError', 'KeyError', 'IndexError', 'cls', 'args', 'kwargs', '__main__', '__str__', '__repr__', '__len__', 'dataclass',
   ],
 })

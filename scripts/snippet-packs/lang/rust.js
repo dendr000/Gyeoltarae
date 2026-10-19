@@ -126,5 +126,6 @@ export const RUST_PACK = languagePack({
     'fn', 'let', 'mut', 'pub', 'struct', 'enum', 'impl', 'trait', 'use', 'mod', 'return', 'if', 'else', 'for', 'while',
     'loop', 'match', 'in', 'self', 'Self', 'true', 'false', 'String', 'Vec', 'Option', 'Result', 'Some', 'None',
     'Ok', 'Err', 'i32', 'u32', 'usize', 'bool', 'println!', 'unwrap', 'rsmain', 'fori', 'pln',
+    'break', 'continue', 'as', 'ref', 'move', 'unsafe', 'where', 'dyn', 'async', 'await', 'const', 'static', 'type', 'crate', 'super', 'extern', 'i8', 'i16', 'i64', 'u8', 'u16', 'u64', 'f32', 'f64', 'isize', 'char', 'str', 'Box', 'Rc', 'Arc', 'RefCell', 'HashMap', 'HashSet', 'BTreeMap', 'VecDeque', 'Default', 'Debug', 'Clone', 'Copy', 'PartialEq', 'Display', 'From', 'Into', 'Iterator', 'Fn', 'Error', 'std', 'format!', 'vec!', 'panic!', 'assert!', 'assert_eq!', 'write!', 'todo!', 'expect', 'unwrap_or', 'is_some', 'is_none', 'is_ok', 'is_err', 'ok_or', 'map_err', 'and_then', 'new', 'push', 'pop', 'len', 'is_empty', 'iter', 'into_iter', 'collect', 'map', 'filter', 'fold', 'sum', 'count', 'enumerate', 'zip', 'rev', 'get', 'insert', 'remove', 'contains_key', 'clone', 'to_string', 'to_owned', 'as_str', 'chars', 'trim', 'parse', 'lines', 'split',
   ],
 })

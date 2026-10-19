@@ -114,3 +114,45 @@ describe('findSnippetQuery — 코드블록 언어의 폴더가 위에 온다 (g
     expect(titles(ctx.matches)).toEqual(['Java/public', '공통/public_note'])
   })
 })
+
+describe('findSnippetQuery — 코드블록에서는 다 친 단어(int)도 후보 맨 위에 남는다', () => {
+  const cpp = (title, content = title, extra = {}) => e('C++', title, content, extra)
+  const run = (typed, entries, options = { wordStartOnly: true, grammar: 'cpp' }) =>
+    findSnippetQuery(typed, typed.length, entries, options)
+
+  it('int 를 다 쳐도 int 가 맨 위에 있고 int8_t 같은 긴 이름이 뒤따른다 (순서 목록에 있을 때)', () => {
+    const entries = [cpp('int8_t'), cpp('int16_t'), cpp('int', 'int', { rank: 3 })]
+    expect(run('int', entries).matches.map((m) => m.title)).toEqual(['int', 'int8_t', 'int16_t'])
+  })
+
+  it('순서 목록에 없어도 정확히 같은 단어가 먼저다', () => {
+    const entries = [cpp('int8_t'), cpp('int')]
+    expect(run('int', entries).matches.map((m) => m.title)).toEqual(['int', 'int8_t'])
+  })
+
+  it('걸리는 후보가 다 친 단어 하나뿐이면 팝업을 닫는다 (예전과 같음)', () => {
+    expect(run('int', [cpp('int')])).toBeNull()
+  })
+
+  it('글(코드블록 밖)에서는 예전처럼 다 친 단어를 빼고 긴 이름만 보여 준다', () => {
+    const entries = [e('공통', 'int8_t'), e('공통', 'int')]
+    expect(run('int', entries, { wordStartOnly: false }).matches.map((m) => m.title)).toEqual(['int8_t'])
+  })
+
+  it('NOT NULL 을 다 쳤을 때 끝의 NULL 로 NULLIF 를 찾지 않는다 (코드블록에서도)', () => {
+    const sql = (title) => e('SQL', title)
+    expect(findSnippetQuery('NOT NULL', 8, [sql('NOT NULL'), sql('NULL'), sql('NULLIF')], { wordStartOnly: true, grammar: 'sql' })).toBeNull()
+  })
+
+  it('한두 글자만 쳤을 때 단어가 틀 줄임말보다 위에 온다 (in → int, include 가 incio 위)', () => {
+    const entries = [cpp('incio', '#include <iostream>'), cpp('incvec', '#include <vector>'), cpp('inline'), cpp('int')]
+    const titlesOf = run('in', entries).matches.map((m) => m.title)
+    expect(titlesOf.slice(0, 2).sort()).toEqual(['inline', 'int'])
+    expect(titlesOf.slice(2).sort()).toEqual(['incio', 'incvec'])
+  })
+
+  it('순서 목록에 있는 틀은 단어보다 위에 둘 수 있다', () => {
+    const entries = [cpp('fori', 'for (int i...)', { rank: 0 }), cpp('format')]
+    expect(run('for', entries).matches.map((m) => m.title)).toEqual(['fori', 'format'])
+  })
+})

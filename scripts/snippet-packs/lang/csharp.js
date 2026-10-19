@@ -130,5 +130,6 @@ export const CSHARP_PACK = languagePack({
     'int', 'bool', 'var', 'if', 'else', 'for', 'foreach', 'while', 'try', 'catch', 'async', 'await', 'null', 'true',
     'false', 'List', 'Dictionary', 'Console', 'WriteLine', 'this', 'override', 'virtual', 'interface',
     'cwl', 'fori', 'foreachv', 'cprop', 'cclass',
+    'internal', 'abstract', 'sealed', 'readonly', 'const', 'base', 'ref', 'out', 'in', 'params', 'is', 'as', 'typeof', 'sizeof', 'checked', 'unchecked', 'lock', 'event', 'delegate', 'partial', 'extern', 'unsafe', 'implicit', 'explicit', 'operator', 'throw', 'finally', 'switch', 'case', 'default', 'break', 'continue', 'do', 'goto', 'char', 'byte', 'short', 'long', 'float', 'double', 'decimal', 'object', 'dynamic', 'enum', 'struct', 'record', 'init', 'get', 'set', 'value', 'yield', 'from', 'where', 'select', 'orderby', 'group', 'join', 'Math', 'String', 'Convert', 'DateTime', 'TimeSpan', 'Guid', 'HashSet', 'Queue', 'Stack', 'Array', 'IEnumerable', 'Task', 'Exception', 'File', 'Path', 'Directory', 'Stream', 'Thread', 'Func', 'Action', 'Nullable', 'Write', 'ReadLine', 'Length', 'Count', 'Add', 'Remove', 'Contains', 'Parse', 'ToString', 'Equals', 'Where', 'Select', 'First', 'Any', 'OrderBy', 'ToList',
   ],
 })

@@ -121,5 +121,6 @@ export const BASH_PACK = languagePack({
     'echo', 'if', 'then', 'else', 'elif', 'fi', 'for', 'in', 'do', 'done', 'while', 'case', 'esac', 'function',
     'local', 'export', 'exit', 'return', 'cd', 'ls', 'cat', 'grep', 'sed', 'awk', 'find', 'sudo', 'git', 'docker',
     '$HOME', '$1', '$@', '$?', 'shbang', 'shif', 'shfor',
+    'until', 'select', 'break', 'continue', 'shift', 'trap', 'time', 'source', 'alias', 'unalias', 'unset', 'readonly', 'declare', 'read', 'printf', 'test', 'eval', 'exec', 'set', 'pwd', 'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'touch', 'head', 'tail', 'less', 'wc', 'sort', 'uniq', 'cut', 'tr', 'tee', 'xargs', 'diff', 'chmod', 'chown', 'ln', 'tar', 'gzip', 'zip', 'unzip', 'curl', 'wget', 'ssh', 'scp', 'rsync', 'ps', 'top', 'kill', 'sleep', 'date', 'env', 'which', 'man', 'apt', 'pip', 'npm', 'python', 'systemctl', '$0', '$2', '$#', '$*', '$$', '$!', '$PATH', '$PWD', '$USER', '$RANDOM', '$LINENO', 'true', 'false',
   ],
 })

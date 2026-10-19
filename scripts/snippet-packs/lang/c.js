@@ -99,5 +99,6 @@ export const C_PACK = languagePack({
     '#include', '#define', 'int', 'char', 'void', 'return', 'if', 'else', 'for', 'while', 'struct', 'typedef',
     'const', 'static', 'sizeof', 'NULL', 'printf', 'scanf', 'malloc', 'free', 'strlen', 'strcmp', 'strcpy',
     'stdio.h', 'stdlib.h', 'string.h', 'cbase', 'fori', 'mainfn',
+    'do', 'break', 'continue', 'switch', 'case', 'default', 'enum', 'union', 'extern', 'register', 'volatile', 'signed', 'unsigned', 'short', 'long', 'float', 'double', 'bool', 'true', 'false', 'size_t', 'uint8_t', 'uint32_t', 'uint64_t', 'int32_t', 'int64_t', 'FILE', 'stdin', 'stdout', 'stderr', 'EOF', 'fopen', 'fclose', 'fgets', 'fputs', 'fprintf', 'sprintf', 'snprintf', 'puts', 'getchar', 'putchar', 'calloc', 'realloc', 'memset', 'memcpy', 'memcmp', 'strncpy', 'strcat', 'strchr', 'strstr', 'atoi', 'atof', 'rand', 'srand', 'exit', 'qsort', 'assert', 'time', 'sqrt', 'pow', 'abs', 'isdigit', 'isalpha', 'toupper', 'tolower', 'argc', 'argv', 'main', 'stdint.h', 'math.h', 'time.h', 'ctype.h',
   ],
 })

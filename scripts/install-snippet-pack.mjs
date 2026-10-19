@@ -7,6 +7,7 @@
 //   node scripts/install-snippet-pack.mjs cpp                 (언어 하나만: cpp c java html css python javascript typescript csharp go kotlin rust swift php ruby bash)
 //   node scripts/install-snippet-pack.mjs sql --dry-run       (아무것도 안 만들고 개수만 보여 줌)
 //   node scripts/install-snippet-pack.mjs sql --workspace D:\WikiDesk
+//   node scripts/install-snippet-pack.mjs langs --merge-order (이미 있는 _순서.txt 에 없는 제목만 뒤에 덧붙임)
 //
 // 파일 이름 규칙(못 쓰는 글자·대소문자 충돌)은 앱과 같은 electron/fileSystem.js 의 ensureSnippet 을
 // 그대로 쓴다. 이미 같은 폴더에 같은 제목의 상용구가 있으면 건드리지 않고 건너뛴다(덮어쓰지 않음) —
@@ -18,6 +19,7 @@ import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath }
 import { SQL_PACK } from './snippet-packs/sql.js'
 import { SQL_PRACTICE_PACK } from './snippet-packs/sql-practice.js'
 import { LANGUAGE_PACKS } from './snippet-packs/langs.js'
+import { parseSnippetOrder } from '../src/lib/snippetOrder.js'
 
 // 'langs' 는 프로그래밍 언어 묶음 전부(폴더마다 하나씩)를 한꺼번에 설치하는 이름이다.
 const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK, ...LANGUAGE_PACKS }
@@ -31,10 +33,12 @@ function normalizeEntry(entry) {
 // 묶음을 워크스페이스에 설치한다. dryRun 이면 디스크에 아무것도 쓰지 않고 결과만 계산한다.
 // order(선택): 추천 팝업에서의 후보 순서(제목 목록, 자주 쓰는 순). 주어지면 폴더에 순서 목록 파일
 // (_순서.txt, 규칙은 src/lib/snippetOrder.js)을 만든다 — 이미 있으면 사용자가 고쳤을 수 있으니 건드리지 않는다.
-// 돌려주는 값: { created, skipped, orderFile }
+// mergeOrder: 이미 있는 순서 목록 파일에 묶음의 순서 중 아직 없는 제목만 맨 뒤에 덧붙인다(사용자가 고친 줄과 순서는 그대로).
+// 돌려주는 값: { created, skipped, orderFile, orderAdded }
 //   created/skipped = 만든/이미 있어서 건너뛴 제목 목록
-//   orderFile = 'created'(새로 씀) | 'kept'(이미 있어서 그대로 둠) | 'none'(order 없음) | 'dry-run'(만들 예정)
-export function installSnippetPack({ workspacePath, folder, entries, order, dryRun = false }) {
+//   orderFile = 'created'(새로 씀) | 'kept'(이미 있어서 그대로 둠) | 'merged'(없던 제목만 덧붙임) | 'none'(order 없음) | 'dry-run'(만들 예정)
+//   orderAdded = 'merged' 일 때 덧붙인(덧붙일) 제목 수
+export function installSnippetPack({ workspacePath, folder, entries, order, dryRun = false, mergeOrder = false }) {
   // 폴더 이름은 Windows 에서 대소문자 구분이 없으므로("SQL" 과 "sql" 은 같은 폴더) 비교도 구분 없이.
   const folderKey = folder.toLowerCase()
   const existing = new Set(
@@ -58,20 +62,31 @@ export function installSnippetPack({ workspacePath, folder, entries, order, dryR
     existing.add(title)
     created.push(title)
   }
-  return { created, skipped, orderFile: writeOrderFile({ workspacePath, folder, order, dryRun }) }
+  return { created, skipped, ...writeOrderFile({ workspacePath, folder, order, dryRun, mergeOrder }) }
 }
 
 // 순서 목록 파일을 쓴다(이미 있으면 그대로 둔다). 결과 표시는 installSnippetPack 설명 참고.
-function writeOrderFile({ workspacePath, folder, order, dryRun }) {
-  if (!order || order.length === 0) return 'none'
+function writeOrderFile({ workspacePath, folder, order, dryRun, mergeOrder }) {
+  if (!order || order.length === 0) return { orderFile: 'none', orderAdded: 0 }
   // 폴더가 아직 없을 수 있다(상용구를 전부 건너뛴 경우는 이미 있음). 있는 폴더는 대소문자가 달라도 그걸 쓴다.
   const dir = path.join(snippetsDirPath(workspacePath), folder)
   const orderPath = path.join(dir, SNIPPET_ORDER_FILE_NAME)
-  if (fs.existsSync(orderPath)) return 'kept'
-  if (dryRun) return 'dry-run'
+  if (fs.existsSync(orderPath)) {
+    if (!mergeOrder) return { orderFile: 'kept', orderAdded: 0 }
+    const current = fs.readFileSync(orderPath, 'utf-8')
+    const have = new Set(parseSnippetOrder(current).keys())
+    const missing = order.filter((title) => !have.has(title))
+    if (missing.length === 0) return { orderFile: 'kept', orderAdded: 0 }
+    if (!dryRun) {
+      const separator = current.endsWith('\n') ? '' : '\n'
+      fs.writeFileSync(orderPath, `${current}${separator}${missing.join('\n')}\n`, 'utf-8')
+    }
+    return { orderFile: 'merged', orderAdded: missing.length }
+  }
+  if (dryRun) return { orderFile: 'dry-run', orderAdded: 0 }
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(orderPath, `# 추천 팝업에서 위에 보일 순서 (자주 쓰는 것부터 한 줄에 하나). 메모장으로 고쳐도 됩니다.\n${order.join('\n')}\n`, 'utf-8')
-  return 'created'
+  return { orderFile: 'created', orderAdded: 0 }
 }
 
 // 앱이 마지막으로 연 워크스페이스(앱 설정 파일에 저장돼 있음). 없으면 null.
@@ -90,6 +105,7 @@ function main(argv) {
   const args = argv.slice(2)
   const packName = args.find((a) => !a.startsWith('--'))
   const dryRun = args.includes('--dry-run')
+  const mergeOrder = args.includes('--merge-order')
   const wsIndex = args.indexOf('--workspace')
   const workspacePath = wsIndex !== -1 ? args[wsIndex + 1] : lastWorkspaceFromAppConfig()
 
@@ -108,14 +124,21 @@ function main(argv) {
   console.log(`${dryRun ? '[미리보기: 아무것도 만들지 않음] ' : ''}워크스페이스: ${workspacePath}`)
   for (const name of names) {
     const pack = PACKS[name]
-    const { created, skipped, orderFile } = installSnippetPack({
+    const { created, skipped, orderFile, orderAdded } = installSnippetPack({
       workspacePath,
       folder: pack.folder,
       entries: pack.entries,
       order: pack.order,
       dryRun,
+      mergeOrder,
     })
-    const orderNote = { created: '새로 씀', kept: '이미 있어서 그대로 둠', 'dry-run': '만들 예정', none: '없음' }[orderFile]
+    const orderNote = {
+      created: '새로 씀',
+      kept: '이미 있어서 그대로 둠',
+      merged: `없던 ${orderAdded}개를 뒤에 덧붙임`,
+      'dry-run': '만들 예정',
+      none: '없음',
+    }[orderFile]
     console.log(`${pack.description}`)
     console.log(`  폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 이미 있어서 건너뜀 ${skipped.length}개 / 순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
     // 건너뛴 게 많으면(보통 두 번째 실행) 개수만 보여 준다. 몇 개 안 될 때만 이름을 나열.

@@ -94,5 +94,6 @@ export const TYPESCRIPT_PACK = languagePack({
     'unknown', 'never', 'null', 'undefined', 'import', 'export', 'default', 'from', 'class', 'extends',
     'implements', 'readonly', 'private', 'public', 'async', 'await', 'Promise', 'Record', 'Partial', 'Array',
     'interf', 'typea', 'tfunc',
+    'else', 'while', 'do', 'switch', 'case', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'typeof', 'instanceof', 'in', 'of', 'super', 'static', 'get', 'set', 'this', 'true', 'false', 'enum', 'abstract', 'namespace', 'declare', 'module', 'keyof', 'infer', 'is', 'as', 'object', 'symbol', 'bigint', 'Date', 'Map', 'Set', 'Error', 'JSON', 'Math', 'Object', 'Required', 'Readonly', 'Pick', 'Omit', 'Exclude', 'Extract', 'ReturnType', 'Parameters', 'Awaited', 'NonNullable', 'console', 'log', 'length', 'push', 'map', 'filter', 'reduce', 'forEach', 'find', 'includes', 'keys', 'values', 'entries', 'then', 'catch', 'useState', 'useEffect', 'useRef', 'useMemo', 'useCallback', 'Props', 'Component', 'HTMLElement', 'Event',
   ],
 })

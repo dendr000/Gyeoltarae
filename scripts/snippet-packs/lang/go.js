@@ -111,5 +111,6 @@ export const GO_PACK = languagePack({
     'func', 'return', 'if', 'else', 'for', 'range', 'var', 'const', 'type', 'struct', 'interface', 'package',
     'import', 'go', 'defer', 'chan', 'select', 'switch', 'case', 'map', 'make', 'len', 'append', 'nil', 'true',
     'false', 'error', 'string', 'int', 'bool', 'fmt', 'Println', 'Printf', 'err', 'iferr', 'gomain', 'fori',
+    'default', 'fallthrough', 'break', 'continue', 'goto', 'iota', 'rune', 'byte', 'uint', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64', 'any', 'new', 'cap', 'copy', 'delete', 'close', 'panic', 'recover', 'print', 'os', 'io', 'bufio', 'strings', 'strconv', 'errors', 'sort', 'time', 'sync', 'context', 'math', 'log', 'http', 'json', 'testing', 'Sprintf', 'Errorf', 'Fprintf', 'Scanln', 'NewReader', 'NewScanner', 'ReadFile', 'WriteFile', 'Open', 'Create', 'Split', 'Join', 'Contains', 'Trim', 'Atoi', 'Itoa', 'Sleep', 'Now', 'Mutex', 'WaitGroup', 'Lock', 'Unlock', 'main', 'init',
   ],
 })
