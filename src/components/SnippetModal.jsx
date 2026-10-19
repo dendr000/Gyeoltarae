@@ -3,6 +3,10 @@ import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
 import { SnippetFolderTab } from './SnippetFolderTab.jsx'
 
+// 목록에 한꺼번에 그리는 최대 줄 수. 폴더를 가리지 않은 '전체'에서 상용구가 수천 개면 다 그릴 때 글자 하나 칠 때마다
+// 느려지므로 앞쪽만 그리고 나머지는 폴더 선택·검색으로 좁히게 한다.
+const MAX_LIST_ROWS = 300
+
 function getCategories(snippetIndex) {
   const set = new Set()
   for (const entry of Object.values(snippetIndex)) set.add(entry.category)
@@ -239,7 +243,7 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
             {list.length === 0 ? (
               <div className="dict-modal-empty">등록된 상용구가 없습니다.</div>
             ) : (
-              list.map((entry) => (
+              list.slice(0, MAX_LIST_ROWS).map((entry) => (
                 <div key={`${entry.category}/${entry.title}`} className="snippet-modal-row">
                   <span className="snippet-modal-row-category">{entry.category}</span>
                   <span className="snippet-modal-row-title">{entry.title}</span>
@@ -265,6 +269,11 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
                   </button>
                 </div>
               ))
+            )}
+            {list.length > MAX_LIST_ROWS && (
+              <div className="dict-modal-empty">
+                {list.length}개 중 앞의 {MAX_LIST_ROWS}개만 보입니다. 폴더를 고르거나 검색해서 좁혀 보세요.
+              </div>
             )}
           </div>
           </>

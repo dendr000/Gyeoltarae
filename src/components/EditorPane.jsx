@@ -38,6 +38,7 @@ import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope.js'
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
+import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../lib/snippetLanguage.js'
 import { fenceAutoCloseEdit, isInCodeFenceAt, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
 import { atomicDeleteRange, atomicStep } from '../lib/atomicTokens.js'
@@ -546,7 +547,11 @@ export function EditorPane({ text, onChange, disabled }) {
   const workspacePath = useAppStore((s) => s.workspacePath)
   const suggestEntries = useMemo(() => {
     if (!scopeWordIndex || !openPath || !workspacePath) return activeSnippets
-    const excludeLower = new Set(activeSnippets.map((entry) => entry.title.toLowerCase()))
+    // 언어 폴더(C++, Java ...)의 상용구는 그 언어의 코드블록에서만 쓰이므로(lib/snippetLanguage.js) 같은 이름의 영어 단어를
+    // 막는 데 쓰지 않는다. 코드블록 안에서 둘이 겹치면 scopeSnippetsToContext 가 단어 쪽을 뺀다.
+    const excludeLower = new Set(
+      activeSnippets.filter((entry) => folderGrammar(entry.category) === null).map((entry) => entry.title.toLowerCase()),
+    )
     const words = wordCandidates(scopeWordIndex, {
       currentPath: openPath,
       root: workspacePath,
@@ -729,7 +734,12 @@ export function EditorPane({ text, onChange, disabled }) {
       return
     }
     // 코드블록 안에서는 단어 중간(NAME 의 끝 E)부터 시작하는 글자로는 후보를 찾지 않는다.
-    const ctx = detectSnippetQuery(textarea, suggestEntries, { wordStartOnly: inCodeBlock })
+    // 글에서는 언어 폴더의 상용구를 빼고, 코드블록 안에서는 그 언어의 폴더만 쓴다(lib/snippetLanguage.js).
+    const context = snippetContextAt(textarea.value, textarea.selectionStart)
+    const ctx = detectSnippetQuery(textarea, scopeSnippetsToContext(suggestEntries, context), {
+      wordStartOnly: inCodeBlock,
+      grammar: context?.grammar ?? null,
+    })
     if (!ctx) {
       setSnippetSuggest(null)
       return
@@ -775,7 +785,8 @@ export function EditorPane({ text, onChange, disabled }) {
   // 가 숫자 선택 팝업을 띄움 — 이미 있는 snippetSuggest 'browse' 모드 렌더링을 그대로 재사용.
   function detectExactSnippetMatch(textarea, snippetEntries) {
     if (textarea.selectionStart !== textarea.selectionEnd) return null
-    return findExactSnippetMatch(textarea.value, textarea.selectionStart, snippetEntries)
+    const context = snippetContextAt(textarea.value, textarea.selectionStart)
+    return findExactSnippetMatch(textarea.value, textarea.selectionStart, scopeSnippetsToContext(snippetEntries, context))
   }
 
   // detectExactSnippetMatch가 찾은 후보를 실제로 적용 — 하나면 바로 치환, 여럿이면(카테고리만

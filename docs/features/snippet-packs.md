@@ -98,6 +98,10 @@ node scripts/install-snippet-pack.mjs sql-practice             # 설치 (1806개
 
 구현: `scripts/snippet-packs/sql-practice.js`(`SQL_PRACTICE_PACK`), 등록은 `install-snippet-pack.mjs` 의 `PACKS`. 테스트: `tests/scripts/snippetPackPractice.test.js`.
 
+## 언어 상용구 묶음
+
+C++·Java·HTML·Python 등 16개 프로그래밍 언어의 키워드와 틀은 별도 묶음이다 — `node scripts/install-snippet-pack.mjs langs`. 자세히: `docs/features/snippet-language-packs.md`. 이 문서의 `SQL` 폴더도 같은 "언어 폴더 규칙"을 따른다. 즉 SQL 코드블록(` ```MySQL ` 등) 안에서만 쓰이고, 글에서는 `SELECT` 같은 키워드가 추천 팝업에 뜨지 않는다.
+
 ## 용어 설명 (초보자용)
 
 | 용어 | 뜻 |

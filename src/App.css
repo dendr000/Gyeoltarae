@@ -946,7 +946,8 @@
 .wiki-code .hljs-keyword,
 .wiki-code .hljs-selector-tag,
 .wiki-code .hljs-literal,
-.wiki-code .hljs-doctag {
+.wiki-code .hljs-doctag,
+.wiki-code .hljs-variable.language_ {
   color: var(--hl-keyword);
 }
 
@@ -984,13 +985,19 @@
 }
 
 .wiki-code .hljs-attr,
-.wiki-code .hljs-attribute,
 .wiki-code .hljs-name,
 .wiki-code .hljs-tag,
 .wiki-code .hljs-property,
 .wiki-code .hljs-selector-id,
-.wiki-code .hljs-selector-class {
+.wiki-code .hljs-selector-class,
+.wiki-code .hljs-selector-pseudo {
   color: var(--hl-tag);
+}
+
+/* HTML 의 속성 이름(<a href=...> 의 href)과 CSS 의 속성(color: ...)은 태그·선택자와 다른 색으로 갈라 읽기 쉽게 한다. */
+.wiki-code .hljs-tag .hljs-attr,
+.wiki-code .hljs-attribute {
+  color: var(--hl-type);
 }
 
 .wiki-code .hljs-meta {
@@ -2815,6 +2822,25 @@
   font-weight: 600;
   color: var(--text);
   opacity: 0.7;
+}
+
+/* 상용구 사이드바: 폴더 헤더를 눌러 접고 펼친다(큰 폴더는 처음에 접힘). */
+.data-sidebar-type-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-sidebar-type-toggle:hover {
+  opacity: 1;
+}
+
+.data-sidebar-type-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .data-sidebar-row {

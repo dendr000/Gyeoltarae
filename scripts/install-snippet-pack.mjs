@@ -3,6 +3,8 @@
 // 상용구 묶음(scripts/snippet-packs/*.js)을 워크스페이스의 상용구 폴더에 만들어 넣는다.
 //   node scripts/install-snippet-pack.mjs sql                 (워크스페이스는 앱이 마지막에 연 곳)
 //   node scripts/install-snippet-pack.mjs sql-practice        (SQL 학습용 이름: emp, dept, student …)
+//   node scripts/install-snippet-pack.mjs langs               (C++·Java·HTML·Python 등 언어 폴더 전부)
+//   node scripts/install-snippet-pack.mjs cpp                 (언어 하나만: cpp c java html css python javascript typescript csharp go kotlin rust swift php ruby bash)
 //   node scripts/install-snippet-pack.mjs sql --dry-run       (아무것도 안 만들고 개수만 보여 줌)
 //   node scripts/install-snippet-pack.mjs sql --workspace D:\WikiDesk
 //
@@ -15,8 +17,11 @@ import { pathToFileURL } from 'node:url'
 import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath } from '../electron/fileSystem.js'
 import { SQL_PACK } from './snippet-packs/sql.js'
 import { SQL_PRACTICE_PACK } from './snippet-packs/sql-practice.js'
+import { LANGUAGE_PACKS } from './snippet-packs/langs.js'
 
-const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK }
+// 'langs' 는 프로그래밍 언어 묶음 전부(폴더마다 하나씩)를 한꺼번에 설치하는 이름이다.
+const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK, ...LANGUAGE_PACKS }
+const ALL_LANGUAGES = 'langs'
 
 // 묶음의 항목 하나는 제목 문자열(본문도 같음) 또는 { title, content }.
 function normalizeEntry(entry) {
@@ -88,9 +93,9 @@ function main(argv) {
   const wsIndex = args.indexOf('--workspace')
   const workspacePath = wsIndex !== -1 ? args[wsIndex + 1] : lastWorkspaceFromAppConfig()
 
-  const pack = PACKS[packName]
-  if (!pack) {
-    console.error(`묶음 이름이 필요합니다. 사용 가능: ${Object.keys(PACKS).join(', ')}`)
+  const names = packName === ALL_LANGUAGES ? Object.keys(LANGUAGE_PACKS) : [packName]
+  if (!names.every((name) => PACKS[name])) {
+    console.error(`묶음 이름이 필요합니다. 사용 가능: ${[...Object.keys(PACKS), ALL_LANGUAGES].join(', ')}`)
     process.exitCode = 1
     return
   }
@@ -100,20 +105,22 @@ function main(argv) {
     return
   }
 
-  const { created, skipped, orderFile } = installSnippetPack({
-    workspacePath,
-    folder: pack.folder,
-    entries: pack.entries,
-    order: pack.order,
-    dryRun,
-  })
-  const orderNote = { created: '새로 씀', kept: '이미 있어서 그대로 둠', 'dry-run': '만들 예정', none: '없음' }[orderFile]
-  console.log(`${dryRun ? '[미리보기: 아무것도 만들지 않음] ' : ''}${pack.description}`)
-  console.log(`워크스페이스: ${workspacePath}`)
-  console.log(`폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 이미 있어서 건너뜀 ${skipped.length}개`)
-  console.log(`순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
-  // 건너뛴 게 많으면(보통 두 번째 실행) 개수만 보여 준다. 몇 개 안 될 때만 이름을 나열.
-  if (skipped.length > 0 && skipped.length <= 10) console.log(`건너뛴 것: ${skipped.join(', ')}`)
+  console.log(`${dryRun ? '[미리보기: 아무것도 만들지 않음] ' : ''}워크스페이스: ${workspacePath}`)
+  for (const name of names) {
+    const pack = PACKS[name]
+    const { created, skipped, orderFile } = installSnippetPack({
+      workspacePath,
+      folder: pack.folder,
+      entries: pack.entries,
+      order: pack.order,
+      dryRun,
+    })
+    const orderNote = { created: '새로 씀', kept: '이미 있어서 그대로 둠', 'dry-run': '만들 예정', none: '없음' }[orderFile]
+    console.log(`${pack.description}`)
+    console.log(`  폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 이미 있어서 건너뜀 ${skipped.length}개 / 순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
+    // 건너뛴 게 많으면(보통 두 번째 실행) 개수만 보여 준다. 몇 개 안 될 때만 이름을 나열.
+    if (skipped.length > 0 && skipped.length <= 10) console.log(`  건너뛴 것: ${skipped.join(', ')}`)
+  }
 }
 
 // 직접 실행했을 때만 동작(시험에서 import 할 때는 실행되지 않게).

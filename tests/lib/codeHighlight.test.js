@@ -123,3 +123,50 @@ describe('highlightCode (색 입히기)', () => {
     expect(highlightCode('', 'sql')).toBe('')
   })
 })
+
+// 언어 상용구 폴더(C++, Java, HTML, Python 등)와 같은 이름의 코드블록(```C++ 등)이 뷰어에서 그 언어답게 칠해지는지.
+describe('언어별 색 입히기 — 코드블록 언어 이름 → 문법표 → 토큰', () => {
+  const SAMPLES = [
+    { names: ['C++', 'c++', 'cpp', 'CPP', 'C/C++', 'hpp'], label: 'C++', grammar: 'cpp', code: '// 주석\nint main() { return 0; }\n#include <iostream>', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-meta'] },
+    { names: ['C', 'c'], label: 'C', grammar: 'c', code: '/* 주석 */\nint x = 1;\n#define A 1', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-meta'] },
+    { names: ['Java', 'JAVA', 'java', '자바'], label: 'Java', grammar: 'java', code: '// 주석\npublic class A { String s = "x"; }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['HTML', 'html', 'htm', 'XHTML'], label: 'HTML', grammar: 'xml', code: '<!-- 주석 -->\n<a href="x">링크</a>', tokens: ['hljs-comment', 'hljs-tag', 'hljs-name', 'hljs-attr', 'hljs-string'] },
+    { names: ['CSS', 'css'], label: 'CSS', grammar: 'css', code: '/* 주석 */\n.a:hover { color: #fff; margin: 0 auto; }', tokens: ['hljs-comment', 'hljs-selector-class', 'hljs-attribute', 'hljs-number'] },
+    { names: ['Python', 'python', 'py', 'PY', '파이썬'], label: 'Python', grammar: 'python', code: '# 주석\ndef f(self):\n    return "x"', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['JavaScript', 'js', 'JS', 'mjs'], label: 'JavaScript', grammar: 'javascript', code: '// 주석\nconst a = 1\nfunction f() { return "x" }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string', 'hljs-number'] },
+    { names: ['TypeScript', 'ts', 'TS'], label: 'TypeScript', grammar: 'typescript', code: '// 주석\nconst a: number = 1\ninterface X {}', tokens: ['hljs-comment', 'hljs-keyword'] },
+    { names: ['C#', 'c#', 'csharp', 'cs'], label: 'C#', grammar: 'csharp', code: '// 주석\npublic class A { string s = "x"; }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Go', 'go', 'golang'], label: 'Go', grammar: 'go', code: '// 주석\nfunc main() { x := "s" }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Kotlin', 'kt'], label: 'Kotlin', grammar: 'kotlin', code: '// 주석\nfun main() { val x = "s" }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Rust', 'rs'], label: 'Rust', grammar: 'rust', code: '// 주석\nfn main() { let x = "s"; }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Swift'], label: 'Swift', grammar: 'swift', code: '// 주석\nfunc f() { let x = "s" }', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['PHP', 'php'], label: 'PHP', grammar: 'php', code: '<?php // 주석\n$a = "x"; function f() {}', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Ruby', 'rb'], label: 'Ruby', grammar: 'ruby', code: '# 주석\ndef f\n  "x"\nend', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+    { names: ['Bash', 'sh', 'shell'], label: 'Bash', grammar: 'bash', code: '# 주석\nif [ -f x ]; then echo "a"; fi', tokens: ['hljs-comment', 'hljs-keyword', 'hljs-string'] },
+  ]
+
+  it.each(SAMPLES)('$label — 이름 변형을 모두 받는다', ({ names, label, grammar }) => {
+    for (const name of names) expect(resolveCodeLanguage(name), name).toEqual({ label, grammar })
+  })
+
+  it.each(SAMPLES)('$label — 주석·키워드·문자열 같은 토큰에 색 클래스가 붙는다', ({ grammar, code, tokens }) => {
+    const html = highlightCode(code, grammar)
+    for (const token of tokens) expect(html, token).toContain(token)
+  })
+
+  it('HTML 안의 <style> 과 <script> 는 CSS·자바스크립트로 따로 칠한다', () => {
+    const html = highlightCode('<style>.a { color: red; }</style><script>const a = 1</script>', 'xml')
+    expect(html).toContain('language-css')
+    expect(html).toContain('language-javascript')
+    expect(html).toContain('hljs-keyword')
+  })
+
+  it('C++ 의 클래스 이름과 함수 이름은 title 로 칠한다', () => {
+    const html = highlightCode('class Stack { void run() {} };', 'cpp')
+    expect(html).toContain('hljs-title')
+  })
+
+  it('C 와 C++ 와 C# 이 서로 다른 문법표다', () => {
+    expect(new Set(['C', 'C++', 'C#'].map((name) => resolveCodeLanguage(name).grammar)).size).toBe(3)
+  })
+})

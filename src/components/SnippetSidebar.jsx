@@ -1,7 +1,13 @@
+import { useMemo, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
 import { SnippetModal } from './SnippetModal.jsx'
 import { SidebarSection } from './SidebarSection.jsx'
+
+// 이 개수를 넘는 폴더는 처음에 접어 둔다. 언어 상용구 묶음(Java 약 470개, SQL 약 1950개 ...)을 설치하면 폴더 하나가
+// 수백~수천 줄이라서 다 그리면 사이드바가 느려지고 스크롤이 끝없이 길어진다. 헤더를 눌러 펼친다.
+const AUTO_COLLAPSE_OVER = 40
 
 function groupByCategory(snippetIndex) {
   const groups = new Map()
@@ -20,7 +26,10 @@ function groupByCategory(snippetIndex) {
 // 목록 훑어보기·바로 열기·삭제는 그대로 사이드바에서(자료/틀과 통일된 모양). 등록·수정·검색·
 // 일괄 등록·자동완성 스위치는 전부 SnippetModal로 옮김(Galpi 원본 모달 레이아웃에 맞춤).
 export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDeleteSnippet }) {
-  const groups = groupByCategory(snippetIndex)
+  // 상용구 수는 수천 개가 될 수 있어서 매번 다시 묶고 정렬하지 않는다.
+  const groups = useMemo(() => groupByCategory(snippetIndex), [snippetIndex])
+  // 폴더별 펼침 여부 — 사용자가 누른 것만 기억하고, 그 밖에는 개수로 정한다(AUTO_COLLAPSE_OVER).
+  const [openOverride, setOpenOverride] = useState({})
   // 모달 열림 상태는 스토어에 둠 — 에디터의 Alt+T 단축키도 같은 모달을 열므로(DictSidebar와 같은 이유).
   const modalOpen = useAppStore((s) => s.snippetModalOpen)
   const prefillContent = useAppStore((s) => s.snippetModalPrefillContent)
@@ -41,10 +50,20 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
           </button>
         }
       >
-        {groups.map(({ category, entries }) => (
+        {groups.map(({ category, entries }) => {
+          const open = openOverride[category] ?? entries.length <= AUTO_COLLAPSE_OVER
+          return (
           <div key={category}>
-            <div className="data-sidebar-type">{category}</div>
-            {entries.map((entry) => {
+            <div
+              className="data-sidebar-type data-sidebar-type-toggle"
+              title={open ? '폴더 접기' : '폴더 펼치기'}
+              onClick={() => setOpenOverride((prev) => ({ ...prev, [category]: !open }))}
+            >
+              <ChevronRight size={11} strokeWidth={2.5} className={`sidebar-section-caret ${open ? 'open' : ''}`} />
+              {category}
+              <span className="data-sidebar-type-count">{entries.length}</span>
+            </div>
+            {open && entries.map((entry) => {
               const isActive = openPath === entry.path
               return (
                 <div
@@ -72,7 +91,8 @@ export function SnippetSidebar({ snippetIndex, openPath, onOpenSnippet, onDelete
               )
             })}
           </div>
-        ))}
+          )
+        })}
       </SidebarSection>
       {modalOpen && (
         <SnippetModal

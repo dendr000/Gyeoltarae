@@ -16,6 +16,8 @@
 // 쪽이 먼저 뜨도록.
 export const SNIPPET_LOOKBACK = 30
 
+import { folderGrammar } from './snippetLanguage.js'
+
 // 글자·숫자·밑줄 — 코드에서 한 단어를 이루는 글자(한글 포함).
 const WORD_CHAR_RE = /[\p{L}\p{N}_]/u
 
@@ -24,7 +26,11 @@ const WORD_CHAR_RE = /[\p{L}\p{N}_]/u
 // 새 단어로 보고 END·ERD·ELSE ... 를 추천한다. 단어의 시작이란 줄 맨 앞이거나 바로 앞이 단어 글자가
 // 아닌 자리(공백·괄호·점·쉼표 등)이다. 기호로 시작하는 접미사(->)는 글자 바로 뒤여도 시작으로 인정한다.
 // 글(문단)에서는 켜지 않는다: 한국어는 조사가 붙어서 단어 중간에서 단축어가 시작되는 일이 흔하다.
-export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } = {}) {
+//
+// options.grammar: 지금 있는 코드블록의 언어(문법표 이름, 없으면 null). 폴더 이름이 그 언어인 상용구(Java 블록의 `Java` 폴더)를
+// 맨 앞에 보여 주고, 그다음 언어와 상관없는 폴더(공통 등), 그다음 나머지 순이다. 어떤 폴더를 쓸지 고르는 일은 호출부가
+// lib/snippetLanguage.js 로 먼저 해 두므로 여기서는 순서만 정한다.
+export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, grammar = null } = {}) {
   if (entries.length === 0) return null
   const lineStart = value.lastIndexOf('\n', pos - 1) + 1
   const upToCursor = value.slice(lineStart, pos)
@@ -51,6 +57,11 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } 
     // 대소문자가 같다는 이유만으로 목록에 없는 created_at 이 CREATE TABLE 위에 오지 않게 한다.
     // 순서 목록이 없으면 예전 정렬과 똑같다.
     matches.sort((a, b) => {
+      if (grammar !== null) {
+        const aLang = languageTier(a, grammar)
+        const bLang = languageTier(b, grammar)
+        if (aLang !== bLang) return aLang - bLang
+      }
       const aListed = Number.isFinite(a.rank) ? 0 : 1
       const bListed = Number.isFinite(b.rank) ? 0 : 1
       if (aListed !== bListed) return aListed - bListed
@@ -77,6 +88,13 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false } 
     return { start: lineStart + start, end: pos, matches }
   }
   return null
+}
+
+// 후보가 코드블록 언어와 얼마나 맞는가: 0 = 그 언어의 폴더, 1 = 언어 폴더가 아닌 폴더, 2 = 다른 언어의 폴더.
+function languageTier(entry, grammar) {
+  const folder = folderGrammar(entry.category)
+  if (folder === grammar) return 0
+  return folder === null ? 1 : 2
 }
 
 // 추천 팝업이 떠 있을 때 Enter 가 후보를 확정하는가. 코드블록 밖(글을 쓰는 중)에서는 예전처럼 항상

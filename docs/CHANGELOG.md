@@ -15,6 +15,19 @@
 - 표 편집기 계산 기능의 방식 비교와 단계 계획을 계획서(`docs/plans/table-editor-calculations.md`)로 정리했다
 - 표 편집기 상태 표시줄의 집계를 불필요한 메모 없이 바로 계산하도록 정리해서 린트 경고 3개를 없앴다 (동작 변화 없음)
 
+## [0.123.0] - 2026-10-19 16:10
+
+### 추가 (Added)
+- C++·Java·HTML·Python·JavaScript·TypeScript·C·C#·Go·Kotlin·Rust·Swift·PHP·Ruby·Bash·CSS 16개 언어의 상용구 묶음을 추가했다. 언어마다 폴더 하나에 키워드·표준 라이브러리 이름(`namespace`, `ArrayList`, `enumerate` 등)과 `for` 반복문·`main` 함수·클래스 뼈대 같은 틀(`fori`, `psvm`, `ifmain`, `html5` 등) 6,259개가 들어 있다. 설치는 `node scripts/install-snippet-pack.mjs langs`(언어 하나만은 `cpp`, `java` 처럼 이름을 적는다)이고, 이미 있는 상용구는 덮어쓰지 않는다
+- 코드블록 언어 이름 별명을 늘렸다: `C/C++`·`hpp`(C++), `xhtml`(HTML), `mjs`·`cjs`(JavaScript), `mts`(TypeScript), `pyw`(Python), `dotnet`(C#), `kts`(Kotlin), `shellscript`(Bash)
+
+### 변경 (Changed)
+- **호환 깨짐** 폴더 이름이 언어 이름(`C++`, `Java`, `Python`, `SQL` 등)인 상용구 폴더는 이제 그 언어의 코드블록 안에서만 추천 팝업·스페이스바 치환·Alt+Enter 에 쓰인다. 글(문단)에서는 `SQL` 폴더의 `SELECT` 같은 키워드가 더 이상 뜨지 않는다. 글에서도 쓰고 싶은 상용구는 언어 이름이 아닌 폴더(`공통` 등)로 옮긴다. 폴더 이름이 언어 이름이 아니면 예전과 같다
+- 코드블록 안에서 추천 후보의 순서가 그 블록 언어의 폴더 → 언어와 상관없는 폴더 순이 되었다
+- 코드블록 색을 조정했다: HTML 의 속성 이름(`href`)과 CSS 의 속성(`color`)이 태그·선택자와 다른 색으로 보이고, `this`·`self` 는 키워드 색이다. 가상 클래스(`:hover`)는 선택자 색이다
+- 상용구 사이드바에서 항목이 40개를 넘는 폴더는 처음에 접혀 있고, 폴더 이름 줄(개수 표시)을 눌러 펼친다. 상용구가 수천 개여도 사이드바가 느려지지 않는다
+- 상용구 모달의 목록은 한 번에 300줄까지만 보여 주고 나머지는 폴더 선택·검색으로 좁히게 했다
+
 ## [0.122.0] - 2026-10-19 07:56
 
 ### 추가 (Added)
