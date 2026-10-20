@@ -40,12 +40,26 @@ node scripts/install-snippet-pack.mjs langs --workspace D:\WikiDesk
 
 합계 6262개. 이 PC 의 `D:\WikiDesk` 에는 16개 폴더 전부를 설치했다(설치에 1분 반쯤 걸린다). 단어·틀의 전체 목록은 `scripts/snippet-packs/lang/<언어>.js`.
 
-## 두 종류의 항목
+## 세 종류의 항목
 
 | 종류 | 설명 | 예 |
 |---|---|---|
 | **단어** | 제목과 본문이 같다. 앞부분만 쳐도 추천 팝업에 떠서 Tab 으로 확정한다. 본문이 제목과 같아서 스페이스바 자동 치환이 켜져 있어도 바뀌는 게 없다. | `names` → `namespace`, `Arr` → `ArrayList` |
+| **호출** | 함수 이름을 고르면 **괄호까지 들어가고 커서가 괄호 안**에 선다(`{#}`). | `printf` → `printf(|);`, `strlen` → `strlen(|)`, `static_cast` → `static_cast<|>()` |
 | **틀** | 짧은 줄임말이 여러 줄 코드로 펼쳐진다. 본문의 `{#}` 가 펼친 뒤 커서 자리다. | `fori` → `for (int i = 0; i < |; i++) { ... }` |
+
+### 호출 항목 (printf → printf(|);)
+
+- `pri` 까지 치면 팝업에 `printf` 가 뜨고, **Tab**(또는 이름을 다 치고 **Alt+Enter**)로 확정하면 `printf();` 가 들어가며 커서는 괄호 안이다.
+- **문장 끝 `;`** 는 문장으로 쓰는 함수(`printf`, `push_back`, `free`, `println`)에만 붙고, 식 안에서 쓰는 함수(`strlen`, `malloc`, `to_string`)에는 붙지 않는다. `int n = strlen(s);` 처럼 이미 `;` 로 끝나는 줄에 `;;` 가 되지 않게 한 것이다. 인자가 없는 함수(`isEmpty`)는 `isEmpty()` 뒤에 커서가 선다.
+- `;` 는 언어를 따른다 — C·C++·Java·C#·PHP·Rust 는 붙고 Python·Go·Kotlin·Swift·JavaScript·TypeScript 는 붙지 않는다. Rust 매크로는 `println!` → `println!(|);`, `vec!` → `vec![|]`. CSS 의 `rgb`, `calc`, `var` 도 `rgb(|)` 로 들어간다.
+- **스페이스바 자동 치환에는 쓰이지 않는다.** `printf` 를 치고 스페이스를 눌러도 `printf();` 로 바뀌지 않는다. 주석(`// sort the list`)이나 글 속에서 `sort `, `print ` 를 쓰다가 코드가 끼어드는 일을 막으려는 것이다. 호출은 팝업(Tab)과 Alt+Enter 로만 쓴다. 틀 줄임말(`fori`)은 예전처럼 스페이스로도 펼쳐진다.
+- `size`, `count`, `min`, `sum`, `list`, `map` 처럼 변수 이름으로도 흔한 단어는 호출로 만들지 않고 **단어로만** 둔다. 이 이름들은 Tab 으로 확정해도 괄호가 붙지 않는다.
+- 이미 `printf` 단어를 설치한 폴더에 반영하려면 `node scripts/install-snippet-pack.mjs langs --refresh` — 본문이 **처음 그대로(`printf`)인 것만** `printf({#});` 로 바꾸고, 사용자가 본문을 고친 것은 건드리지 않는다.
+
+### 이름 중간에서는 스페이스 치환을 하지 않는다
+
+코드블록 안에서 식별자 끝이 틀 줄임말·단어와 같아도(`profori` 의 `fori`, `my_free` 의 `free`, PHP 의 `$count`) 스페이스바 자동 치환을 하지 않는다. 제목 바로 앞이 글자·숫자·`_`·`$`·`@` 이면 이름의 중간으로 본다. (`#include` 처럼 기호로 시작하는 제목은 해당 없음. 글(코드블록 밖)은 예전 그대로다.)
 
 ### 틀 줄임말의 규칙
 
@@ -116,8 +130,8 @@ node scripts/install-snippet-pack.mjs langs --workspace D:\WikiDesk
 
 ## 구현 위치
 
-- `scripts/snippet-packs/lang/*.js`(언어별 단어·틀), `lang/common.js`(`words`, `t`, `languagePack` — 틀 제목 중복·단어와 같은 틀 제목은 오류), `scripts/snippet-packs/langs.js`(16개 모음), `scripts/install-snippet-pack.mjs`(`langs`·언어 이름 설치).
-- `src/lib/snippetLanguage.js` — 언어 폴더 규칙(`folderGrammar`, `snippetContextAt`, `scopeSnippetsToContext`). `src/lib/snippetMatch.js` — 코드블록 언어 폴더를 위로(`grammar` 옵션). `src/components/EditorPane.jsx` — 위 함수를 부르는 연결부.
+- `scripts/snippet-packs/lang/*.js`(언어별 단어·틀), `lang/common.js`(`words`, `t`, `calls`, `languagePack` — 틀·호출 제목 중복·단어와 같은 틀 제목은 오류), `scripts/snippet-packs/langs.js`(16개 모음), `scripts/install-snippet-pack.mjs`(`langs`·언어 이름 설치, `--merge-order`, `--refresh`).
+- `src/lib/snippetLanguage.js` — 언어 폴더 규칙(`folderGrammar`, `snippetContextAt`, `scopeSnippetsToContext`). `src/lib/snippetMatch.js` — 코드블록 언어 폴더를 위로(`grammar` 옵션), 호출 항목 판별(`isCallEntry`), 스페이스바 치환에서 호출·이름 중간 일치 빼기(`findExactSnippetMatch` 의 `auto`·`wordBoundary`). `src/components/EditorPane.jsx` — 위 함수를 부르는 연결부.
 - `src/lib/codeHighlight.js`(언어 이름·별명), `src/App.css`(`.wiki-code .hljs-*` 색).
 - 테스트: `tests/scripts/langPacks.test.js`(데이터 규칙 160여 개·설치), `tests/lib/snippetLanguage.test.js`, `tests/lib/codeHighlight.test.js`(언어별 색).
 

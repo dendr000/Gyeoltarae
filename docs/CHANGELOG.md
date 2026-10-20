@@ -15,6 +15,16 @@
 - 표 편집기 계산 기능의 방식 비교와 단계 계획을 계획서(`docs/plans/table-editor-calculations.md`)로 정리했다
 - 표 편집기 상태 표시줄의 집계를 불필요한 메모 없이 바로 계산하도록 정리해서 린트 경고 3개를 없앴다 (동작 변화 없음)
 
+## [0.130.0] - 2026-10-20 10:30
+
+### 추가 (Added)
+- 언어 상용구의 함수 이름이 괄호까지 들어가고 커서가 괄호 안에 선다: C++ 에서 `printf` 를 고르면 `printf();`, `strlen` 은 `strlen()`, `static_cast` 는 `static_cast<>()`. C·Java·Python·JavaScript·TypeScript·C#·Go·Rust(`println!`, `vec!`)·Kotlin·Swift·PHP·CSS(`rgb`, `calc`)에도 적용했다. 문장으로 쓰는 함수에만 `;` 가 붙고 식 안에서 쓰는 함수에는 붙지 않는다. `size`·`count`·`min` 처럼 변수 이름으로도 흔한 단어는 그대로 단어로만 둔다
+- 설치 스크립트에 `--refresh` 를 추가했다. 이미 설치한 폴더에서 처음 그대로인 단어(`printf`)만 새 본문(`printf({#});`)으로 바꾸고, 직접 고친 본문은 건드리지 않는다
+
+### 변경 (Changed)
+- 코드블록에서 이름 중간의 일치로는 스페이스바 자동 치환을 하지 않는다. `profori`, `my_free`, PHP 의 `$count` 처럼 식별자 끝이 틀 줄임말·단어와 같아도 바뀌지 않는다
+- 함수 호출 항목(`printf` → `printf();`)은 스페이스바 자동 치환에서 빠진다. 주석이나 글 속에서 `sort `, `print ` 를 쓸 때 코드가 끼어들지 않는다. 추천 팝업(Tab)과 Alt+Enter 로 쓴다
+
 ## [0.129.0] - 2026-10-20 10:04
 
 ### 변경 (Changed)

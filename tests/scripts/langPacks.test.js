@@ -6,7 +6,7 @@ import { resolveCodeLanguage } from '../../src/lib/codeHighlight.js'
 import { scanSnippets, snippetsDirPath } from '../../electron/fileSystem.js'
 import { installSnippetPack } from '../../scripts/install-snippet-pack.mjs'
 import { LANGUAGE_PACKS } from '../../scripts/snippet-packs/langs.js'
-import { languagePack, t } from '../../scripts/snippet-packs/lang/common.js'
+import { calls, languagePack, t } from '../../scripts/snippet-packs/lang/common.js'
 
 const EXPECTED_GRAMMAR = {
   cpp: 'cpp', c: 'c', java: 'java', html: 'xml', css: 'css', python: 'python', javascript: 'javascript',
@@ -136,7 +136,97 @@ describe('언어별 대표 항목', () => {
   })
 })
 
+// 호출 항목: 함수 이름 뒤에 괄호가 붙고 커서가 괄호 안에 선다(printf -> printf();).
+describe('호출 항목 (printf -> printf();)', () => {
+  const find = (key, title) => LANGUAGE_PACKS[key].entries.find((e) => titleOf(e) === title)
+  // 변수 이름으로도 자주 쓰는 이름 — 호출로 만들면 변수를 쓰다가 괄호가 붙을 수 있어서 단어로만 둔다.
+  const VARIABLE_LIKE = [
+    'size', 'count', 'min', 'max', 'sum', 'list', 'map', 'set', 'str', 'int', 'float', 'string', 'name', 'id', 'key',
+    'value', 'index', 'length', 'data', 'result', 'line', 'text', 'temp', 'tmp', 'file', 'path', 'type', 'input',
+    'filter',
+  ]
+  const isCall = (entry) =>
+    typeof entry !== 'string' && entry.content !== entry.title && entry.content.startsWith(entry.title) && /^[(<![]/.test(entry.content.slice(entry.title.length))
+  const callsOf = (pack) => pack.entries.filter(isCall)
+
+  it('요청한 C++ 의 printf 는 printf(); 이고 커서가 괄호 안이다', () => {
+    expect(find('cpp', 'printf')).toEqual({ title: 'printf', content: 'printf({#});' })
+    const content = find('cpp', 'printf').content
+    expect(content.indexOf('{#}')).toBe('printf('.length)
+  })
+
+  it('식 안에서 쓰는 함수(strlen)는 ; 를 붙이지 않는다 (int n = strlen(); 뒤에 ; 가 또 붙으면 안 되므로)', () => {
+    expect(find('cpp', 'strlen').content).toBe('strlen({#})')
+    expect(find('c', 'malloc').content).toBe('malloc({#})')
+  })
+
+  it('인자 없는 함수(isEmpty)는 커서가 괄호 뒤다', () => {
+    expect(find('java', 'isEmpty').content).toBe('isEmpty(){#}')
+  })
+
+  it('형 변환(static_cast)은 꺾쇠 안에 커서가 선다', () => {
+    expect(find('cpp', 'static_cast').content).toBe('static_cast<{#}>()')
+  })
+
+  it('문장 끝 기호는 언어를 따른다 — C 계열은 ;, Python·Go·Kotlin·Swift·JS 는 없다', () => {
+    expect(find('java', 'println').content).toBe('println({#});')
+    expect(find('csharp', 'WriteLine').content).toBe('WriteLine({#});')
+    expect(find('php', 'var_dump').content).toBe('var_dump({#});')
+    expect(find('rust', 'println!').content).toBe('println!({#});')
+    expect(find('python', 'print').content).toBe('print({#})')
+    expect(find('go', 'Println').content).toBe('Println({#})')
+    expect(find('kotlin', 'println').content).toBe('println({#})')
+    expect(find('swift', 'print').content).toBe('print({#})')
+    expect(find('javascript', 'alert').content).toBe('alert({#})')
+  })
+
+  it('Rust 의 vec! 는 대괄호, CSS 의 함수는 이름만 제목이다', () => {
+    expect(find('rust', 'vec!').content).toBe('vec![{#}]')
+    expect(find('css', 'rgb').content).toBe('rgb({#})')
+    expect(find('css', 'rgb()')).toBeUndefined()
+  })
+
+  it('모든 언어에 호출 항목이 있고, 커서 자리는 한 개 이하다', () => {
+    for (const [key, pack] of Object.entries(LANGUAGE_PACKS)) {
+      const found = callsOf(pack)
+      if (key === 'ruby' || key === 'bash' || key === 'html') continue
+      expect(found.length, key).toBeGreaterThanOrEqual(5)
+      for (const entry of found) expect(entry.content.split('{#}').length - 1, `${key}/${entry.title}`).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('변수 이름으로 흔한 단어는 호출로 만들지 않는다 (size·count·min·sum 등은 단어로만)', () => {
+    // CSS 는 변수가 없고 PHP 변수는 $ 가 붙어서 이름이 겹치지 않으므로 뺀다.
+    for (const [key, pack] of Object.entries(LANGUAGE_PACKS)) {
+      if (key === 'css' || key === 'php') continue
+      for (const entry of callsOf(pack)) expect(VARIABLE_LIKE.includes(entry.title), `${key}/${entry.title}`).toBe(false)
+    }
+  })
+
+  it('호출 항목은 같은 이름의 단어를 대신한다 (제목이 한 번만 나온다)', () => {
+    for (const pack of Object.values(LANGUAGE_PACKS)) {
+      const titles = pack.entries.map(titleOf)
+      expect(new Set(titles).size).toBe(titles.length)
+    }
+  })
+})
+
 describe('languagePack 만들기 규칙', () => {
+  it('호출 제목이 서로 겹치면 오류, 호출은 같은 이름의 단어를 대신한다', () => {
+    expect(() => languagePack({ folder: 'X', calls: [{ title: 'a', content: 'a()' }, { title: 'a', content: 'a({#})' }] })).toThrow(/겹칩니다/)
+    const pack = languagePack({ folder: 'X', keywords: ['printf', 'int'], calls: calls({ statements: ['printf'], end: ';' }) })
+    expect(pack.entries).toEqual([{ title: 'printf', content: 'printf({#});' }, 'int'])
+  })
+
+  it('calls() 는 문장·식·인자 없음·묶음표를 구분해 만든다', () => {
+    expect(calls({ statements: ['a'], expressions: ['b'], noArgs: ['c'], end: ';', braces: { 'vec!': '[]' } })).toEqual([
+      { title: 'a', content: 'a({#});' },
+      { title: 'b', content: 'b({#})' },
+      { title: 'c', content: 'c(){#}' },
+      { title: 'vec!', content: 'vec![{#}];' },
+    ])
+  })
+
   it('틀 제목이 서로 겹치면 만들 때 오류', () => {
     expect(() => languagePack({ folder: 'X', templates: [t('a', '1'), t('a', '2')] })).toThrow(/겹칩니다/)
   })
@@ -195,7 +285,7 @@ describe('설치 (임시 폴더)', () => {
     install('rust')
     const bodies = installed('Rust')
     expect(bodies['#[tokio::main]']).toBe('#[tokio::main]')
-    expect(bodies['println!']).toBe('println!')
+    expect(bodies['println!']).toBe('println!({#});')
   })
 
   it('대소문자만 다른 제목(Rust 의 self / Self, C# 의 string / String)도 서로 덮어쓰지 않는다', () => {
@@ -265,6 +355,38 @@ describe('설치 (임시 폴더)', () => {
     const result = install('java', { mergeOrder: true, dryRun: true })
     expect(result.orderFile).toBe('merged')
     expect(fs.readFileSync(path.join(dir, '_순서.txt'), 'utf-8')).toBe('void\n')
+  })
+
+  it('--refresh: 처음 설치한 그대로인 단어(printf)만 호출(printf();)로 바꾸고 사용자가 고친 본문은 그대로 둔다', () => {
+    const dir = path.join(snippetsDirPath(root), 'C++')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'printf.md'), 'printf', 'utf-8')
+    fs.writeFileSync(path.join(dir, 'strlen.md'), '내가 고친 strlen', 'utf-8')
+    fs.writeFileSync(path.join(dir, 'int.md'), 'int', 'utf-8')
+
+    const plain = install('cpp')
+    expect(plain.updated).toEqual([])
+    expect(installed('C++').printf).toBe('printf')
+
+    const result = install('cpp', { refresh: true })
+
+    expect(result.updated).toContain('printf')
+    expect(result.updated).not.toContain('strlen')
+    expect(result.updated).not.toContain('int')
+    const bodies = installed('C++')
+    expect(bodies.printf).toBe('printf({#});')
+    expect(bodies.strlen).toBe('내가 고친 strlen')
+    expect(bodies.int).toBe('int')
+    expect(install('cpp', { refresh: true }).updated).toEqual([])
+  })
+
+  it('--refresh 미리보기(dryRun)는 파일을 바꾸지 않고 바꿀 제목만 알려 준다', () => {
+    const dir = path.join(snippetsDirPath(root), 'C++')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'printf.md'), 'printf', 'utf-8')
+    const result = install('cpp', { refresh: true, dryRun: true })
+    expect(result.updated).toContain('printf')
+    expect(installed('C++').printf).toBe('printf')
   })
 
   it('다른 폴더(영어 등)는 건드리지 않는다', () => {

@@ -2,7 +2,7 @@
 
 // TypeScript 상용구 — 타입 문법, 유틸리티 타입, 데코레이터, 자주 쓰는 틀. JavaScript 의 키워드·내장 객체도 같이 넣는다
 // (코드블록 언어가 TypeScript 일 때는 JavaScript 폴더의 상용구가 쓰이지 않으므로).
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   abstract any as asserts async await bigint boolean break case catch class const constructor continue declare
@@ -32,6 +32,20 @@ const DECORATORS = [
   '@ViewChild', '@Controller', '@Get', '@Post', '@Put', '@Delete', '@Body', '@Param', '@Query', '@Module',
   '@Entity', '@Column', '@PrimaryGeneratedColumn',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `setTimeout` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    setTimeout setInterval clearTimeout clearInterval addEventListener removeEventListener appendChild removeChild
+  `),
+  expressions: words(`
+    parseInt parseFloat isNaN fetch require querySelector querySelectorAll getElementById createElement setAttribute getAttribute stringify includes indexOf startsWith endsWith padStart toFixed slice splice concat join split replace forEach reduce findIndex useState useEffect useRef useMemo useCallback
+  `),
+  noArgs: words(`
+    preventDefault stopPropagation toUpperCase toLowerCase
+  `),
+})
 
 const TEMPLATES = [
   t('interf', 'interface {#} {', '  id: number', '  name: string', '}'),
@@ -88,6 +102,7 @@ export const TYPESCRIPT_PACK = languagePack({
   folder: 'TypeScript',
   description: 'TypeScript — 타입 문법·유틸리티 타입·틀',
   keywords: [...KEYWORDS, ...TYPES, ...DECORATORS],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'const', 'let', 'function', 'return', 'interface', 'type', 'string', 'number', 'boolean', 'void', 'any',

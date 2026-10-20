@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // Swift 상용구 — 키워드, 표준 라이브러리, Foundation·SwiftUI·UIKit 기본 이름, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   associatedtype class deinit enum extension fileprivate func import init inout internal let open operator
@@ -46,6 +46,17 @@ const ATTRIBUTES = [
   '@main', '@escaping', '@autoclosure', '@available', '@discardableResult', '@objc', '@IBOutlet', '@IBAction',
   '@MainActor', '@Observable', '@Bindable', '@AppStorage', '@ViewBuilder', '@propertyWrapper', '@testable',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `print` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    print debugPrint dump fatalError precondition assert
+  `),
+  noArgs: words(`
+    readLine
+  `),
+})
 
 const TEMPLATES = [
   t('swprint', 'print({#})'),
@@ -145,6 +156,7 @@ export const SWIFT_PACK = languagePack({
   folder: 'Swift',
   description: 'Swift — 키워드·표준 라이브러리·SwiftUI·UIKit·틀',
   keywords: [...KEYWORDS, ...API, ...ATTRIBUTES],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'func', 'let', 'var', 'class', 'struct', 'enum', 'protocol', 'extension', 'return', 'if', 'else', 'guard',

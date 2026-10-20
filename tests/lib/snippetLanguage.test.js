@@ -1,6 +1,6 @@
 // Copyright (c) dendr000. MIT License.
 import { describe, expect, it } from 'vitest'
-import { findSnippetQuery } from '../../src/lib/snippetMatch.js'
+import { findExactSnippetMatch, findSnippetQuery, isCallEntry } from '../../src/lib/snippetMatch.js'
 import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../../src/lib/snippetLanguage.js'
 
 const e = (category, title, content = title, extra = {}) => ({ category, title, content, ...extra })
@@ -154,5 +154,68 @@ describe('findSnippetQuery — 코드블록에서는 다 친 단어(int)도 후�
   it('순서 목록에 있는 틀은 단어보다 위에 둘 수 있다', () => {
     const entries = [cpp('fori', 'for (int i...)', { rank: 0 }), cpp('format')]
     expect(run('for', entries).matches.map((m) => m.title)).toEqual(['fori', 'format'])
+  })
+})
+
+describe('isCallEntry — 함수 이름에 괄호만 붙인 항목', () => {
+  it('언어 폴더에서 이름 + ( < ! [ 로 시작하는 본문이면 호출 항목이다', () => {
+    expect(isCallEntry(e('C++', 'printf', 'printf({#});'))).toBe(true)
+    expect(isCallEntry(e('C++', 'static_cast', 'static_cast<{#}>()'))).toBe(true)
+    expect(isCallEntry(e('Rust', 'vec!', 'vec![{#}]'))).toBe(true)
+    expect(isCallEntry(e('Rust', 'println!', 'println!({#});'))).toBe(true)
+  })
+
+  it('단어(제목=본문), 틀 줄임말, 일반 상용구는 호출 항목이 아니다', () => {
+    expect(isCallEntry(e('C++', 'int'))).toBe(false)
+    expect(isCallEntry(e('C++', 'fori', 'for (int i = 0; i < {#}; i++) {'))).toBe(false)
+    expect(isCallEntry(e('공통', '감사', '감사합니다, {#}님'))).toBe(false)
+    expect(isCallEntry(e('공통', 'foo', 'foo(bar)'))).toBe(false)
+  })
+})
+
+describe('findExactSnippetMatch — 스페이스바 자동 치환 규칙', () => {
+  const printf = e('C++', 'printf', 'printf({#});')
+  const fori = e('C++', 'fori', 'for (int i = 0; i < {#}; i++) {')
+  const thanks = e('공통', '감사', '감사합니다, {#}님')
+  const run = (line, entries, options) => findExactSnippetMatch(line, line.length, entries, options)
+
+  it('옵션이 없으면 예전과 같다 (호출 항목도 줄 끝이 같으면 걸린다)', () => {
+    expect(run('printf', [printf]).matches).toEqual([printf])
+  })
+
+  it('auto 면 호출 항목은 빼고 찾는다 — 주석 속 `// sort the list` 가 sort(); 로 바뀌지 않는다', () => {
+    expect(run('// printf', [printf], { auto: true })).toBeNull()
+    expect(run('printf', [printf], { auto: true })).toBeNull()
+  })
+
+  it('auto 여도 틀 줄임말과 일반 상용구(감사 -> 감사합니다)는 그대로 치환된다', () => {
+    expect(run('fori', [fori, printf], { auto: true }).matches).toEqual([fori])
+    expect(run('감사', [thanks], { auto: true }).matches).toEqual([thanks])
+  })
+
+  it('Alt+Enter(auto 아님)에서는 호출 항목도 치환된다', () => {
+    expect(run('  printf', [printf], { auto: false }).start).toBe(2)
+  })
+
+  it('wordBoundary 면 이름 중간의 일치는 뺀다 — blueprint 의 print, my_free 의 free, $count 의 count', () => {
+    const print = e('Python', 'print', 'print({#})')
+    const count = e('PHP', 'count', 'count({#})')
+    const free = e('C', 'free', 'free({#});')
+    expect(run('blueprint', [print], { wordBoundary: true })).toBeNull()
+    expect(run('x = $count', [count], { wordBoundary: true })).toBeNull()
+    expect(run('my_free', [free], { wordBoundary: true })).toBeNull()
+    expect(run('x = print', [print], { wordBoundary: true }).matches).toEqual([print])
+    expect(run('(print', [print], { wordBoundary: true }).matches).toEqual([print])
+    expect(run('print', [print], { wordBoundary: true }).matches).toEqual([print])
+  })
+
+  it('wordBoundary 가 없으면(글) 단어 중간에서도 예전처럼 걸린다', () => {
+    const print = e('공통', 'print', '출력')
+    expect(run('blueprint', [print]).matches).toEqual([print])
+  })
+
+  it('기호로 시작하는 제목(#include)은 앞이 글자여도 걸린다', () => {
+    const inc = e('C', '#include', '#include <{#}>')
+    expect(run('x#include', [inc], { wordBoundary: true }).matches).toEqual([inc])
   })
 })

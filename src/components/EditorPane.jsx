@@ -784,10 +784,15 @@ export function EditorPane({ text, onChange, disabled }) {
   // 제목과 "정확히"(대소문자 구분) 일치하는지 확인. 규칙은 lib/snippetMatch.js. 같은 길이로
   // 여러 개(카테고리만 다른 동일 제목)가 동시에 걸리면 하나로 정할 수 없으니 applySnippetMatch
   // 가 숫자 선택 팝업을 띄움 — 이미 있는 snippetSuggest 'browse' 모드 렌더링을 그대로 재사용.
-  function detectExactSnippetMatch(textarea, snippetEntries) {
+  // auto: 스페이스바 자동 치환(호출 항목 `printf` -> `printf();` 는 빼고 찾는다). 코드블록 안에서는 이름 중간에서 시작하는
+  // 일치(`blueprint` 의 `print`)도 뺀다 — 규칙은 lib/snippetMatch.js.
+  function detectExactSnippetMatch(textarea, snippetEntries, { auto = false } = {}) {
     if (textarea.selectionStart !== textarea.selectionEnd) return null
     const context = snippetContextAt(textarea.value, textarea.selectionStart)
-    return findExactSnippetMatch(textarea.value, textarea.selectionStart, scopeSnippetsToContext(snippetEntries, context))
+    return findExactSnippetMatch(textarea.value, textarea.selectionStart, scopeSnippetsToContext(snippetEntries, context), {
+      auto,
+      wordBoundary: context !== null,
+    })
   }
 
   // detectExactSnippetMatch가 찾은 후보를 실제로 적용 — 하나면 바로 치환, 여럿이면(카테고리만
@@ -1056,7 +1061,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 못 함 — 실제로 이 버그로 처음 구현했을 때 스페이스바 치환이 전혀 동작하지 않았음).
     if (snippetSpaceExpandEnabled && e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
       if (snippetSuggest) setSnippetSuggest(null)
-      const match = detectExactSnippetMatch(textarea, activeSnippets)
+      const match = detectExactSnippetMatch(textarea, activeSnippets, { auto: true })
       if (match) {
         e.preventDefault()
         applySnippetMatch(match)

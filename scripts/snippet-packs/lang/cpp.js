@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // C++ 상용구 — 키워드, 전처리기, 표준 라이브러리 이름, 자주 쓰는 틀. 공통 규칙은 common.js.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   alignas alignof and and_eq asm auto bitand bitor bool break case catch char char8_t char16_t char32_t class
@@ -54,6 +54,20 @@ const TYPES_AND_STD = words(`
   exit atexit abort assert static_assert nullopt monostate
   isalpha isdigit isalnum isspace isupper islower toupper tolower
 `)
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `printf` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    printf scanf sprintf snprintf fprintf fscanf sscanf puts fputs fputc putchar memset memcpy memmove strcpy strncpy strcat free exit srand push_back pop_back push_front pop_front emplace_back emplace_front emplace sort stable_sort reverse shuffle fill iota rotate nth_element for_each assert static_assert perror fclose fflush getline
+  `),
+  expressions: words(`
+    strlen strcmp strncmp strstr strchr malloc calloc realloc atoi atof atol stoi stol stoll stoul stof stod to_string make_unique make_shared make_pair make_tuple make_optional sqrt pow floor ceil fabs abs lower_bound upper_bound binary_search accumulate min_element max_element next_permutation prev_permutation find_if count_if any_of all_of none_of remove_if fopen fgets getchar rand isdigit isalpha isalnum isspace toupper tolower setprecision setw
+  `),
+})
+
+// 꺾쇠·대괄호가 들어간 호출
+const CALLS_EXTRA = [{ title: 'static_cast', content: 'static_cast<{#}>()' }, { title: 'dynamic_cast', content: 'dynamic_cast<{#}>()' }, { title: 'reinterpret_cast', content: 'reinterpret_cast<{#}>()' }, { title: 'const_cast', content: 'const_cast<{#}>()' }, { title: 'sizeof', content: 'sizeof({#})' }, { title: 'decltype', content: 'decltype({#})' }, { title: 'typeid', content: 'typeid({#})' }]
 
 const TEMPLATES = [
   t('cppbase', '#include <iostream>', 'using namespace std;', '', 'int main() {', '    {#}', '    return 0;', '}'),
@@ -130,6 +144,7 @@ export const CPP_PACK = languagePack({
   folder: 'C++',
   description: 'C++ — 키워드·전처리기·표준 라이브러리·틀',
   keywords: [...KEYWORDS, ...PREPROCESSOR, ...HEADERS, ...TYPES_AND_STD],
+  calls: [...CALLS, ...CALLS_EXTRA],
   templates: TEMPLATES,
   first: [
     'include', '#include', 'int', 'return', 'for', 'while', 'if', 'else', 'void', 'class', 'struct', 'public',

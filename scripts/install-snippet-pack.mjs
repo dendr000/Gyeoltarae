@@ -7,6 +7,7 @@
 //   node scripts/install-snippet-pack.mjs cpp                 (언어 하나만: cpp c java html css python javascript typescript csharp go kotlin rust swift php ruby bash)
 //   node scripts/install-snippet-pack.mjs sql --dry-run       (아무것도 안 만들고 개수만 보여 줌)
 //   node scripts/install-snippet-pack.mjs sql --workspace D:\WikiDesk
+//   node scripts/install-snippet-pack.mjs langs --refresh     (처음 설치한 그대로인 단어의 본문만 새 묶음 내용으로 바꿈, 고친 것은 그대로)
 //   node scripts/install-snippet-pack.mjs langs --merge-order (이미 있는 _순서.txt 에 없는 제목만 뒤에 덧붙임)
 //
 // 파일 이름 규칙(못 쓰는 글자·대소문자 충돌)은 앱과 같은 electron/fileSystem.js 의 ensureSnippet 을
@@ -34,25 +35,35 @@ function normalizeEntry(entry) {
 // order(선택): 추천 팝업에서의 후보 순서(제목 목록, 자주 쓰는 순). 주어지면 폴더에 순서 목록 파일
 // (_순서.txt, 규칙은 src/lib/snippetOrder.js)을 만든다 — 이미 있으면 사용자가 고쳤을 수 있으니 건드리지 않는다.
 // mergeOrder: 이미 있는 순서 목록 파일에 묶음의 순서 중 아직 없는 제목만 맨 뒤에 덧붙인다(사용자가 고친 줄과 순서는 그대로).
-// 돌려주는 값: { created, skipped, orderFile, orderAdded }
-//   created/skipped = 만든/이미 있어서 건너뛴 제목 목록
+// refresh: 이미 있는 상용구 중 본문이 제목과 같은 그대로인 것(처음 설치한 단어)만 묶음의 새 본문으로 바꾼다. 사용자가 본문을
+//   고친 것은 건드리지 않는다. 단어가 함수 호출(printf -> printf();)로 바뀐 묶음을 이미 설치한 폴더에 반영할 때 쓴다.
+// 돌려주는 값: { created, skipped, updated, orderFile, orderAdded }
+//   created/skipped/updated = 만든/이미 있어서 건너뛴/본문을 새로 바꾼 제목 목록
 //   orderFile = 'created'(새로 씀) | 'kept'(이미 있어서 그대로 둠) | 'merged'(없던 제목만 덧붙임) | 'none'(order 없음) | 'dry-run'(만들 예정)
 //   orderAdded = 'merged' 일 때 덧붙인(덧붙일) 제목 수
-export function installSnippetPack({ workspacePath, folder, entries, order, dryRun = false, mergeOrder = false }) {
+export function installSnippetPack({ workspacePath, folder, entries, order, dryRun = false, mergeOrder = false, refresh = false }) {
   // 폴더 이름은 Windows 에서 대소문자 구분이 없으므로("SQL" 과 "sql" 은 같은 폴더) 비교도 구분 없이.
   const folderKey = folder.toLowerCase()
-  const existing = new Set(
+  const existingPaths = new Map(
     scanSnippets(workspacePath)
       .filter((snippet) => snippet.category.toLowerCase() === folderKey)
-      .map((snippet) => snippet.title),
+      .map((snippet) => [snippet.title, snippet.path]),
   )
+  const existing = new Set(existingPaths.keys())
 
   const created = []
   const skipped = []
+  const updated = []
   for (const raw of entries) {
     const { title, content } = normalizeEntry(raw)
     if (existing.has(title)) {
-      skipped.push(title)
+      const filePath = existingPaths.get(title)
+      if (refresh && content !== title && filePath && fs.readFileSync(filePath, 'utf-8') === title) {
+        if (!dryRun) fs.writeFileSync(filePath, content, 'utf-8')
+        updated.push(title)
+      } else {
+        skipped.push(title)
+      }
       continue
     }
     if (!dryRun) {
@@ -62,7 +73,7 @@ export function installSnippetPack({ workspacePath, folder, entries, order, dryR
     existing.add(title)
     created.push(title)
   }
-  return { created, skipped, ...writeOrderFile({ workspacePath, folder, order, dryRun, mergeOrder }) }
+  return { created, skipped, updated, ...writeOrderFile({ workspacePath, folder, order, dryRun, mergeOrder }) }
 }
 
 // 순서 목록 파일을 쓴다(이미 있으면 그대로 둔다). 결과 표시는 installSnippetPack 설명 참고.
@@ -106,6 +117,7 @@ function main(argv) {
   const packName = args.find((a) => !a.startsWith('--'))
   const dryRun = args.includes('--dry-run')
   const mergeOrder = args.includes('--merge-order')
+  const refresh = args.includes('--refresh')
   const wsIndex = args.indexOf('--workspace')
   const workspacePath = wsIndex !== -1 ? args[wsIndex + 1] : lastWorkspaceFromAppConfig()
 
@@ -124,13 +136,14 @@ function main(argv) {
   console.log(`${dryRun ? '[미리보기: 아무것도 만들지 않음] ' : ''}워크스페이스: ${workspacePath}`)
   for (const name of names) {
     const pack = PACKS[name]
-    const { created, skipped, orderFile, orderAdded } = installSnippetPack({
+    const { created, skipped, updated, orderFile, orderAdded } = installSnippetPack({
       workspacePath,
       folder: pack.folder,
       entries: pack.entries,
       order: pack.order,
       dryRun,
       mergeOrder,
+      refresh,
     })
     const orderNote = {
       created: '새로 씀',
@@ -140,7 +153,7 @@ function main(argv) {
       none: '없음',
     }[orderFile]
     console.log(`${pack.description}`)
-    console.log(`  폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 이미 있어서 건너뜀 ${skipped.length}개 / 순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
+    console.log(`  폴더 "${pack.folder}": 새로 만듦 ${created.length}개, 본문 바꿈 ${updated.length}개, 이미 있어서 건너뜀 ${skipped.length}개 / 순서 목록(${SNIPPET_ORDER_FILE_NAME}): ${orderNote}`)
     // 건너뛴 게 많으면(보통 두 번째 실행) 개수만 보여 준다. 몇 개 안 될 때만 이름을 나열.
     if (skipped.length > 0 && skipped.length <= 10) console.log(`  건너뛴 것: ${skipped.join(', ')}`)
   }

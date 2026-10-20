@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // CSS 상용구 — 속성 이름, 값, 함수, 선택자(가상 클래스·가상 요소), @규칙, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const PROPERTIES = words(`
   color background background-color background-image background-size background-position background-repeat
@@ -106,7 +106,9 @@ const TEMPLATES = [
 export const CSS_PACK = languagePack({
   folder: 'CSS',
   description: 'CSS — 속성·값·함수·선택자·@규칙·틀',
-  keywords: [...PROPERTIES, ...VALUES, ...FUNCTIONS, ...SELECTORS, ...AT_RULES],
+  keywords: [...PROPERTIES, ...VALUES, ...SELECTORS, ...AT_RULES],
+  // 함수는 이름만 제목으로 두고 괄호까지 넣는다(rgb -> rgb(), 커서는 괄호 안).
+  calls: calls({ expressions: FUNCTIONS.map((name) => name.replace('()', '')) }),
   templates: TEMPLATES,
   first: [
     'color', 'background', 'background-color', 'margin', 'padding', 'border', 'width', 'height', 'display',

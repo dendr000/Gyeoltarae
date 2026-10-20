@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // C# 상용구 — 키워드, .NET 기본 클래스, LINQ, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   abstract as base bool break byte case catch char checked class const continue decimal default delegate do
@@ -45,6 +45,20 @@ const ATTRIBUTES = words(`
   Serializable Obsolete Flags Required Key Table Column HttpGet HttpPost HttpPut HttpDelete Route ApiController
   Authorize FromBody FromQuery Test TestMethod Fact Theory STAThread DllImport
 `)
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `WriteLine` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    WriteLine Write Add AddRange Remove RemoveAt Insert Sort Reverse
+  `),
+  expressions: words(`
+    Parse TryParse Contains IndexOf Substring StartsWith EndsWith Replace Split Join Format Equals Where Select SelectMany OrderBy OrderByDescending GroupBy First FirstOrDefault Last LastOrDefault Any All Sum Take Skip Delay WhenAll Combine ReadAllText WriteAllText Exists
+  `),
+  noArgs: words(`
+    ReadLine ReadKey ToString ToList ToArray ToUpper ToLower Trim Clear Dispose GetType
+  `),
+})
+
 const TEMPLATES = [
   t('csmain', 'using System;', '', 'namespace {#}', '{', '    internal class Program', '    {', '        static void Main(string[] args)', '        {', '            ', '        }', '    }', '}'),
   t('csmain9', 'using System;', '', '{#}'),
@@ -124,6 +138,7 @@ export const CSHARP_PACK = languagePack({
   folder: 'C#',
   description: 'C# — 키워드·.NET 기본 클래스·LINQ·틀',
   keywords: [...KEYWORDS, ...API, ...ATTRIBUTES],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'public', 'private', 'protected', 'static', 'void', 'class', 'new', 'return', 'using', 'namespace', 'string',

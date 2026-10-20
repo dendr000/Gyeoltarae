@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // Rust 상용구 — 키워드, 자료형, 표준 라이브러리, 매크로, 어트리뷰트, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   as async await break const continue crate dyn else enum extern false fn for if impl in let loop match mod move
@@ -40,6 +40,20 @@ const ATTRIBUTES = [
   '#[derive(Default)]', '#[derive(Serialize, Deserialize)]', '#[allow(dead_code)]', '#[allow(unused)]',
   '#[test]', '#[cfg(test)]', '#[inline]', '#[must_use]', '#[tokio::main]', '#[macro_use]', '#![allow(unused)]',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `println!` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    println! print! eprintln! eprint! panic! assert! assert_eq! assert_ne! debug_assert! write! writeln! todo! unimplemented! unreachable! dbg! drop
+  `),
+  expressions: words(`
+    format! matches!
+  `),
+})
+
+// 꺾쇠·대괄호가 들어간 호출
+const CALLS_EXTRA = [{ title: 'vec!', content: 'vec![{#}]' }]
 
 const TEMPLATES = [
   t('rsmain', 'fn main() {', '    {#}', '}'),
@@ -121,6 +135,7 @@ export const RUST_PACK = languagePack({
   folder: 'Rust',
   description: 'Rust — 키워드·표준 라이브러리·매크로·틀',
   keywords: [...KEYWORDS, ...TYPES_AND_API, ...MACROS, ...ATTRIBUTES],
+  calls: [...CALLS, ...CALLS_EXTRA],
   templates: TEMPLATES,
   first: [
     'fn', 'let', 'mut', 'pub', 'struct', 'enum', 'impl', 'trait', 'use', 'mod', 'return', 'if', 'else', 'for', 'while',

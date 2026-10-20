@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // C 상용구 — 키워드, 전처리기, 표준 라이브러리 함수, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   auto break case char const continue default do double else enum extern float for goto if inline int long
@@ -39,6 +39,20 @@ const API = words(`
   socket bind listen accept connect send recv
   main argc argv
 `)
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `printf` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    printf scanf sprintf snprintf fprintf fscanf sscanf puts fputs fputc putchar free exit srand memset memcpy memmove strcpy strncpy strcat strncat qsort perror fclose fflush rewind assert pthread_join
+  `),
+  expressions: words(`
+    fopen fgets fgetc fread fwrite fseek ftell strlen strcmp strncmp strchr strrchr strstr strtok strdup malloc calloc realloc atoi atol atof strtol strtod getchar rand sqrt pow floor ceil fabs abs toupper tolower isalpha isdigit isalnum isspace time clock
+  `),
+})
+
+// 꺾쇠·대괄호가 들어간 호출
+const CALLS_EXTRA = [{ title: 'sizeof', content: 'sizeof({#})' }]
 
 const TEMPLATES = [
   t('cbase', '#include <stdio.h>', '', 'int main(void) {', '    {#}', '    return 0;', '}'),
@@ -94,6 +108,7 @@ export const C_PACK = languagePack({
   folder: 'C',
   description: 'C — 키워드·전처리기·표준 라이브러리·틀',
   keywords: [...KEYWORDS, ...PREPROCESSOR, ...HEADERS, ...API],
+  calls: [...CALLS, ...CALLS_EXTRA],
   templates: TEMPLATES,
   first: [
     '#include', '#define', 'int', 'char', 'void', 'return', 'if', 'else', 'for', 'while', 'struct', 'typedef',

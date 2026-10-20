@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // Kotlin 상용구 — 키워드, 표준 라이브러리, 컬렉션·코루틴 함수, 안드로이드 기본 이름, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   abstract actual annotation as break by catch class companion const constructor continue crossinline data
@@ -43,6 +43,20 @@ const ANNOTATIONS = [
   '@Override', '@JvmStatic', '@JvmField', '@JvmOverloads', '@Suppress', '@Deprecated', '@Composable',
   '@Preview', '@Test', '@Inject', '@HiltViewModel', '@Entity', '@Dao', '@Serializable',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `println` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    println print require check error TODO
+  `),
+  expressions: words(`
+    listOf mutableListOf arrayListOf setOf mutableSetOf mapOf mutableMapOf hashMapOf arrayOf intArrayOf buildString requireNotNull checkNotNull joinToString
+  `),
+  noArgs: words(`
+    emptyList emptyMap emptySet readLine readln toInt toLong toDouble toString toList toSet toMutableList isEmpty isNotEmpty
+  `),
+})
 
 const TEMPLATES = [
   t('ktmain', 'fun main() {', '    {#}', '}'),
@@ -126,6 +140,7 @@ export const KOTLIN_PACK = languagePack({
   folder: 'Kotlin',
   description: 'Kotlin — 키워드·표준 라이브러리·코루틴·틀',
   keywords: [...KEYWORDS, ...API, ...ANNOTATIONS],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'fun', 'val', 'var', 'class', 'return', 'if', 'else', 'for', 'while', 'when', 'in', 'is', 'as', 'null', 'true',

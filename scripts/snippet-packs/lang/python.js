@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // Python 상용구 — 키워드, 내장 함수, 예외, 특수 메서드, 표준 라이브러리 이름, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   False None True and as assert async await break class continue def del elif else except finally for from
@@ -55,6 +55,17 @@ const DECORATORS = [
   '@staticmethod', '@classmethod', '@property', '@dataclass', '@abstractmethod', '@lru_cache', '@cache', '@wraps',
   '@cached_property', '@contextmanager', '@pytest.fixture', '@app.route',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `print` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    print
+  `),
+  expressions: words(`
+    len range enumerate zip sorted reversed isinstance issubclass open sleep randint sqrt floor ceil dumps loads join split strip replace startswith endswith append extend format encode decode readline readlines
+  `),
+})
 
 const TEMPLATES = [
   t('ifmain', 'if __name__ == "__main__":', '    {#}'),
@@ -140,6 +151,7 @@ export const PYTHON_PACK = languagePack({
   folder: 'Python',
   description: 'Python — 키워드·내장 함수·표준 라이브러리·틀',
   keywords: [...KEYWORDS, ...BUILTINS, ...EXCEPTIONS, ...DUNDERS, ...METHODS, ...MODULES, ...DECORATORS],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'def', 'class', 'import', 'from', 'return', 'if', 'elif', 'else', 'for', 'while', 'in', 'not', 'and', 'or',

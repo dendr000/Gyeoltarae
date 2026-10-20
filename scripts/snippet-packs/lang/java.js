@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // Java 상용구 — 키워드, 자료형, 표준 라이브러리(java.lang·java.util·java.io·java.time 등), 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   abstract assert boolean break byte case catch char class const continue default do double else enum extends
@@ -53,6 +53,20 @@ const ANNOTATIONS = [
   '@PathVariable', '@RequestParam', '@RequestBody', '@ResponseBody', '@Bean', '@Configuration', '@Entity',
   '@Id', '@GeneratedValue', '@Column', '@Table', '@Transactional', '@Getter', '@Setter', '@Data',
 ]
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `println` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    println printf print sleep arraycopy
+  `),
+  expressions: words(`
+    parseInt parseLong parseDouble parseBoolean valueOf charAt substring indexOf lastIndexOf equals equalsIgnoreCase compareTo startsWith endsWith containsKey containsValue getOrDefault nextInt nextLong nextDouble requireNonNull asList copyOf copyOfRange
+  `),
+  noArgs: words(`
+    isEmpty hashCode toString toCharArray toUpperCase toLowerCase trim strip isBlank getClass intValue doubleValue longValue hasNext hasNextInt hasNextLine nextLine readLine currentTimeMillis nanoTime isPresent getKey getValue keySet entrySet printStackTrace
+  `),
+})
 
 const TEMPLATES = [
   t('jmain', 'public class Main {', '    public static void main(String[] args) {', '        {#}', '    }', '}'),
@@ -122,6 +136,7 @@ export const JAVA_PACK = languagePack({
   folder: 'Java',
   description: 'Java — 키워드·표준 라이브러리·어노테이션·틀',
   keywords: [...KEYWORDS, ...TYPES_AND_API, ...ANNOTATIONS],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'public', 'private', 'protected', 'static', 'final', 'void', 'class', 'interface', 'return', 'new', 'import',

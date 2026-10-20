@@ -2,7 +2,7 @@
 
 // Go 상용구 — 키워드, 내장 함수·자료형, 표준 라이브러리 패키지와 자주 쓰는 함수, 자주 쓰는 틀.
 // 들여쓰기는 gofmt 와 같게 탭이다.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   break case chan const continue default defer else fallthrough for func go goto if import interface map package
@@ -33,6 +33,20 @@ const PACKAGES = words(`
   Marshal Unmarshal NewDecoder NewEncoder MarshalIndent
   main init
 `)
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `Println` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    Println Printf Print Fprintf Fprintln Fatal Fatalf Panic panic Sleep
+  `),
+  expressions: words(`
+    Sprintf Sprint Sprintln Errorf Atoi Itoa ParseInt ParseFloat make append Contains HasPrefix HasSuffix Split Join Trim TrimSpace Replace ReplaceAll ToUpper ToLower Fields Index Repeat NewReader NewScanner NewWriter ReadFile WriteFile Open Create Marshal Unmarshal Sqrt Pow Abs Floor Ceil
+  `),
+  noArgs: words(`
+    Lock Unlock Done Wait Close Scan Text Now
+  `),
+})
 
 const TEMPLATES = [
   t('gomain', 'package main', '', 'import "fmt"', '', 'func main() {', '\t{#}', '}'),
@@ -106,6 +120,7 @@ export const GO_PACK = languagePack({
   folder: 'Go',
   description: 'Go — 키워드·내장·표준 라이브러리·틀',
   keywords: [...KEYWORDS, ...BUILTINS, ...PACKAGES],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'func', 'return', 'if', 'else', 'for', 'range', 'var', 'const', 'type', 'struct', 'interface', 'package',

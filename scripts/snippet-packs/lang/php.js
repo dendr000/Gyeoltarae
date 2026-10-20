@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // PHP 상용구 — 키워드, 내장 함수, 슈퍼글로벌, PDO·Laravel 기본 이름, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   abstract and array as break callable case catch class clone const continue declare default do echo else
@@ -47,6 +47,20 @@ const CLASSES = words(`
   Request Response Route Auth Cache DB Schema Eloquent Model Controller Collection Validator Storage
   Log Session Config View Blade Artisan Migration Seeder Factory Illuminate App Http Middleware
 `)
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `var_dump` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: ';',
+  statements: words(`
+    var_dump print_r die array_push session_start session_destroy define header setcookie error_log unlink mkdir copy rename sleep usleep unset file_put_contents
+  `),
+  expressions: words(`
+    strlen strpos substr str_replace str_contains str_starts_with str_ends_with trim ltrim rtrim explode implode sprintf number_format in_array array_merge array_map array_filter array_keys array_values array_key_exists array_slice array_search array_unique array_reverse array_sum array_pop range json_encode json_decode file_get_contents preg_match preg_replace intval floatval strval isset empty is_array is_null is_numeric password_hash password_verify htmlspecialchars date strtotime mt_rand rand random_int round floor ceil abs
+  `),
+  noArgs: words(`
+    time
+  `),
+})
 
 const TEMPLATES = [
   t('phptag', '<?php', '', '{#}'),
@@ -131,6 +145,7 @@ export const PHP_PACK = languagePack({
   folder: 'PHP',
   description: 'PHP — 키워드·내장 함수·슈퍼글로벌·PDO·Laravel·틀',
   keywords: [...KEYWORDS, ...FUNCTIONS, ...SUPERGLOBALS, ...CLASSES],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'echo', 'function', 'return', 'if', 'else', 'elseif', 'for', 'foreach', 'while', 'class', 'public', 'private',

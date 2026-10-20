@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 
 // JavaScript 상용구 — 키워드, 내장 객체, 배열·문자열 메서드, DOM·브라우저 API, Node.js, 자주 쓰는 틀.
-import { languagePack, t, words } from './common.js'
+import { calls, languagePack, t, words } from './common.js'
 
 const KEYWORDS = words(`
   async await break case catch class const continue debugger default delete do else export extends false
@@ -50,6 +50,20 @@ const EVENTS = words(`
   mouseenter mouseleave focus blur scroll resize load DOMContentLoaded beforeunload unload touchstart
   touchend touchmove dragstart dragover drop contextmenu wheel hashchange popstate storage message
 `)
+
+// 이름 뒤에 괄호가 붙어 나오는 항목 — `alert` 를 고르면 괄호까지 들어가고 커서는 괄호 안에 선다(common.js 의 calls).
+const CALLS = calls({
+  end: '',
+  statements: words(`
+    alert setTimeout setInterval clearTimeout clearInterval addEventListener removeEventListener appendChild removeChild
+  `),
+  expressions: words(`
+    confirm prompt parseInt parseFloat isNaN isFinite fetch require querySelector querySelectorAll getElementById getElementsByClassName getElementsByTagName createElement setAttribute getAttribute encodeURIComponent decodeURIComponent stringify includes indexOf startsWith endsWith padStart padEnd toFixed slice splice concat join split replace replaceAll forEach reduce findIndex
+  `),
+  noArgs: words(`
+    preventDefault stopPropagation toUpperCase toLowerCase
+  `),
+})
 
 const TEMPLATES = [
   t('arrowf', 'const {#} = () => {', '    ', '}'),
@@ -127,6 +141,7 @@ export const JAVASCRIPT_PACK = languagePack({
   folder: 'JavaScript',
   description: 'JavaScript — 키워드·내장 객체·DOM·Node.js·틀',
   keywords: [...KEYWORDS, ...BUILTINS, ...METHODS, ...EVENTS],
+  calls: CALLS,
   templates: TEMPLATES,
   first: [
     'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'new', 'this', 'import',

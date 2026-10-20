@@ -72,8 +72,8 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, g
       // 코드블록에서는 순서 목록에 없을 때 단어(int, include)를 틀(fori, incio 같은 줄임말)보다 먼저 보여 준다.
       // 한두 글자만 쳤을 때 틀 줄임말이 짧다는 이유로 키워드보다 위에 뜨는 것을 막는다.
       if (grammar !== null) {
-        const aTemplate = a.content !== a.title && folderGrammar(a.category) === grammar ? 1 : 0
-        const bTemplate = b.content !== b.title && folderGrammar(b.category) === grammar ? 1 : 0
+        const aTemplate = a.content !== a.title && !isCallEntry(a) && folderGrammar(a.category) === grammar ? 1 : 0
+        const bTemplate = b.content !== b.title && !isCallEntry(b) && folderGrammar(b.category) === grammar ? 1 : 0
         if (aTemplate !== bTemplate) return aTemplate - bTemplate
       }
       // 폴더 범위 영어 단어(word: true, lib/scopeWords.js)는 상용구보다 뒤에 둔다 — 직접 등록한 것이 우선.
@@ -101,6 +101,21 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, g
   return null
 }
 
+// 함수 이름에 괄호만 붙인 호출 항목인가(`printf` -> `printf({#});`, `vec!` -> `vec![{#}]`). 순서를 매길 때는 단어와 같은
+// 취급이고, 스페이스바 자동 치환에서는 빠진다(아래 findExactSnippetMatch). 언어 폴더의 상용구만 해당한다 — `감사` -> `감사합니다`
+// 같은 일반 상용구는 이 항목이 아니다.
+export function isCallEntry(entry) {
+  if (entry.content === entry.title || !entry.content.startsWith(entry.title)) return false
+  return folderGrammar(entry.category) !== null && /^[(<![]/.test(entry.content.slice(entry.title.length))
+}
+
+// currentLine 끝의 title 이 식별자(이름)의 중간에서 시작하는가 — 제목이 단어 글자로 시작하고 그 앞이 단어 글자·$·@ 일 때.
+function insideIdentifier(currentLine, title) {
+  if (!WORD_CHAR_RE.test(title[0])) return false
+  const before = currentLine[currentLine.length - title.length - 1]
+  return before !== undefined && (WORD_CHAR_RE.test(before) || before === '$' || before === '@')
+}
+
 // 후보가 코드블록 언어와 얼마나 맞는가: 0 = 그 언어의 폴더, 1 = 언어 폴더가 아닌 폴더, 2 = 다른 언어의 폴더.
 function languageTier(entry, grammar) {
   const folder = folderGrammar(entry.category)
@@ -123,13 +138,24 @@ export function enterAcceptsSuggestion({ inCodeBlock, navigated }) {
 //
 // 대소문자를 구분한다 — "MYSQL"과 "mysql"을 각각 다른 상용구로 등록할 수 있어야 하므로.
 // (추천 팝업 findSnippetQuery 는 대소문자를 가리지 않는다.)
-export function findExactSnippetMatch(value, pos, entries) {
+//
+// options.auto: 스페이스바 자동 치환에서 부른 것. 호출 항목(`printf` -> `printf();`)은 빼고 찾는다 — 주석(`// sort the list`)이나
+// 글 속에서 `sort `·`print ` 를 쳤는데 `sort();` 로 바뀌면 안 되기 때문이다. 호출 항목은 추천 팝업(Tab)이나 Alt+Enter 로 쓴다.
+// options.wordBoundary: 코드블록 안에서 켠다. 식별자의 끝부분이 제목과 같아도(`blueprint` 의 `print`, `$count` 의 `count`,
+// `my_free` 의 `free`) 치환하지 않는다 — 제목이 단어 글자로 시작할 때 그 바로 앞이 단어 글자·`$`·`@` 이면 단어 중간이다.
+export function findExactSnippetMatch(value, pos, entries, { auto = false, wordBoundary = false } = {}) {
   if (entries.length === 0) return null
   const lineStart = value.lastIndexOf('\n', pos - 1) + 1
   const currentLine = value.slice(lineStart, pos)
   if (!currentLine.trim()) return null
 
-  const matches = entries.filter((entry) => entry.title && currentLine.endsWith(entry.title))
+  const matches = entries.filter(
+    (entry) =>
+      entry.title &&
+      currentLine.endsWith(entry.title) &&
+      !(auto && isCallEntry(entry)) &&
+      !(wordBoundary && insideIdentifier(currentLine, entry.title)),
+  )
   if (matches.length === 0) return null
   const maxLen = Math.max(...matches.map((e) => e.title.length))
   const longest = matches.filter((e) => e.title.length === maxLen)
