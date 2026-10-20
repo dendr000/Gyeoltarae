@@ -42,6 +42,7 @@ import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../lib/
 import { fenceAutoCloseEdit, isInCodeFenceAt, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
 import { isLineMoveKey, moveLinesEdit } from '../lib/lineMove.js'
+import { matchesShortcut } from '../lib/shortcuts.js'
 import { atomicDeleteRange, atomicStep } from '../lib/atomicTokens.js'
 import { toggleCommentEdit } from '../lib/codeComment.js'
 import { moveToLineEdge } from '../lib/lineEdge.js'
@@ -508,6 +509,8 @@ export function EditorPane({ text, onChange, disabled }) {
   const sortFlip = useAppStore((s) => s.sortFlip)
   // 메뉴 "설정" > 타자기 스크롤: 0 = 끔(기본), 1~5 = 글 쓰는 줄이 머물 구역(편집창 세로 5등분, 1 맨 위쪽 ~ 5 맨 아래쪽).
   const typewriterZone = useAppStore((s) => s.typewriterZone)
+  // 설정 메뉴 > 단축키…에서 바꾼 키(기능 id -> 조합). 줄 이동·복제·정렬 키 처리가 이것을 본다(lib/shortcuts.js).
+  const shortcuts = useAppStore((s) => s.shortcuts)
   // 줄 여백: 줄 번호 표시 여부, 이 문서에서 점을 눌러 강조해 둔 줄(lib/lineMarks.js 규칙, 스토어가 줄 수 변화를 따라 옮겨 줌).
   const editorLineNumbers = useAppStore((s) => s.editorLineNumbers)
   const setEditorLineNumbers = useAppStore((s) => s.setEditorLineNumbers)
@@ -1223,7 +1226,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // Ctrl+` — 선택에 걸친 줄들을 이름순(가나다·ABC·숫자 크기순)으로 정렬하고, 이미 오름차순이면 내림차순으로 뒤집는다. 선택이
     // 없거나 한 줄뿐이거나 코드블록 여는·닫는 줄이 들어 있으면 sortLinesEdit 가 null 을 줘서 지나간다(규칙은 lib/lineSort.js).
     // 백틱은 키보드 배열에 따라 e.key 가 다를 수 있어 물리 키(e.code)도 본다.
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '`' || e.code === 'Backquote')) {
+    if (matchesShortcut(e.nativeEvent, shortcuts['line.sort'])) {
       const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
@@ -1237,7 +1240,7 @@ export function EditorPane({ text, onChange, disabled }) {
     }
     // Ctrl+Shift+` — 선택에 걸친 줄들을 "묶음" 단위로 이름순 정렬한다(맨 윗줄 글자 기준, 딸린 줄은 함께 움직임). 묶음은 들여쓰기나
     // 목록 표시(*, 1.)·빈 줄로 나뉜다(규칙은 lib/blockSort.js). Shift 가 눌리면 US 배열에서 e.key 가 '~' 가 되므로 물리 키(e.code)도 본다.
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === '~' || e.key === '`' || e.code === 'Backquote')) {
+    if (matchesShortcut(e.nativeEvent, shortcuts['line.blockSort'])) {
       const edit = blockSortEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
@@ -1251,7 +1254,7 @@ export function EditorPane({ text, onChange, disabled }) {
     }
     // Alt+↑/↓ — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다(VS Code 의 줄 이동). 추천 팝업이 떠 있어도(팝업의 ↑/↓ 는 Alt 가 없을 때만 후보를 고른다) 줄을 옮기고, 팝업은 닫는다. 맨 윗줄·맨 아랫줄에서는 아무 일도 없다.
     // 규칙은 lib/lineMove.js. 한글 조합 중 여부는 nativeEvent 에 있다. 선택 방향(앞->뒤/뒤->앞)은 옮긴 뒤에도 유지한다.
-    const lineMoveDirection = isLineMoveKey(e.nativeEvent)
+    const lineMoveDirection = isLineMoveKey(e.nativeEvent, { up: shortcuts['line.moveUp'], down: shortcuts['line.moveDown'] })
     if (lineMoveDirection !== null) {
       e.preventDefault()
       setFileSuggest(null)
@@ -1271,7 +1274,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 문서 어디서나 된다(처음에는 코드블록 안만 됐다). 한글 입력 상태에서는 e.key 가 자모일 수 있어 물리 키
     // (e.code)도 본다. 복제하면 코드블록(```) 구조가 깨지는 줄(여는 줄만, 닫는 줄만 등)이면 duplicateLinesEdit 이
     // null 을 줘서 아무것도 안 하고 지나간다.
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
+    if (matchesShortcut(e.nativeEvent, shortcuts['line.duplicate'])) {
       const edit = duplicateLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
         e.preventDefault()

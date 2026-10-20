@@ -49,7 +49,7 @@ describe('소스 점검: App 이 단축키를 연결했다', () => {
   const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
 
   it('전역 keydown 에서 isSidebarToggleKey 로 사이드바를 토글한다', () => {
-    expect(app).toMatch(/isSidebarToggleKey\(e\)[\s\S]{0,120}setSidebarCollapsed\(\(v\) => !v\)/)
+    expect(app).toMatch(/isSidebarToggleKey\(e, shortcuts\['sidebar\.toggle'\]\)[\s\S]{0,120}setSidebarCollapsed\(\(v\) => !v\)/)
   })
 
   it('입력창(PromptModal)이 떠 있을 때는 무시하는 검사 뒤에 있다', () => {

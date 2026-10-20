@@ -9,7 +9,7 @@ const pane = readFileSync(new URL('../../src/components/EditorPane.jsx', import.
 describe('App 의 활성 탭 옮기기', () => {
   it('activeTabMoveKey 로 판별해 활성 탭을 moveTab 으로 옮기고 기본 동작을 막는다', () => {
     expect(app).toContain("from './lib/tabOrder.js'")
-    expect(app).toMatch(/activeTabMoveKey\(e\)[\s\S]{0,200}e\.preventDefault\(\)[\s\S]{0,160}moveTab\(activeTabId, tabDirection\)/)
+    expect(app).toMatch(/activeTabMoveKey\(e, \{ left: shortcuts\['tab\.moveLeft'\], right: shortcuts\['tab\.moveRight'\] \}\)[\s\S]{0,200}e\.preventDefault\(\)[\s\S]{0,160}moveTab\(activeTabId, tabDirection\)/)
   })
 
   it('열린 탭이 없으면 아무 일도 없다 (activeTabId 확인)', () => {
@@ -17,7 +17,7 @@ describe('App 의 활성 탭 옮기기', () => {
   })
 
   it('이름 입력창·표 편집기 같은 모달이 떠 있으면 무시한다', () => {
-    const at = app.indexOf('activeTabMoveKey(e)')
+    const at = app.indexOf('activeTabMoveKey(e,')
     expect(at).toBeGreaterThan(app.indexOf("document.querySelector('.modal-backdrop')"))
   })
 

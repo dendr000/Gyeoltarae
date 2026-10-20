@@ -23,6 +23,7 @@ import { decodeFileNameChars } from '../../shared/fileNameChars.js'
 import { normalizeTypewriterZone } from '../../shared/typewriterZone.js'
 import { DEFAULT_MODE, modeForDocFields } from '../lib/viewMode.js'
 import { moveTabById } from '../lib/tabOrder.js'
+import { SHORTCUT_ACTIONS, findConflict, parseShortcutOverrides, resolveShortcuts, validateCombo } from '../lib/shortcuts.js'
 
 const SAVE_DEBOUNCE_MS = 800
 const WATCH_REBUILD_DEBOUNCE_MS = 400
@@ -229,6 +230,25 @@ function loadWholeScopeTopFolders() {
 }
 
 // 편집기 줄 번호 표시(기본 켜짐). 이 PC 의 화면 설정이라 localStorage 에 둔다.
+// 단축키 설정: 사용자가 바꾼 키({ 기능 id: 조합 })만 JSON 으로 저장한다(기본 키는 lib/shortcuts.js). 규칙은 lib/shortcuts.js.
+const SHORTCUTS_STORAGE_KEY = 'wikidesk-shortcuts'
+
+function loadShortcutOverrides() {
+  try {
+    return parseShortcutOverrides(localStorage.getItem(SHORTCUTS_STORAGE_KEY))
+  } catch {
+    return {}
+  }
+}
+
+function saveShortcutOverrides(overrides) {
+  try {
+    localStorage.setItem(SHORTCUTS_STORAGE_KEY, JSON.stringify(overrides))
+  } catch {
+    /* localStorage unavailable; 재시작하면 기본 키로 돌아갈 뿐 */
+  }
+}
+
 const EDITOR_LINE_NUMBERS_STORAGE_KEY = 'wikidesk-editor-line-numbers'
 
 function loadEditorLineNumbers() {
@@ -477,6 +497,9 @@ export const useAppStore = create((set, get) => ({
   // 편집기 줄 여백: 줄 번호 표시 여부(저장)와, 문서마다 점을 눌러 강조해 둔 줄 번호(0부터)의 목록 { [경로]: number[] }
   // — 강조 표시는 앱을 켜 둔 동안만 유지한다(파일에 저장하지 않음). 규칙은 lib/lineMarks.js.
   editorLineNumbers: loadEditorLineNumbers(),
+  // 단축키: 바꾼 키(shortcutOverrides)와 기본 키를 합친 { 기능 id: 조합 }(shortcuts). 키 처리 코드는 shortcuts 를 보고 판단한다.
+  shortcutOverrides: loadShortcutOverrides(),
+  shortcuts: resolveShortcuts(loadShortcutOverrides()),
   monoFont: loadMonoFont(),
   // 정렬 단축키(Ctrl+`, Ctrl+Shift+`)를 이미 오름차순인 글에서 다시 누르면 내림차순으로 뒤집을지. 기본은 꺼짐(항상 오름차순).
   // 값은 메인의 config.json 에 있고(메뉴 "설정"), 여기에는 그 사본이 있다(initSettings).
@@ -1397,6 +1420,44 @@ export const useAppStore = create((set, get) => ({
       const tabs = state.tabs.filter((t) => t.id !== id)
       return withViewerIfNeeded(state, resolveTabsAfterRemoval(tabs, wasActive, closedIndex))
     })
+  },
+
+  // 기능 id 의 단축키를 combo 로 바꾼다(빈 글이면 단축키를 없앤다). 돌려주는 값: { ok: true } 또는 { ok: false, reason } 또는 { ok: false, conflict: 다른 기능 id }.
+  // 규칙(수식키·예약된 키)에 어긋나면 거절하고, 다른 기능이 같은 키를 쓰고 있으면 거절하면서 그 기능을 알려 준다. force 면 그 기능의 키를 없애고 바꾼다.
+  setShortcut(id, combo, { force = false } = {}) {
+    if (!SHORTCUT_ACTIONS.some((a) => a.id === id)) return { ok: false, reason: '알 수 없는 기능입니다' }
+    const overrides = { ...get().shortcutOverrides }
+    const current = get().shortcuts
+    if (combo !== '') {
+      const check = validateCombo(combo)
+      if (!check.ok) return check
+      const conflict = findConflict(current, id, combo)
+      if (conflict) {
+        if (!force) return { ok: false, conflict }
+        overrides[conflict] = ''
+      }
+    }
+    const action = SHORTCUT_ACTIONS.find((a) => a.id === id)
+    if (combo === action.defaultKey) delete overrides[id]
+    else overrides[id] = combo
+    // 충돌로 해제한 기능이 원래 기본 키가 없어진 것이므로 빈 글로 남긴다(위). 저장은 바뀐 것만.
+    saveShortcutOverrides(overrides)
+    set({ shortcutOverrides: overrides, shortcuts: resolveShortcuts(overrides) })
+    return { ok: true }
+  },
+
+  // 한 기능의 단축키를 기본 키로 되돌린다.
+  resetShortcut(id) {
+    const overrides = { ...get().shortcutOverrides }
+    delete overrides[id]
+    saveShortcutOverrides(overrides)
+    set({ shortcutOverrides: overrides, shortcuts: resolveShortcuts(overrides) })
+  },
+
+  // 모든 단축키를 기본 키로 되돌린다.
+  resetAllShortcuts() {
+    saveShortcutOverrides({})
+    set({ shortcutOverrides: {}, shortcuts: resolveShortcuts({}) })
   },
 
   // 탭을 왼쪽(-1)·오른쪽(+1)으로 한 칸 옮긴다(탭 순서만 바뀌고 활성 탭과 탭 내용은 그대로). 규칙은 lib/tabOrder.js.

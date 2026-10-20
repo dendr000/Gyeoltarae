@@ -24,6 +24,7 @@ export function createSettingsMenu({
   onTypewriterZoneChange = () => {},
   getHeadingHighlight = () => true,
   onHeadingHighlightChange = () => {},
+  onOpenShortcuts = () => {},
 }) {
   return {
     label: '설정',
@@ -52,6 +53,12 @@ export function createSettingsMenu({
           checked: normalizeTypewriterZone(getTypewriterZone()) === zone,
           click: () => onTypewriterZoneChange(zone),
         })),
+      },
+      { type: 'separator' },
+      {
+        // 기능별 단축키를 바꾸는 창(렌더러)을 연다. 규칙은 src/lib/shortcuts.js.
+        label: '단축키…',
+        click: () => onOpenShortcuts(),
       },
     ],
   }

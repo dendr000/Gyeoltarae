@@ -8,7 +8,7 @@ const pane = readFileSync(new URL('../../src/components/EditorPane.jsx', import.
 describe('EditorPane 의 줄 이동', () => {
   it('isLineMoveKey(nativeEvent)로 판별하고 moveLinesEdit 결과를 replaceRange 로 적용한다 (되돌리기가 이어진다)', () => {
     expect(pane).toContain("from '../lib/lineMove.js'")
-    expect(pane).toMatch(/const lineMoveDirection = isLineMoveKey\(e\.nativeEvent\)/)
+    expect(pane).toMatch(/const lineMoveDirection = isLineMoveKey\(e\.nativeEvent, \{ up: shortcuts\['line\.moveUp'\], down: shortcuts\['line\.moveDown'\] \}\)/)
     expect(pane).toMatch(/moveLinesEdit\(textarea\.value, textarea\.selectionStart, textarea\.selectionEnd, lineMoveDirection\)/)
     expect(pane).toMatch(/replaceRange\(textarea, edit\.from, edit\.to, edit\.insert, onChange\)/)
   })

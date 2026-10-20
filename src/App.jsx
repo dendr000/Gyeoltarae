@@ -20,6 +20,7 @@ import { EditorHeader } from './components/EditorHeader.jsx'
 import { EditorPane } from './components/EditorPane.jsx'
 import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
+import { ShortcutSettingsModal } from './components/ShortcutSettingsModal.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordLines, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
@@ -39,6 +40,8 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Ctrl+N 이 부르는 "새 문서 만들기"(사이드바 단추와 같은 handleCreateDoc). 키 처리는 한 번만 등록해 두고, 항상 최신 함수를 부르도록 ref 로 넘긴다.
   const createDocRef = useRef(null)
+  // 메뉴 "설정" > "단축키…" 로 여는 단축키 설정 창.
+  const [shortcutModalOpen, setShortcutModalOpen] = useState(false)
   // 편집기·코드블록 글꼴: 고른 글꼴을 CSS 변수 --mono 에 넣는다(index.css 의 기본값을 덮어씀). 기본이면 index.css 의 값 그대로다.
   const monoFont = useAppStore((s) => s.monoFont)
   useEffect(() => {
@@ -99,6 +102,7 @@ export default function App() {
     activeTabId,
     closeTab,
     moveTab,
+    shortcuts,
   } = useAppStore()
 
   const handleCreateDoc = async (dirPath) => {
@@ -157,6 +161,11 @@ export default function App() {
     return unsubscribe
   }, [chooseWorkspace])
 
+  useEffect(() => {
+    const unsubscribe = getApi().onMenuOpenShortcuts?.(() => setShortcutModalOpen(true))
+    return unsubscribe
+  }, [])
+
   // Ctrl+W — 탭 닫기. electron/main.js가 "창" 메뉴의 role:'close' 기본 가속기(Ctrl+W)를
   // Alt+F4로 옮겨 뒀으니 여기까지 살아서 도착함 — 그거 없이는 Ctrl+W가 창(=앱) 자체를
   // 닫아버렸음("Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네" 제보). PromptModal이 떠 있는
@@ -169,7 +178,7 @@ export default function App() {
         if (activeTabId) closeTab(activeTabId)
       }
       // Ctrl+M — 왼쪽 사이드바(문서/폴더 목록 등) 열기·닫기. 편집 중에도 동작한다.
-      if (isSidebarToggleKey(e)) {
+      if (isSidebarToggleKey(e, shortcuts['sidebar.toggle'])) {
         e.preventDefault()
         setSidebarCollapsed((v) => !v)
       }
@@ -177,19 +186,19 @@ export default function App() {
       // 모달(표 편집기 등)이 떠 있으면 무시한다 — 뷰어로 바뀌면 편집 창이 사라져서 모달 안의 작업이 날아간다.
       if (!document.querySelector('.modal-backdrop')) {
         // Ctrl+Alt+←/→ — 지금 열린 탭을 한 칸씩 왼쪽/오른쪽으로 옮긴다(규칙은 lib/tabOrder.js). Alt+←/→ 만 누르면 편집기의 줄 처음/끝 이동이다.
-        const tabDirection = activeTabMoveKey(e)
+        const tabDirection = activeTabMoveKey(e, { left: shortcuts['tab.moveLeft'], right: shortcuts['tab.moveRight'] })
         if (tabDirection !== null) {
           e.preventDefault()
           if (activeTabId) moveTab(activeTabId, tabDirection)
           return
         }
         // Ctrl+N — 지금 열린 문서가 있는 폴더에 새 문서 만들기(없으면 작업 폴더). 폴더를 찾아 스크롤해서 그 폴더의 "새 문서"를 누르지 않아도 된다. 규칙은 lib/newDocShortcut.js.
-        if (isNewDocKey(e)) {
+        if (isNewDocKey(e, shortcuts['doc.new'])) {
           e.preventDefault()
           createDocRef.current?.(newDocTargetDir(openPath, workspacePath))
           return
         }
-        const target = modeShortcutTarget(e, mode)
+        const target = modeShortcutTarget(e, mode, { toggle: shortcuts['mode.toggle'], viewer: shortcuts['mode.viewer'], dual: shortcuts['mode.dual'], editor: shortcuts['mode.editor'] })
         if (target) {
           e.preventDefault()
           if (target !== mode) setMode(target)
@@ -198,7 +207,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [activeTabId, closeTab, moveTab, promptRequest, mode, setMode, openPath, workspacePath])
+  }, [activeTabId, closeTab, moveTab, promptRequest, mode, setMode, openPath, workspacePath, shortcuts])
 
   if (!workspacePath) {
     return (
@@ -208,6 +217,7 @@ export default function App() {
         <button className="primary-btn" onClick={chooseWorkspace}>
           워크스페이스 폴더 선택
         </button>
+        {shortcutModalOpen && <ShortcutSettingsModal onClose={() => setShortcutModalOpen(false)} />}
       </div>
     )
   }
@@ -458,6 +468,7 @@ export default function App() {
           )}
         </div>
       </main>
+      {shortcutModalOpen && <ShortcutSettingsModal onClose={() => setShortcutModalOpen(false)} />}
       {promptRequest && (
         <PromptModal
           {...promptRequest}

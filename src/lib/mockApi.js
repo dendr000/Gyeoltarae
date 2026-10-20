@@ -480,6 +480,9 @@ export function createMockApi() {
     onMenuChooseWorkspace() {
       return () => {}
     },
+    onMenuOpenShortcuts() {
+      return () => {}
+    },
     __isMock: true,
   }
 }

@@ -331,6 +331,7 @@ function buildMenu() {
         saveConfig({ ...loadConfig(), typewriterZone })
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
+      onOpenShortcuts: () => mainWindow?.webContents.send('menu:open-shortcuts'),
       getHeadingHighlight: () => readSettings().headingHighlight,
       onHeadingHighlightChange: (headingHighlight) => {
         saveConfig({ ...loadConfig(), headingHighlight })

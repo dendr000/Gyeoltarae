@@ -86,7 +86,8 @@ describe('activeTabMoveKey (Ctrl+Alt+←/→ — 지금 열린 탭을 옮김)', 
     expect(activeTabMoveKey(ev({ ctrlKey: false }))).toBeNull()
     expect(activeTabMoveKey(ev({ altKey: false }))).toBeNull()
     expect(activeTabMoveKey(ev({ shiftKey: true }))).toBeNull()
-    expect(activeTabMoveKey(ev({ metaKey: true }))).toBeNull()
+    // Mac 의 Cmd 는 Ctrl 과 같게 본다: Cmd+Alt 만으로도 일치한다
+    expect(activeTabMoveKey(ev({ ctrlKey: false, metaKey: true }))).toBe(-1)
   })
 
   it('위·아래 방향키(줄 이동)와 다른 키, 한글 조합 중은 null 이다', () => {

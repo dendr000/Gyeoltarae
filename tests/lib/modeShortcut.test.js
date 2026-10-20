@@ -80,7 +80,7 @@ describe('소스 점검: App·헤더 연결', () => {
   const app = read('src/App.jsx')
 
   it('전역 keydown 이 modeShortcutTarget 결과로 setMode 를 부른다', () => {
-    expect(app).toMatch(/modeShortcutTarget\(e, mode\)[\s\S]{0,200}setMode\(/)
+    expect(app).toMatch(/modeShortcutTarget\(e, mode, \{[\s\S]{0,260}\}\)[\s\S]{0,200}setMode\(/)
   })
 
   it('모달이 떠 있으면 모드 단축키를 무시한다 (편집 창이 사라지면 표 편집기 작업이 날아감)', () => {

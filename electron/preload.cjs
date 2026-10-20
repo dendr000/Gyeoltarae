@@ -69,6 +69,13 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('settings:changed', listener)
   },
 
+  // 메뉴 "설정" > "단축키…" — 화면의 단축키 설정 창을 연다.
+  onMenuOpenShortcuts: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('menu:open-shortcuts', listener)
+    return () => ipcRenderer.removeListener('menu:open-shortcuts', listener)
+  },
+
   onMenuChooseWorkspace: (callback) => {
     const listener = () => callback()
     ipcRenderer.on('menu:choose-workspace', listener)

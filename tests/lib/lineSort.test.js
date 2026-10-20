@@ -169,11 +169,12 @@ describe('줄바꿈과 코드블록', () => {
 describe('소스 점검: 편집기에 Ctrl+` 가 연결됐다', () => {
   const pane = readFileSync(new URL('../../src/components/EditorPane.jsx', import.meta.url), 'utf8')
 
-  it('Backquote 키(물리 키 포함)로 sortLinesEdit 를 부른다', () => {
-    expect(pane).toMatch(/e\.key === '`' \|\| e\.code === 'Backquote'[\s\S]{0,400}sortLinesEdit\(/)
+  it('설정한 줄 정렬 키(기본 Ctrl+`, 물리 키 포함)로 sortLinesEdit 를 부른다', () => {
+    expect(pane).toMatch(/matchesShortcut\(e\.nativeEvent, shortcuts\['line\.sort'\]\)[\s\S]{0,400}sortLinesEdit\(/)
   })
 
-  it('Shift 나 Alt 가 같이 눌리면 반응하지 않는다', () => {
-    expect(pane).toMatch(/\(e\.ctrlKey \|\| e\.metaKey\) && !e\.shiftKey && !e\.altKey && \(e\.key === '`'/)
+  it('수식키가 정확히 같아야 반응한다 (Shift 나 Alt 가 더 눌리면 반응하지 않는다 — matchesShortcut 이 정확히 비교)', () => {
+    expect(pane).toContain("from '../lib/shortcuts.js'")
+    expect(pane).toMatch(/if \(matchesShortcut\(e\.nativeEvent, shortcuts\['line\.sort'\]\)\) \{/)
   })
 })

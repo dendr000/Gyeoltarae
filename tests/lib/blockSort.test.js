@@ -187,11 +187,11 @@ describe('범위와 안전장치', () => {
 describe('소스 점검: 편집기에 Ctrl+Shift+` 가 연결됐다', () => {
   const pane = readFileSync(new URL('../../src/components/EditorPane.jsx', import.meta.url), 'utf8')
 
-  it('Shift 가 눌린 백틱(물리 키 포함)으로 blockSortEdit 를 부른다', () => {
-    expect(pane).toMatch(/\(e\.ctrlKey \|\| e\.metaKey\) && e\.shiftKey && !e\.altKey && \(e\.key === '~'[\s\S]{0,200}blockSortEdit\(/)
+  it('설정한 묶음 정렬 키(기본 Ctrl+Shift+`, 물리 키 포함)로 blockSortEdit 를 부른다', () => {
+    expect(pane).toMatch(/matchesShortcut\(e\.nativeEvent, shortcuts\['line\.blockSort'\]\)[\s\S]{0,200}blockSortEdit\(/)
   })
 
-  it('Shift 없는 Ctrl+` 는 여전히 줄 정렬(sortLinesEdit)이다', () => {
-    expect(pane).toMatch(/\(e\.ctrlKey \|\| e\.metaKey\) && !e\.shiftKey && !e\.altKey && \(e\.key === '`'[\s\S]{0,400}sortLinesEdit\(/)
+  it('설정한 줄 정렬 키(기본 Ctrl+`)는 여전히 줄 정렬(sortLinesEdit)이다', () => {
+    expect(pane).toMatch(/matchesShortcut\(e\.nativeEvent, shortcuts\['line\.sort'\]\)[\s\S]{0,400}sortLinesEdit\(/)
   })
 })

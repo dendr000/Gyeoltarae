@@ -163,6 +163,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "정렬 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
 - **타자기 스크롤**: 메뉴 "설정" > "타자기 스크롤"에서 편집창 세로 5등분 구역을 고르면 글 쓰는 줄이 그 구역 한가운데에 머물도록 자동 스크롤(기본 끔, 30만 자 넘는 글에서는 동작 안 함). [`docs/features/typewriter-scroll.md`](docs/features/typewriter-scroll.md)
 - **제목 강조 끄기**: 메뉴 "설정" > "제목 강조"를 끄면 편집 모드에서 제목 줄에 배경이 입혀지지 않음(기본 켜짐). 코드블록 안의 줄은 제목 모양이어도 강조하지 않고, 필요한 줄만 줄 여백의 점으로 직접 켜고 끔. [`docs/features/editor-gutter.md`](docs/features/editor-gutter.md)
+- **단축키 설정**: 메뉴 "설정" > "단축키…" 에서 줄 이동·복제·정렬, 탭 이동, 새 문서, 사이드바, 화면 모드 전환 키를 바꾸고 없애고 기본값으로 되돌림(Ctrl·Alt 필요, 이미 쓰는 키는 지정 불가, 겹치면 확인). [`docs/features/shortcut-settings.md`](docs/features/shortcut-settings.md)
 - **Alt+↑/↓ (줄 이동)**: 편집 모드에서 현재 줄(여러 줄 선택 시 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꿈. VS Code 의 줄 이동과 같음. [`docs/features/line-move.md`](docs/features/line-move.md)
 - **탭 순서 바꾸기**: Ctrl+Alt+← / → 로 지금 열린 탭을 한 칸씩 옮김(글 쓰는 중에도 됨, Alt+← / → 만은 편집기의 줄 처음/끝 이동 그대로). 탭을 마우스로 누른 채 ← / → 를 눌러도 그 탭이 옮겨 감. [`docs/features/tab-reorder.md`](docs/features/tab-reorder.md)
 - **Ctrl+N (새 문서)**: 지금 열린 문서가 있는 폴더에 새 문서 만들기 창을 띄움(열린 문서가 없으면 작업 폴더). 폴더별 "새 문서" 단추와 같은 창이고, 다른 창이 떠 있으면 무시함. [`docs/features/new-doc-shortcut.md`](docs/features/new-doc-shortcut.md)

@@ -1,4 +1,5 @@
 // Copyright (c) dendr000. MIT License.
+import { defaultShortcuts, matchesShortcut } from './shortcuts.js'
 
 // 탭 순서 바꾸기: 탭을 마우스로 누른 채 왼쪽/오른쪽 방향키를 누르면 그 탭이 한 칸씩 옮겨 간다. 화면과 분리한 순수 함수라서 시험할 수 있다.
 
@@ -21,11 +22,10 @@ export function isTabMoveKey(e) {
   return null
 }
 
-// Ctrl+Alt+← 면 -1, Ctrl+Alt+→ 면 +1, 아니면 null — 지금 열린(활성) 탭을 한 칸 옮기는 키. 글 입력칸에 커서가 있어도 쓸 수 있다. 편집기의 Alt+←/→(줄 처음/끝으로
-// 이동)와는 Ctrl 로 구별되고, 줄 이동(Alt+↑/↓)과는 방향이 달라 겹치지 않는다. Shift·Meta 가 같이 눌린 조합과 한글 조합 중(isComposing)에는 반응하지 않는다.
-export function activeTabMoveKey(e) {
-  if (e.isComposing || !e.ctrlKey || !e.altKey || e.shiftKey || e.metaKey) return null
-  if (e.key === 'ArrowLeft') return -1
-  if (e.key === 'ArrowRight') return 1
+// 지금 열린(활성) 탭을 한 칸 옮기는 키: keys.left 면 -1, keys.right 면 +1, 아니면 null. 키는 설정에서 바꾼 것(기본 Ctrl+Alt+←/→)이고 글 입력칸에 커서가 있어도 쓸 수 있다.
+// 판별 규칙은 lib/shortcuts.js 의 matchesShortcut 이다(수식키가 정확히 같아야 하고 한글 조합 중에는 반응하지 않는다).
+export function activeTabMoveKey(e, keys = { left: defaultShortcuts()['tab.moveLeft'], right: defaultShortcuts()['tab.moveRight'] }) {
+  if (matchesShortcut(e, keys.left)) return -1
+  if (matchesShortcut(e, keys.right)) return 1
   return null
 }

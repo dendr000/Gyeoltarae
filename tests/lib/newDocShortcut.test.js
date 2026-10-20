@@ -61,11 +61,11 @@ describe('App 연결 (소스 점검)', () => {
 
   it('전역 키 처리에서 Ctrl+N 이면 열린 문서의 폴더로 새 문서 만들기를 연다', () => {
     expect(app).toContain("from './lib/newDocShortcut.js'")
-    expect(app).toMatch(/isNewDocKey\(e\)[\s\S]{0,200}newDocTargetDir\(openPath, workspacePath\)/)
+    expect(app).toMatch(/isNewDocKey\(e, shortcuts\['doc\.new'\]\)[\s\S]{0,200}newDocTargetDir\(openPath, workspacePath\)/)
   })
 
   it('이름 입력창 등 모달이 떠 있으면 무시한다', () => {
-    const at = app.indexOf('isNewDocKey(e)')
+    const at = app.indexOf('isNewDocKey(e,')
     const guard = app.indexOf("if (!document.querySelector('.modal-backdrop')) {")
     expect(guard).toBeGreaterThan(-1)
     expect(guard).toBeLessThan(at)
