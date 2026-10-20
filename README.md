@@ -188,7 +188,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **굵게·들여쓰기 한 덩어리**: Ctrl+B 로 글을 감싸면 커서가 닫는 `'''` 바깥에 놓이고, `'''` 와 줄 앞 들여쓰기(공백 4칸)는 ←/→ 로 한 번에
   건너뛰고 Backspace/Delete 로 한 번에 지움(코드블록 안 `'''` 와 한글 조합 중은 제외).
   [`docs/features/bold-and-indent-keys.md`](docs/features/bold-and-indent-keys.md)
-- **줄 단위 키**: Alt+←/→ = 줄 처음/끝으로 이동(Alt+Shift 는 선택), 여러 줄 선택 후 Tab / Shift+Tab = 들여쓰기 / 내어쓰기,
+- **줄 단위 키**: Alt+←/→ = 줄 처음/끝으로 이동(들여쓰기가 있으면 Alt+← 는 글자의 맨 앞으로, 다시 누르면 줄 맨 앞. Alt+Shift 는 선택), 여러 줄 선택 후 Tab / Shift+Tab = 들여쓰기 / 내어쓰기,
   `* ` 목록 줄에서 Enter = 다음 `* ` 자동 생성(빈 `* ` 에서 Enter 하면 목록 끝).
   [`docs/features/editor-line-keys.md`](docs/features/editor-line-keys.md)
 - **툴바 휠 스크롤**: 편집 툴바 위에서 마우스 휠을 굴리면 좌우로 스크롤됨(스크롤바를 잡지 않아도 됨).
