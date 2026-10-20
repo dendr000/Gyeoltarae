@@ -1,6 +1,6 @@
 // Copyright (c) dendr000. MIT License.
 import { describe, expect, it } from 'vitest'
-import { isTabMoveKey, moveTabById } from '../../src/lib/tabOrder.js'
+import { activeTabMoveKey, isTabMoveKey, moveTabById } from '../../src/lib/tabOrder.js'
 
 // 탭을 누른 채(마우스 버튼을 누르고 있는 동안) 왼쪽/오른쪽 방향키로 탭 순서를 바꾼다. 순서 바꾸기와 키 판별의 규칙.
 const tabs = (...ids) => ids.map((id) => ({ id, title: id }))
@@ -71,5 +71,28 @@ describe('isTabMoveKey', () => {
 
   it('한글 조합 중에는 null 이다', () => {
     expect(isTabMoveKey(key({ isComposing: true }))).toBeNull()
+  })
+})
+
+describe('activeTabMoveKey (Ctrl+Alt+←/→ — 지금 열린 탭을 옮김)', () => {
+  const ev = (over) => ({ key: 'ArrowLeft', ctrlKey: true, altKey: true, shiftKey: false, metaKey: false, isComposing: false, ...over })
+
+  it('Ctrl+Alt+← 는 -1, Ctrl+Alt+→ 는 +1 이다', () => {
+    expect(activeTabMoveKey(ev({ key: 'ArrowLeft' }))).toBe(-1)
+    expect(activeTabMoveKey(ev({ key: 'ArrowRight' }))).toBe(1)
+  })
+
+  it('Alt 만(줄 처음/끝 이동)·Ctrl 만·Shift 나 Meta 가 같이 눌린 조합은 null 이다', () => {
+    expect(activeTabMoveKey(ev({ ctrlKey: false }))).toBeNull()
+    expect(activeTabMoveKey(ev({ altKey: false }))).toBeNull()
+    expect(activeTabMoveKey(ev({ shiftKey: true }))).toBeNull()
+    expect(activeTabMoveKey(ev({ metaKey: true }))).toBeNull()
+  })
+
+  it('위·아래 방향키(줄 이동)와 다른 키, 한글 조합 중은 null 이다', () => {
+    expect(activeTabMoveKey(ev({ key: 'ArrowUp' }))).toBeNull()
+    expect(activeTabMoveKey(ev({ key: 'ArrowDown' }))).toBeNull()
+    expect(activeTabMoveKey(ev({ key: 'a' }))).toBeNull()
+    expect(activeTabMoveKey(ev({ isComposing: true }))).toBeNull()
   })
 })

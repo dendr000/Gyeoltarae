@@ -66,7 +66,11 @@ describe('App 연결 (소스 점검)', () => {
 
   it('이름 입력창 등 모달이 떠 있으면 무시한다', () => {
     const at = app.indexOf('isNewDocKey(e)')
-    expect(app.slice(at - 200, at + 100)).toContain("document.querySelector('.modal-backdrop')")
+    const guard = app.indexOf("if (!document.querySelector('.modal-backdrop')) {")
+    expect(guard).toBeGreaterThan(-1)
+    expect(guard).toBeLessThan(at)
+    // 모달 검사의 블록 안에서 Ctrl+N 을 처리한다 (그 블록이 Ctrl+N 앞에서 닫히지 않는다)
+    expect(app.slice(guard, at)).not.toMatch(/\n {4}\}\n/)
   })
 
   it('새 문서 만들기는 사이드바 단추와 같은 handleCreateDoc 를 쓴다', () => {

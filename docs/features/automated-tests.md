@@ -79,7 +79,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/docFind.test.js` | 문서 찾기·바꾸기: 줄바꿈이 든 찾기(한 줄바꿈·빈 줄·여러 줄·글자 `
 | `tests/store/viewMode.test.js` | 기본 화면 모드(편집으로 시작, 문서를 열어도·직접 고른 모드는 유지), 페이지 없는 분류·자료·틀을 열면(탭 전환·탭 닫기 포함) 편집 -> 듀얼 자동 전환과 그 예외(이미 뷰어·듀얼, 페이지가 있는 분류), 판단 규칙(`modeForDocFields`) | 스토어(가짜 API) · 순수 함수 · 소스 검사 |
 | `tests/lib/lineMove.test.js`, `tests/components/editorLineMove.test.js` | 줄 이동 Ctrl+Alt+↑/↓: 한 줄·여러 줄·커서 줄 안 위치·줄 전체 선택, 맨 위·맨 아래·빈 문서, CRLF, 편집 범위, 키 판별(Shift/Meta/조합 중 제외), 편집기 연결(기본 동작 차단·되돌리기·선택 방향) | 순수 함수·소스 점검 |
-| `tests/lib/tabOrder.test.js`, `tests/store/moveTab.test.js`, `tests/components/tabBarMove.test.js` | 탭 순서 바꾸기: 한 칸 옮기기(양 끝·없는 탭·잘못된 방향은 그대로, 원본 불변), 키 판별(조합키·한글 조합 제외), 스토어의 moveTab(활성 탭 유지), 탭 바 연결(누른 탭 기억·닫기 단추 제외·뗄 때 해제·클릭 전환 억제) | 순수 함수·소스 점검 |
+| `tests/lib/tabOrder.test.js`, `tests/store/moveTab.test.js`, `tests/components/tabBarMove.test.js`, `tests/components/activeTabMove.test.js` | 탭 순서 바꾸기(활성 탭 Ctrl+Alt+←/→ 판별·App 연결·편집기 Alt+←/→ 와 겹치지 않음 포함): 한 칸 옮기기(양 끝·없는 탭·잘못된 방향은 그대로, 원본 불변), 키 판별(조합키·한글 조합 제외), 스토어의 moveTab(활성 탭 유지), 탭 바 연결(누른 탭 기억·닫기 단추 제외·뗄 때 해제·클릭 전환 억제) | 순수 함수·소스 점검 |
 | `tests/lib/newDocShortcut.test.js` | Ctrl+N 새 문서: 키 판별(Cmd·한글 자판·Shift/Alt/조합 중 제외), 만들 폴더 결정(윈도·슬래시 경로, 열린 문서 없음·이상한 경로는 작업 폴더), App 연결(모달 중 무시·사이드바와 같은 handleCreateDoc) | 순수 함수·소스 점검 |
 | `tests/lib/numpadEnter.test.js`, `tests/components/editorBrKey.test.js` | 문서 편집기 숫자패드 Enter -> [br]: 키 판단(조합키 제외), 연결·처리 순서(링크·목록 이어쓰기 앞, 추천 팝업 뒤, 한글 조합 제외, replaceRange) | 순수 함수·소스 점검 |
 | `tests/lib/tableInsertAfter.test.js`, `tests/components/structureInsertAfter.test.js`, `tests/lib/cellText.test.js` | 행·열 `+` 단추: 끼울 자리 계산(병합 뒤로 미룸)과 동작(그 행 아래·열 오른쪽, 포커스 대상), 넓은 칸의 줄바꿈 <-> `[br]` 변환(왕복·\r\n·대문자 제외) | 순수 함수 |

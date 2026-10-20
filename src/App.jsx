@@ -5,6 +5,7 @@ import { isSidebarToggleKey } from './lib/sidebarShortcut.js'
 import { decodeFileNameChars } from '../shared/fileNameChars.js'
 import { modeShortcutTarget } from './lib/modeShortcut.js'
 import { isNewDocKey, newDocTargetDir } from './lib/newDocShortcut.js'
+import { activeTabMoveKey } from './lib/tabOrder.js'
 import { getApi } from './lib/api.js'
 import { FileTree } from './components/FileTree.jsx'
 import { SearchBar } from './components/SearchBar.jsx'
@@ -97,6 +98,7 @@ export default function App() {
     resolvePrompt,
     activeTabId,
     closeTab,
+    moveTab,
   } = useAppStore()
 
   const handleCreateDoc = async (dirPath) => {
@@ -174,6 +176,13 @@ export default function App() {
       // Ctrl+1/2/3 뷰어·듀얼·편집으로 이동, Ctrl+E 뷰어 <-> 편집(듀얼 제외). 규칙은 lib/modeShortcut.js.
       // 모달(표 편집기 등)이 떠 있으면 무시한다 — 뷰어로 바뀌면 편집 창이 사라져서 모달 안의 작업이 날아간다.
       if (!document.querySelector('.modal-backdrop')) {
+        // Ctrl+Alt+←/→ — 지금 열린 탭을 한 칸씩 왼쪽/오른쪽으로 옮긴다(규칙은 lib/tabOrder.js). Alt+←/→ 만 누르면 편집기의 줄 처음/끝 이동이다.
+        const tabDirection = activeTabMoveKey(e)
+        if (tabDirection !== null) {
+          e.preventDefault()
+          if (activeTabId) moveTab(activeTabId, tabDirection)
+          return
+        }
         // Ctrl+N — 지금 열린 문서가 있는 폴더에 새 문서 만들기(없으면 작업 폴더). 폴더를 찾아 스크롤해서 그 폴더의 "새 문서"를 누르지 않아도 된다. 규칙은 lib/newDocShortcut.js.
         if (isNewDocKey(e)) {
           e.preventDefault()
@@ -189,7 +198,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [activeTabId, closeTab, promptRequest, mode, setMode, openPath, workspacePath])
+  }, [activeTabId, closeTab, moveTab, promptRequest, mode, setMode, openPath, workspacePath])
 
   if (!workspacePath) {
     return (
