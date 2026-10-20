@@ -995,12 +995,12 @@ export function EditorPane({ text, onChange, disabled }) {
     const textarea = e.currentTarget
     if (typewriterZone && isTypewriterNavKey(e.key)) requestAnimationFrame(recenterCaret)
     if (fileSuggest) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown' && !e.altKey) {
         e.preventDefault()
         setFileSuggest((s) => s && { ...s, activeIndex: Math.min(s.activeIndex + 1, s.items.length - 1) })
         return
       }
-      if (e.key === 'ArrowUp') {
+      if (e.key === 'ArrowUp' && !e.altKey) {
         e.preventDefault()
         setFileSuggest((s) => s && { ...s, activeIndex: Math.max(s.activeIndex - 1, 0) })
         return
@@ -1017,13 +1017,13 @@ export function EditorPane({ text, onChange, disabled }) {
       }
     }
     if (snippetSuggest) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown' && !e.altKey) {
         e.preventDefault()
         // navigated: 방향키로 후보를 직접 골랐다는 표시 — 코드블록 안에서 Enter 가 확정할지 가르는 기준.
         setSnippetSuggest((s) => s && { ...s, navigated: true, activeIndex: Math.min(s.activeIndex + 1, s.items.length - 1) })
         return
       }
-      if (e.key === 'ArrowUp') {
+      if (e.key === 'ArrowUp' && !e.altKey) {
         e.preventDefault()
         setSnippetSuggest((s) => s && { ...s, navigated: true, activeIndex: Math.max(s.activeIndex - 1, 0) })
         return
@@ -1249,11 +1249,13 @@ export function EditorPane({ text, onChange, disabled }) {
       }
       return
     }
-    // Ctrl+Alt+↑/↓ — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다(VS Code 의 줄 이동). 맨 윗줄·맨 아랫줄에서는 아무 일도 없다.
+    // Alt+↑/↓ — 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다(VS Code 의 줄 이동). 추천 팝업이 떠 있어도(팝업의 ↑/↓ 는 Alt 가 없을 때만 후보를 고른다) 줄을 옮기고, 팝업은 닫는다. 맨 윗줄·맨 아랫줄에서는 아무 일도 없다.
     // 규칙은 lib/lineMove.js. 한글 조합 중 여부는 nativeEvent 에 있다. 선택 방향(앞->뒤/뒤->앞)은 옮긴 뒤에도 유지한다.
     const lineMoveDirection = isLineMoveKey(e.nativeEvent)
     if (lineMoveDirection !== null) {
       e.preventDefault()
+      setFileSuggest(null)
+      setSnippetSuggest(null)
       const selectionDirection = textarea.selectionDirection
       const edit = moveLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, lineMoveDirection)
       if (edit) {

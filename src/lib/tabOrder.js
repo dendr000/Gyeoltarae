@@ -22,7 +22,7 @@ export function isTabMoveKey(e) {
 }
 
 // Ctrl+Alt+← 면 -1, Ctrl+Alt+→ 면 +1, 아니면 null — 지금 열린(활성) 탭을 한 칸 옮기는 키. 글 입력칸에 커서가 있어도 쓸 수 있다. 편집기의 Alt+←/→(줄 처음/끝으로
-// 이동)와는 Ctrl 로 구별되고, 줄 이동(Ctrl+Alt+↑/↓)과는 방향이 달라 겹치지 않는다. Shift·Meta 가 같이 눌린 조합과 한글 조합 중(isComposing)에는 반응하지 않는다.
+// 이동)와는 Ctrl 로 구별되고, 줄 이동(Alt+↑/↓)과는 방향이 달라 겹치지 않는다. Shift·Meta 가 같이 눌린 조합과 한글 조합 중(isComposing)에는 반응하지 않는다.
 export function activeTabMoveKey(e) {
   if (e.isComposing || !e.ctrlKey || !e.altKey || e.shiftKey || e.metaKey) return null
   if (e.key === 'ArrowLeft') return -1

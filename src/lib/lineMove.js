@@ -1,11 +1,12 @@
 // Copyright (c) dendr000. MIT License.
 
-// Ctrl+Alt+↑/↓ — VS Code 의 "줄 위/아래로 이동"처럼 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다.
+// Alt+↑/↓ — VS Code 의 "줄 위/아래로 이동"처럼 현재 줄(선택했으면 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꾼다.
 // 화면(textarea)과 분리한 순수 함수라서 시험할 수 있다.
 
-// Ctrl+Alt+↑ 면 -1, Ctrl+Alt+↓ 면 +1, 아니면 null. Shift·Meta 가 같이 눌린 조합과 한글 조합 중(isComposing)에는 반응하지 않는다.
+// Alt+↑ 면 -1, Alt+↓ 면 +1, 아니면 null. Ctrl·Shift·Meta 가 같이 눌린 조합과 한글 조합 중(isComposing)에는 반응하지 않는다.
+// Alt+←/→ 는 줄 처음/끝 이동(lineEdge.js)이라 겹치지 않는다.
 export function isLineMoveKey(e) {
-  if (e.isComposing || !e.ctrlKey || !e.altKey || e.shiftKey || e.metaKey) return null
+  if (e.isComposing || !e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return null
   if (e.key === 'ArrowUp') return -1
   if (e.key === 'ArrowDown') return 1
   return null

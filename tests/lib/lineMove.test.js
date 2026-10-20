@@ -112,22 +112,23 @@ describe('moveLinesEdit - 편집 범위', () => {
 })
 
 describe('isLineMoveKey', () => {
-  const key = (over) => ({ key: 'ArrowUp', ctrlKey: true, altKey: true, shiftKey: false, metaKey: false, isComposing: false, ...over })
+  const key = (over) => ({ key: 'ArrowUp', ctrlKey: false, altKey: true, shiftKey: false, metaKey: false, isComposing: false, ...over })
 
-  it('Ctrl+Alt+↑ 는 -1, Ctrl+Alt+↓ 는 +1 이다', () => {
+  it('Alt+↑ 는 -1, Alt+↓ 는 +1 이다', () => {
     expect(isLineMoveKey(key({ key: 'ArrowUp' }))).toBe(-1)
     expect(isLineMoveKey(key({ key: 'ArrowDown' }))).toBe(1)
   })
 
-  it('Ctrl 이나 Alt 가 빠졌거나 Shift·Meta 가 같이 눌렸으면 null 이다', () => {
-    expect(isLineMoveKey(key({ ctrlKey: false }))).toBeNull()
+  it('Alt 가 빠졌거나 Ctrl·Shift·Meta 가 같이 눌렸으면 null 이다 (Ctrl+Alt+↑/↓ 는 더 이상 줄 이동이 아니다)', () => {
     expect(isLineMoveKey(key({ altKey: false }))).toBeNull()
+    expect(isLineMoveKey(key({ ctrlKey: true }))).toBeNull()
     expect(isLineMoveKey(key({ shiftKey: true }))).toBeNull()
     expect(isLineMoveKey(key({ metaKey: true }))).toBeNull()
   })
 
-  it('다른 키와 한글 조합 중은 null 이다', () => {
+  it('다른 키(Alt+←/→ 는 줄 처음/끝 이동)와 한글 조합 중은 null 이다', () => {
     expect(isLineMoveKey(key({ key: 'ArrowLeft' }))).toBeNull()
+    expect(isLineMoveKey(key({ key: 'ArrowRight' }))).toBeNull()
     expect(isLineMoveKey(key({ key: 'a' }))).toBeNull()
     expect(isLineMoveKey(key({ isComposing: true }))).toBeNull()
   })

@@ -53,5 +53,5 @@ SELECT * FROM t WHERE id = 1;|     ← 복제된 줄, 커서는 같은 열로 �
 ## 알려진 한계
 
 - `{{{ ... }}}` 방식 코드블록은 구조를 따지지 않는다(``` 방식만 구조를 지킨다).
-- 줄을 위/아래로 옮기는 기능(Alt+↑/↓)은 없다. (표 편집기에는 행·열 이동이 있다: [table-editor-structure.md](table-editor-structure.md))
+- 줄을 위/아래로 옮기는 기능은 Alt+↑/↓ 다([line-move.md](line-move.md), 0.131.0). (표 편집기에는 행·열 이동이 있다: [table-editor-structure.md](table-editor-structure.md))
 - 선택한 글자만 복제하는 기능(VS Code 의 선택 복제)은 없고 항상 줄 단위다.
