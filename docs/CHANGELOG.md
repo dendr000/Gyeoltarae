@@ -6,6 +6,9 @@
 
 ## [Unreleased]
 
+### 수정 (Fixed)
+- Java 상용구 묶음의 추천 순서에서 `i` 를 쳤을 때 `interface` 가 `int` 보다 위에 오던 것을 고쳤다(이제 `int`, `interface`, `import`, `if` 순). 이미 설치한 폴더는 `_순서.txt` 에서 `int` 줄을 `interface` 위로 옮기면 된다. 이 PC 의 `D:\WikiDesk` 는 옮겨 두었다
+
 ### 변경 (Changed)
 - 다른 사람에게 줄 배포 빌드에서 불필요한 파일을 뺐다: 계획서·CHANGELOG(`docs`), 임시 메모, 이 PC 경로가 든 바로가기, 쓰지 않는 `node_modules` 6천여 개. 앱 내부 파일(`app.asar`)이 약 56MB 에서 약 5MB 로 줄었다(앱 동작 변화 없음)
 - 배포 폴더의 exe 옆에 라이선스(`LICENSE-Gyeoltarae.txt`), 제3자 고지(`THIRD_PARTY_NOTICES.md`), D2Coding 글꼴 파일과 OFL 라이선스·설치 안내(`fonts` 폴더)를 함께 넣는다

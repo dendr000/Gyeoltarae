@@ -139,8 +139,8 @@ export const JAVA_PACK = languagePack({
   calls: CALLS,
   templates: TEMPLATES,
   first: [
-    'public', 'private', 'protected', 'static', 'final', 'void', 'class', 'interface', 'return', 'new', 'import',
-    'package', 'int', 'String', 'boolean', 'double', 'long', 'if', 'else', 'for', 'while', 'try', 'catch',
+    'public', 'private', 'protected', 'static', 'final', 'void', 'class', 'int', 'interface', 'return', 'new', 'import',
+    'package', 'String', 'boolean', 'double', 'long', 'if', 'else', 'for', 'while', 'try', 'catch',
     'extends', 'implements', 'this', 'super', 'null', 'true', 'false', 'List', 'ArrayList', 'Map', 'HashMap',
     'System', 'println', 'Override', 'psvm', 'sout', 'fori', 'fore', 'jmain',
     'abstract', 'enum', 'throw', 'throws', 'instanceof', 'default', 'switch', 'case', 'break', 'continue', 'do', 'char', 'byte', 'short', 'float', 'synchronized', 'volatile', 'transient', 'native', 'assert', 'Object', 'Integer', 'Long', 'Double', 'Boolean', 'Character', 'Math', 'Arrays', 'Collections', 'Set', 'HashSet', 'TreeMap', 'LinkedList', 'Queue', 'Deque', 'Stack', 'Optional', 'Stream', 'Collectors', 'Scanner', 'Random', 'Exception', 'RuntimeException', 'IOException', 'File', 'Files', 'Path', 'Thread', 'Runnable', 'Comparable', 'Comparator', 'Iterator', 'StringBuilder', 'length', 'size', 'add', 'get', 'put', 'remove', 'contains', 'containsKey', 'equals', 'hashCode', 'toString', 'valueOf', 'parseInt', 'charAt', 'substring', 'split', 'trim', 'isEmpty', 'indexOf', 'format', 'forEach', 'stream', 'map', 'filter', 'sort', 'printf', 'print', 'nextInt', 'nextLine', 'readLine', 'main', 'args',

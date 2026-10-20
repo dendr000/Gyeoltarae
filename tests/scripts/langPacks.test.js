@@ -397,3 +397,16 @@ describe('설치 (임시 폴더)', () => {
     expect(installed('영어')).toEqual({ ERD: 'ERD(Entity-Relation Diagram)' })
   })
 })
+
+describe('자주 쓰는 순서 — 자주 쓰는 키워드가 드물게 쓰는 키워드보다 위', () => {
+  it('Java 에서 i 를 쳤을 때 int 가 interface 보다 위다', () => {
+    const { order } = LANGUAGE_PACKS.java
+    expect(order.indexOf('int')).toBeGreaterThanOrEqual(0)
+    expect(order.indexOf('int')).toBeLessThan(order.indexOf('interface'))
+  })
+
+  it('C++ 에서 int 가 interface 급의 드문 이름보다 위다 (int 는 순서 목록의 앞쪽)', () => {
+    const { order } = LANGUAGE_PACKS.cpp
+    expect(order.indexOf('int')).toBeLessThan(20)
+  })
+})
