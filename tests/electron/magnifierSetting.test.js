@@ -96,6 +96,9 @@ describe('메인 프로세스', () => {
 
 describe('돋보기 컴포넌트의 구조', () => {
   const component = read('src/components/Magnifier.jsx')
+  const lens = read('src/lib/magnifierLens.js')
+  const clone = read('src/lib/magnifierClone.js')
+  const region = read('src/lib/magnifierRegion.js')
   const css = read('src/App.css')
   const app = read('src/App.jsx')
 
@@ -104,57 +107,86 @@ describe('돋보기 컴포넌트의 구조', () => {
     expect(app).toMatch(/<Magnifier \/>/)
   })
 
-  it('휠 클릭(가운데 버튼)으로만 켜고 끈다', () => {
-    expect(component).toMatch(/if \(e\.button !== 1\) return/)
-    expect(component).toMatch(/if \(lens\) close\(\)\s*else lens = openLens/)
+  it('휠 클릭(가운데 버튼)만 다룬다', () => {
+    expect(component).toMatch(/onMouseDown = \(e\) => \{\s*if \(e\.button !== 1 \|\| !e\.isTrusted\) return/)
+    expect(component).toMatch(/onMouseUp = \(e\) => \{\s*if \(e\.button !== 1 \|\| !e\.isTrusted\) return/)
   })
 
   it('휠 클릭의 기본 동작(자동 스크롤·링크 열기)을 막는다', () => {
     expect(component).toMatch(/onMouseDown[\s\S]*?e\.preventDefault\(\)/)
-    expect(component).toMatch(/addEventListener\('auxclick', swallowMiddle, true\)/)
-    expect(component).toMatch(/addEventListener\('mouseup', swallowMiddle, true\)/)
+    expect(component).toMatch(/addEventListener\('auxclick', swallowAux, true\)/)
+  })
+
+  it('누르고 바로 떼면 켜기/끄기, 끌었다 떼면 영역 확대창이다', () => {
+    expect(component).toMatch(/if \(done\.band\) \{[\s\S]*?isUsableRegion\(rect\)[\s\S]*?active = openRegion\(\{ rect \}\)/)
+    expect(component).toMatch(/if \(active\) close\(\)\s*else \{\s*active = openLens\(/)
+  })
+
+  it('끄는 동안 점선 사각형을 보이고, 포커스를 잃으면 치운다', () => {
+    expect(component).toMatch(/gesture\.band = createBand\(\)/)
+    expect(component).toMatch(/window\.addEventListener\('blur', onBlur\)/)
   })
 
   it('켜진 동안 휠은 배율을 바꾸고 문서 스크롤은 막는다(passive 끔)', () => {
     expect(component).toMatch(/addEventListener\('wheel', onWheel, \{ capture: true, passive: false \}\)/)
-    expect(component).toMatch(/onWheel = \(e\) => \{\s*e\.preventDefault\(\)/)
-    expect(component).toMatch(/zoom = nextZoom\(zoom, e\.deltaY\)/)
+    expect(component).toMatch(/onWheel = \(e\) => \{\s*if \(!active \|\| !e\.isTrusted\) return\s*e\.preventDefault\(\)/)
+    expect(component).toMatch(/active\.wheel\(e\.deltaY\)/)
   })
 
   it('Esc 로도 끈다', () => {
-    expect(component).toMatch(/e\.key === 'Escape' && lens/)
+    expect(component).toMatch(/e\.key !== 'Escape' \|\| \(!active && !gesture\)/)
   })
 
-  it('복제본은 shadow DOM 안에 두고 html 아래에 붙인다(앱의 문서 검색에 섞이지 않고, body 감시에도 안 걸림)', () => {
-    expect(component).toMatch(/host\.attachShadow\(\{ mode: 'open' \}\)/)
-    expect(component).toMatch(/document\.documentElement\.appendChild\(host\)/)
+  it('코드가 만든 가짜 마우스 이벤트는 무시한다(영역 확대창이 진짜 화면에 보낸 이벤트가 되먹임되지 않게)', () => {
+    expect(component).toMatch(/onMouseMove = \(e\) => \{\s*if \(!e\.isTrusted\) return/)
   })
 
-  it('마우스 입력은 받지 않는다(진짜 화면이 받는다)', () => {
+  it('복제본은 shadow DOM 안에 두고 html 아래에 붙이며, 마우스·키보드를 받지 않는다(inert)', () => {
+    expect(clone).toMatch(/host\.attachShadow\(\{ mode: 'open' \}\)/)
+    expect(clone).toMatch(/document\.documentElement\.appendChild\(host\)/)
+    expect(clone).toMatch(/stage\.inert = true/)
+  })
+
+  it('둥근 돋보기는 마우스 입력을 받지 않고 둥글다, 영역 확대창은 마우스를 받는 사각형이다', () => {
     expect(css).toMatch(/\.magnifier-host\s*\{[^}]*pointer-events:\s*none/)
-  })
-
-  it('둥근 모양이다', () => {
     expect(css).toMatch(/\.magnifier-host\s*\{[^}]*border-radius:\s*50%/)
+    expect(css).toMatch(/\.magnifier-host\.magnifier-region\s*\{[^}]*pointer-events:\s*auto/)
+    expect(css).toMatch(/\.magnifier-band\s*\{[^}]*pointer-events:\s*none/)
   })
 
-  it('마우스 아래 요소를 복제본에도 오버 표시한다', () => {
-    expect(component).toMatch(/markHover\(stage, document\.body, document\.elementFromPoint\(mouse\.x, mouse\.y\), marked\)/)
+  it('기준 거리를 넘게 움직여야 사각형을 그리기 시작한다(살짝 흔들린 클릭은 켜기/끄기)', () => {
+    expect(component).toMatch(/if \(!gesture\.band && isDrag\(gesture\.start, current\)\) gesture\.band = createBand\(\)/)
+  })
+
+  it('영역 확대창은 코드가 만든 가짜 이벤트를 다시 전달하지 않는다', () => {
+    expect(region).toMatch(/const forward = \(type\) => \(e\) => \{\s*if \(!e\.isTrusted\) return/)
+  })
+
+  it('둥근 돋보기는 마우스 아래 요소를 복제본에도 오버 표시한다', () => {
+    expect(lens).toMatch(/markHover\(stage, document\.body, document\.elementFromPoint\(mouse\.x, mouse\.y\), marked\)/)
+  })
+
+  it('영역 확대창은 마우스 동작을 진짜 화면의 같은 자리로 전달하고 진짜 누름의 기본 동작(포커스 이동)은 막는다', () => {
+    expect(region).toMatch(/panelToSource\(\{ x: e\.clientX, y: e\.clientY \}, rect, zoom, panel\)/)
+    expect(region).toMatch(/if \(type === 'mousedown'\) e\.preventDefault\(\)/)
+    expect(region).toMatch(/\['click', forward\('click'\)\]/)
+    expect(region).toMatch(/\['contextmenu', forward\('contextmenu'\)\]/)
   })
 
   it('화면이 바뀌거나 스크롤·입력이 있으면 복제본을 다시 만든다', () => {
-    expect(component).toMatch(/new MutationObserver\(markDirty\)/)
-    expect(component).toMatch(/addEventListener\('scroll', markDirty, true\)/)
-    expect(component).toMatch(/addEventListener\('input', markDirty, true\)/)
+    expect(clone).toMatch(/new MutationObserver\(markDirty\)/)
+    expect(clone).toMatch(/addEventListener\('scroll', markDirty, true\)/)
+    expect(clone).toMatch(/addEventListener\('input', markDirty, true\)/)
   })
 
-  it('크기 설정이 바뀌면 켜진 돋보기에 바로 반영한다', () => {
-    expect(component).toMatch(/state\.magnifierSize !== prev\.magnifierSize\) lens\?\.setSize\(state\.magnifierSize\)/)
+  it('크기 설정이 바뀌면 켜진 둥근 돋보기에 바로 반영한다', () => {
+    expect(component).toMatch(/state\.magnifierSize !== prev\.magnifierSize && active\?\.kind === 'lens'\) active\.setSize/)
   })
 
   it('꺼질 때 모든 감시와 요소를 정리한다', () => {
-    expect(component).toMatch(/observer\.disconnect\(\)/)
-    expect(component).toMatch(/host\.remove\(\)/)
+    expect(clone).toMatch(/observer\.disconnect\(\)/)
+    expect(clone).toMatch(/host\.remove\(\)/)
     expect(component).toMatch(/removeEventListener\('wheel', onWheel, true\)/)
+    expect(region).toMatch(/host\.removeEventListener\(type, handler\)/)
   })
 })

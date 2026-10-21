@@ -1,149 +1,130 @@
 // Copyright (c) dendr000. MIT License.
 import { useEffect } from 'react'
-import { lensOrigin, magnifierDiameter, nextZoom, stageTransform, ZOOM_DEFAULT } from '../../shared/magnifier.js'
-import { cloneStyleNodes, collectHoverCss, markHover, rebuildClone } from '../lib/magnifierDom.js'
+import { isDrag, isUsableRegion, normalizeRect, ZOOM_DEFAULT } from '../../shared/magnifier.js'
+import { openLens } from '../lib/magnifierLens.js'
+import { openRegion } from '../lib/magnifierRegion.js'
 import { useAppStore } from '../store/useAppStore.js'
 
-// 마우스 휠 클릭으로 켜고 끄는 둥근 돋보기. 앱 화면을 복제해 마우스 위치를 중심으로 키워 보여 준다(규칙: src/lib/magnifierDom.js, shared/magnifier.js).
-// 돋보기는 마우스 입력을 받지 않는다(pointer-events: none). 마우스를 따라다니고 확대의 중심도 마우스 위치라서, 돋보기 한가운데에 보이는 것이
-// 곧 마우스 아래의 진짜 요소다 — 클릭·마우스 오버·드래그는 진짜 화면에 그대로 들어간다. 돋보기가 켜진 동안 휠은 배율을 바꾼다. Esc 로도 끈다.
-const STAGE_CSS = `
-:host { display: block; }
-.mag-stage { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; background: var(--bg); }
-`
+// 마우스 휠(가운데 버튼) 돋보기. 규칙: shared/magnifier.js, src/lib/magnifier*.js
+//   - 휠 클릭(누르고 바로 뗌): 둥근 돋보기를 켜고, 켜져 있으면(돋보기든 영역 확대창이든) 끈다.
+//   - 휠을 누른 채 끌기: 끈 만큼 사각형을 그리고, 떼면 그 영역을 창 한가운데에 크게 보여 주는 확대창을 연다.
+//   - 켜진 동안 휠을 굴리면 배율이 바뀌고, Esc 로 끈다.
+// 휠 클릭에 붙은 윈도의 자동 스크롤과 링크 새 창 열기는 막는다. 코드가 만든 가짜 마우스 이벤트(isTrusted 가 아닌 것)는 무시한다.
 
-// 휠로 바꾼 배율은 돋보기를 껐다 켜도 이어진다.
+// 휠로 바꾼 둥근 돋보기의 배율은 돋보기를 껐다 켜도 이어진다.
 let rememberedZoom = ZOOM_DEFAULT
 
-function openLens(startMouse, size) {
-  const host = document.createElement('div')
-  host.className = 'magnifier-host'
-  host.setAttribute('aria-hidden', 'true')
-  const shadow = host.attachShadow({ mode: 'open' })
-  const hoverStyle = document.createElement('style')
-  hoverStyle.textContent = collectHoverCss(document)
-  const baseStyle = document.createElement('style')
-  baseStyle.textContent = STAGE_CSS
-  const stage = document.createElement('div')
-  stage.className = 'mag-stage'
-  shadow.append(...cloneStyleNodes(document), hoverStyle, baseStyle, stage)
-  // body 가 아니라 html 아래에 둔다 — body 의 변화를 지켜보는 감시자가 돋보기 자신의 움직임에 반응하지 않도록.
-  document.documentElement.appendChild(host)
+function createBand() {
+  const band = document.createElement('div')
+  band.className = 'magnifier-band'
+  document.documentElement.appendChild(band)
+  return band
+}
 
-  let mouse = startMouse
-  let diameter = magnifierDiameter(size)
-  let zoom = rememberedZoom
-  let cloneDirty = true
-  let frame = 0
-  let marked = []
-
-  function paint() {
-    frame = 0
-    const origin = lensOrigin(mouse, diameter)
-    host.style.width = `${diameter}px`
-    host.style.height = `${diameter}px`
-    host.style.transform = `translate(${origin.left}px, ${origin.top}px)`
-    stage.style.width = `${window.innerWidth}px`
-    stage.style.height = `${window.innerHeight}px`
-    stage.style.transform = stageTransform(mouse, diameter, zoom)
-    if (cloneDirty) {
-      cloneDirty = false
-      rebuildClone(document.body, stage, host)
-    }
-    // 마우스 아래의 진짜 요소(돋보기는 마우스를 받지 않아 그대로 보인다)를 복제본에도 오버 표시한다.
-    marked = markHover(stage, document.body, document.elementFromPoint(mouse.x, mouse.y), marked)
-  }
-  const schedule = () => {
-    if (!frame) frame = requestAnimationFrame(paint)
-  }
-  const markDirty = () => {
-    cloneDirty = true
-    schedule()
-  }
-
-  const onMouseMove = (e) => {
-    mouse = { x: e.clientX, y: e.clientY }
-    schedule()
-  }
-  const onWheel = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    zoom = nextZoom(zoom, e.deltaY)
-    rememberedZoom = zoom
-    schedule()
-  }
-  const observer = new MutationObserver(markDirty)
-  observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true })
-
-  // 켠 자리에서 바로 한 번 그린다.
-  document.addEventListener('mousemove', onMouseMove, true)
-  document.addEventListener('wheel', onWheel, { capture: true, passive: false })
-  document.addEventListener('scroll', markDirty, true)
-  document.addEventListener('input', markDirty, true)
-  document.addEventListener('change', markDirty, true)
-  window.addEventListener('resize', markDirty)
-  paint()
-
-  return {
-    host,
-    setSize(nextSize) {
-      diameter = magnifierDiameter(nextSize)
-      schedule()
-    },
-    close() {
-      if (frame) cancelAnimationFrame(frame)
-      observer.disconnect()
-      document.removeEventListener('mousemove', onMouseMove, true)
-      document.removeEventListener('wheel', onWheel, true)
-      document.removeEventListener('scroll', markDirty, true)
-      document.removeEventListener('input', markDirty, true)
-      document.removeEventListener('change', markDirty, true)
-      window.removeEventListener('resize', markDirty)
-      host.remove()
-    },
-  }
+function placeBand(band, rect) {
+  band.style.transform = `translate(${rect.x}px, ${rect.y}px)`
+  band.style.width = `${rect.width}px`
+  band.style.height = `${rect.height}px`
 }
 
 export function Magnifier() {
   useEffect(() => {
-    let lens = null
+    let active = null // 켜져 있는 돋보기(둥근 것 또는 영역 확대창)
+    let gesture = null // 휠을 누르고 있는 동안의 { start, band }
     const close = () => {
-      lens?.close()
-      lens = null
+      active?.close()
+      active = null
     }
-    // 휠 클릭(가운데 버튼)을 누르면 켜고, 켜져 있으면 끈다. 윈도의 자동 스크롤과 링크 새 창 열기는 막는다.
+    const cancelGesture = () => {
+      gesture?.band?.remove()
+      gesture = null
+    }
+    const point = (e) => ({ x: e.clientX, y: e.clientY })
+
     const onMouseDown = (e) => {
-      if (e.button !== 1) return
+      if (e.button !== 1 || !e.isTrusted) return
       e.preventDefault()
       e.stopPropagation()
-      if (lens) close()
-      else lens = openLens({ x: e.clientX, y: e.clientY }, useAppStore.getState().magnifierSize)
+      cancelGesture()
+      gesture = { start: point(e), band: null }
     }
-    const swallowMiddle = (e) => {
+    const onMouseMove = (e) => {
+      if (!e.isTrusted) return
+      if (gesture) {
+        const current = point(e)
+        if (!gesture.band && isDrag(gesture.start, current)) gesture.band = createBand()
+        if (gesture.band) placeBand(gesture.band, normalizeRect(gesture.start, current))
+      }
+      if (active?.kind === 'lens') active.moveTo(point(e))
+    }
+    const onMouseUp = (e) => {
+      if (e.button !== 1 || !e.isTrusted) return
+      e.preventDefault()
+      e.stopPropagation()
+      const done = gesture
+      cancelGesture()
+      if (!done) return
+      if (done.band) {
+        const rect = normalizeRect(done.start, point(e))
+        if (!isUsableRegion(rect)) return
+        close()
+        active = openRegion({ rect })
+        return
+      }
+      if (active) close()
+      else {
+        active = openLens({
+          start: done.start,
+          size: useAppStore.getState().magnifierSize,
+          zoom: rememberedZoom,
+          onZoomChange: (zoom) => {
+            rememberedZoom = zoom
+          },
+        })
+      }
+    }
+    const swallowAux = (e) => {
       if (e.button === 1) {
         e.preventDefault()
         e.stopPropagation()
       }
     }
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape' && lens) {
-        e.stopPropagation()
-        close()
-      }
+    // 켜진 동안 휠은 배율을 바꾸고 문서 스크롤은 막는다.
+    const onWheel = (e) => {
+      if (!active || !e.isTrusted) return
+      e.preventDefault()
+      e.stopPropagation()
+      active.wheel(e.deltaY)
     }
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape' || (!active && !gesture)) return
+      e.stopPropagation()
+      cancelGesture()
+      close()
+    }
+    // 휠을 누른 채 창 밖으로 나가 뗀 경우처럼 mouseup 을 못 받아도 그리던 사각형이 남지 않게 한다.
+    const onBlur = () => cancelGesture()
+
     document.addEventListener('mousedown', onMouseDown, true)
-    document.addEventListener('mouseup', swallowMiddle, true)
-    document.addEventListener('auxclick', swallowMiddle, true)
+    document.addEventListener('mousemove', onMouseMove, true)
+    document.addEventListener('mouseup', onMouseUp, true)
+    document.addEventListener('auxclick', swallowAux, true)
+    document.addEventListener('wheel', onWheel, { capture: true, passive: false })
     document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('blur', onBlur)
     const unsubscribe = useAppStore.subscribe((state, prev) => {
-      if (state.magnifierSize !== prev.magnifierSize) lens?.setSize(state.magnifierSize)
+      if (state.magnifierSize !== prev.magnifierSize && active?.kind === 'lens') active.setSize(state.magnifierSize)
     })
     return () => {
       document.removeEventListener('mousedown', onMouseDown, true)
-      document.removeEventListener('mouseup', swallowMiddle, true)
-      document.removeEventListener('auxclick', swallowMiddle, true)
+      document.removeEventListener('mousemove', onMouseMove, true)
+      document.removeEventListener('mouseup', onMouseUp, true)
+      document.removeEventListener('auxclick', swallowAux, true)
+      document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('blur', onBlur)
       unsubscribe()
+      cancelGesture()
       close()
     }
   }, [])

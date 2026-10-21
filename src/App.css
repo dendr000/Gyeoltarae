@@ -3822,3 +3822,20 @@
   pointer-events: none;
   box-shadow: 0 0 0 2px var(--accent), 0 8px 28px rgba(0, 0, 0, 0.35);
 }
+
+/* 영역 확대창(휠 클릭을 누른 채 끌어 고른 영역): 둥글지 않은 사각형이고, 마우스를 받아 진짜 화면의 같은 자리로 전달한다. src/lib/magnifierRegion.js */
+.magnifier-host.magnifier-region {
+  border-radius: 10px;
+  pointer-events: auto;
+}
+
+/* 영역을 끄는 동안 보이는 점선 사각형. */
+.magnifier-band {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147482999;
+  border: 2px dashed var(--accent);
+  background: var(--accent-bg);
+  pointer-events: none;
+}
