@@ -3,6 +3,7 @@ import { ContextMenu } from './ContextMenu.jsx'
 import { MoveItemModal } from './MoveItemModal.jsx'
 import { getApi } from '../lib/api.js'
 import { TreeLabel } from './TreeLabel.jsx'
+import { docLinkFor } from '../lib/docLink.js'
 import { readFileAsBase64, IMPORTABLE_IMAGE_EXT } from '../lib/fileEncoding.js'
 
 // Which folders the user collapsed, by path — everything defaults to
@@ -31,7 +32,7 @@ function setFolderCollapsed(path, collapsed) {
   }
 }
 
-function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDelete, onRename, onContextMenu, openPath }) {
+function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDelete, onRename, onContextMenu, onCopyLink, openPath }) {
   const [expanded, setExpanded] = useState(() => !loadCollapsedPaths().has(node.path))
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(node.name)
@@ -141,6 +142,7 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
                 onDelete={onDelete}
                 onRename={onRename}
                 onContextMenu={onContextMenu}
+                onCopyLink={onCopyLink}
                 openPath={openPath}
               />
             ))}
@@ -183,9 +185,19 @@ function TreeNode({ node, depth, onOpenFile, onCreateDoc, onCreateFolder, onDele
     <div
       className={`tree-row tree-row-file ${isActive ? 'active' : ''}`}
       style={{ paddingLeft: depth * 14 + 8 }}
-      title="더블클릭 또는 F2로 이름 변경, 우클릭으로 메뉴"
+      title="더블클릭 또는 F2로 이름 변경, 우클릭으로 메뉴, Shift+클릭으로 [[문서명]] 링크 복사"
       tabIndex={0}
-      onClick={() => {
+      // Shift 를 누른 채 누르면 글자 범위 선택이 시작되지 않게 막는다(Shift+클릭은 링크 복사다).
+      onMouseDown={(e) => {
+        if (e.shiftKey) e.preventDefault()
+      }}
+      onClick={(e) => {
+        // Shift+클릭: 문서를 열지 않고 이 문서의 링크 글([[문서명]], 같은 이름이 여럿이면 [[문서명(폴더명)]])을 클립보드에 복사한다.
+        if (e.shiftKey) {
+          e.preventDefault()
+          onCopyLink(node)
+          return
+        }
         getApi().softRefocusWindow?.()
         onOpenFile(node.path, node.name)
       }}
@@ -225,12 +237,26 @@ export function FileTree({
   onDefaultTemplate,
   onImportFiles,
   onImportImages,
+  docIndex,
 }) {
   const [dragOver, setDragOver] = useState(false)
+  // 링크를 복사한 뒤 잠깐 보여 주는 안내({ text, ok }).
+  const [copyNotice, setCopyNotice] = useState(null)
   const [menu, setMenu] = useState(null)
   const [moveTarget, setMoveTarget] = useState(null)
 
   if (!workspacePath) return null
+
+  // Shift+클릭한 문서의 링크 글을 만들어 클립보드에 복사한다(규칙은 lib/docLink.js).
+  async function copyDocLink(node) {
+    const text = docLinkFor({ path: node.path, name: node.name }, docIndex ?? {})
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyNotice({ text, ok: true })
+    } catch {
+      setCopyNotice({ text, ok: false })
+    }
+  }
 
   function openContextMenu(e, node, startRenaming) {
     e.preventDefault()
@@ -323,9 +349,15 @@ export function FileTree({
           onDelete={onDelete}
           onRename={onRename}
           onContextMenu={openContextMenu}
+          onCopyLink={copyDocLink}
           openPath={openPath}
         />
       ))}
+      {copyNotice && (
+        <div className={`tree-copy-notice${copyNotice.ok ? '' : ' failed'}`} role="status">
+          {copyNotice.ok ? `복사됨: ${copyNotice.text}` : `복사하지 못했습니다: ${copyNotice.text}`}
+        </div>
+      )}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {moveTarget && (
         <MoveItemModal

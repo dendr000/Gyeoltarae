@@ -7,6 +7,7 @@ import { getApi } from '../lib/api.js'
 import { getViewerScroll, setViewerScroll } from '../lib/scrollMemory.js'
 import { copyCodeBlock } from '../lib/codeCopy.js'
 import { toStraightQuotes } from '../lib/smartQuotes.js'
+import { lookupDocCandidates } from '../lib/docLink.js'
 import { applyFoldOverrides, findFoldHeading, toggleFold, unfoldAncestors } from '../lib/sectionFoldDom.js'
 
 function dirnameOf(filePath) {
@@ -523,7 +524,7 @@ export function ViewerPane({ text, emptyHint }) {
 
   const handleAmbiguousLink = useCallback(
     (target, x, y) => {
-      const candidates = docIndex[target] ?? []
+      const candidates = lookupDocCandidates(target, docIndex)
       setLinkMenu({
         x,
         y,

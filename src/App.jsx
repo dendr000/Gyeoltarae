@@ -65,6 +65,7 @@ export default function App() {
     categoryIndex,
     dataIndex,
     templateIndex,
+    docIndex,
     imageIndex,
     snippetIndex,
     chooseWorkspace,
@@ -394,6 +395,7 @@ export default function App() {
             onDefaultTemplate={handleDefaultTemplate}
             onImportFiles={importFiles}
             onImportImages={importImageFiles}
+            docIndex={docIndex}
           />
           <CategorySidebar
             categoryIndex={categoryIndex}

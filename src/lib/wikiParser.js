@@ -7,6 +7,7 @@ import { resolveCodeLanguage, highlightCode } from './codeHighlight.js'
 import { applySmartQuotes } from './smartQuotes.js'
 import { preserveSpaces } from './preserveSpaces.js'
 import { wrapSections } from './sectionFold.js'
+import { lookupDocCandidates } from './docLink.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -298,7 +299,7 @@ function resolveLinkTarget(trimmedTarget, docIndex) {
     return { type: 'same-doc-anchor', anchorName, anchorSlug: slugifyName(anchorName) }
   }
   if (anchorName) {
-    const anchorDocCandidates = docIndex[docPart]
+    const anchorDocCandidates = lookupDocCandidates(docPart, docIndex)
     if (anchorDocCandidates?.length === 1) {
       return { type: 'anchor', doc: anchorDocCandidates[0], anchorName, anchorSlug: slugifyName(anchorName) }
     }
@@ -308,9 +309,10 @@ function resolveLinkTarget(trimmedTarget, docIndex) {
   }
 
   const lookupTarget = anchorName ? docPart : trimmedTarget
-  const candidates = docIndex[lookupTarget]
-  if (candidates?.length === 1) return { type: 'doc', doc: candidates[0] }
-  if (candidates?.length > 1) return { type: 'ambiguous', target: lookupTarget, candidateCount: candidates.length }
+  // 이름이 그대로 있거나, 없으면 [[문서명(폴더명)]] 으로 보고 그 폴더의 문서를 찾는다(lib/docLink.js).
+  const candidates = lookupDocCandidates(lookupTarget, docIndex)
+  if (candidates.length === 1) return { type: 'doc', doc: candidates[0] }
+  if (candidates.length > 1) return { type: 'ambiguous', target: lookupTarget, candidateCount: candidates.length }
   return { type: 'missing', target: lookupTarget }
 }
 

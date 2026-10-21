@@ -3797,3 +3797,22 @@
 .char-count-selected strong {
   color: var(--accent);
 }
+
+/* 문서 목록에서 Shift+클릭으로 링크를 복사한 뒤 잠깐 보이는 안내 */
+.tree-copy-notice {
+  position: sticky;
+  bottom: 4px;
+  margin: 6px 10px 0;
+  padding: 5px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-pane);
+  color: var(--text-h);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.tree-copy-notice.failed {
+  border-color: var(--border);
+  opacity: 0.8;
+}
