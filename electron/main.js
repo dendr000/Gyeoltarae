@@ -9,6 +9,7 @@ import { execFile } from 'node:child_process'
 import chokidar from 'chokidar'
 import { createWatchScheduler } from './watchScheduler.js'
 import { createSettingsMenu } from './settingsMenu.js'
+import { ensureStarterCommands } from './starterSnippets.js'
 import { normalizeMagnifierSize } from '../shared/magnifier.js'
 import { normalizeTypewriterZone } from '../shared/typewriterZone.js'
 import {
@@ -209,6 +210,18 @@ function selectWorkspace(workspacePath) {
   }
 }
 
+// 새 워크스페이스를 열 때 슬래시 명령(상용구 폴더 `명령`)을 자동으로 넣는다(규칙: electron/starterSnippets.js). 이미 확인한 폴더는 이 PC 의 설정
+// 파일(config.json)의 starterCommandsOffered 에 기록돼 다시 넣지 않는다. 실패해도(쓰기 권한 없음 등) 워크스페이스는 그대로 열려야 한다.
+function offerStarterCommands(workspacePath) {
+  try {
+    const config = loadConfig()
+    const { offered, changed } = ensureStarterCommands(workspacePath, config.starterCommandsOffered)
+    if (changed) saveConfig({ ...config, starterCommandsOffered: offered })
+  } catch (error) {
+    console.error('슬래시 명령 자동 설치 실패:', error?.message)
+  }
+}
+
 function startWatching(workspacePath) {
   currentWorkspacePath = workspacePath
   if (watcher) {
@@ -405,6 +418,7 @@ ipcMain.handle('workspace:choose', async () => {
   }
   saveConfig({ ...loadConfig(), lastWorkspace: chosen })
   selectWorkspace(chosen)
+  offerStarterCommands(chosen)
   ensureWorkspaceShortcut(chosen)
   return chosen
 })
@@ -425,6 +439,7 @@ ipcMain.handle('workspace:getLast', () => {
         .then(() => refocusMainWindow())
     }
     selectWorkspace(lastWorkspace)
+    offerStarterCommands(lastWorkspace)
     ensureWorkspaceShortcut(lastWorkspace)
     return lastWorkspace
   }

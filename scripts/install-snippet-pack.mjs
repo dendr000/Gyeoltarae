@@ -21,7 +21,7 @@ import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath }
 import { SQL_PACK } from './snippet-packs/sql.js'
 import { SQL_PRACTICE_PACK } from './snippet-packs/sql-practice.js'
 import { LANGUAGE_PACKS } from './snippet-packs/langs.js'
-import { COMMANDS_PACK } from './snippet-packs/commands.js'
+import { COMMANDS_PACK } from '../shared/commandsPack.js'
 import { parseSnippetOrder } from '../src/lib/snippetOrder.js'
 
 // 'langs' 는 프로그래밍 언어 묶음 전부(폴더마다 하나씩)를 한꺼번에 설치하는 이름이다.

@@ -29,9 +29,24 @@
 | 창 열기(동작) | `/표` `/그라데이션` `/이미지` `/자료` `/틀` `/분류` `/별칭` — 툴바의 같은 이름 버튼과 같은 창을 연다 |
 | 언어 코드블록 | `/sql` `/mysql` `/java` `/python` `/cpp` `/js` `/html` `/css` `/bash` — 언어 이름이 적힌 코드블록 |
 
-문법은 README 의 "문법" 표를 따른다. 전체 목록과 본문은 `scripts/snippet-packs/commands.js` 또는 앱의 상용구 모달(폴더 `명령`).
+문법은 README 의 "문법" 표를 따른다. 전체 목록과 본문은 `shared/commandsPack.js` 또는 앱의 상용구 모달(폴더 `명령`).
 
-## 설치
+## 설치 — 새 워크스페이스에는 앱이 자동으로 넣는다
+
+슬래시 명령은 앱 안이 아니라 **워크스페이스 폴더 안의 상용구 폴더**(`.wikidesk-snippets\명령`)에 저장된다. 그래서 예전에는 빈 폴더를 고른 사람(특히 exe 만 받은 사람)이 개발 폴더의 설치 스크립트를 돌리지 않으면 `/` 명령이 하나도 없었다. 0.139.0 부터는 **워크스페이스를 열 때 앱이 알아서 넣는다.**
+
+| 열려는 워크스페이스의 상태 | 앱이 하는 일 |
+|---|---|
+| 상용구 폴더(`.wikidesk-snippets`)가 **없는** 폴더(새 폴더·빈 폴더·문서만 있는 폴더) | 명령 55개와 추천 순서 파일(`_순서.txt`)을 **자동으로 만든다** |
+| 상용구 폴더가 **이미 있는** 폴더(직접 설치했거나 쓰던 워크스페이스) | **아무것도 하지 않는다**(내 상용구를 건드리지 않음) |
+| 한 번 확인한 적이 있는 폴더 | 아무것도 하지 않는다 — 넣은 뒤 내가 지웠어도 **되살리지 않는다** |
+
+- 확인한 폴더는 이 PC 의 앱 설정 파일(`config.json`)의 `starterCommandsOffered` 에 경로로 기록된다(윈도에서는 대소문자만 다른 경로도 같은 폴더로 본다).
+- 자동 설치가 실패해도(폴더에 쓰기 권한이 없는 경우 등) 워크스페이스는 그대로 열린다.
+- 이미 상용구 폴더가 있는 워크스페이스(예: 오래 쓰던 폴더)에 명령을 넣고 싶으면 아래 설치 명령으로 직접 넣는다.
+- 규칙·구현: `electron/starterSnippets.js`, 데이터: `shared/commandsPack.js`.
+
+### 직접 설치 (개발 폴더에서)
 
 ```bash
 node scripts/install-snippet-pack.mjs commands --dry-run     # 미리보기
@@ -71,7 +86,8 @@ node scripts/install-snippet-pack.mjs commands --workspace D:\WikiDesk
 
 ## 구현 위치
 
-- `scripts/snippet-packs/commands.js` — 명령 55개(`COMMANDS_PACK`), `scripts/install-snippet-pack.mjs` 의 `commands`.
+- `shared/commandsPack.js` — 명령 55개(`COMMANDS_PACK`). 앱 안(app.asar)에 들어가며 `scripts/install-snippet-pack.mjs` 의 `commands` 도 이것을 쓴다.
+- `electron/starterSnippets.js` — 새 워크스페이스를 열 때 자동으로 넣는 규칙(`ensureStarterCommands`), `electron/main.js` 의 `offerStarterCommands` 가 부른다.
 - `src/lib/snippetExpansion.js` — 본문 해석(`parseSnippetContent`: `{#}`·`{!이름}`), Tab 자리 이동(`nextStop`, `shiftStops`).
 - `src/lib/snippetLanguage.js`(`isSlashCommand`, 코드블록에서 제외), `src/lib/snippetMatch.js`(`/` 는 단어 시작에서만 찾기).
 - `src/components/EditorPane.jsx` — 펼치기(`commitSnippetExpansion`), Tab 자리 따라가기(`trackSnippetStops`), 동작 연결(`snippetActionsRef`), 추천 팝업이 꺼져 있어도 `/` 명령은 띄우기(`updateSnippetSuggest`).

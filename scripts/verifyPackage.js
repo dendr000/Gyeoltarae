@@ -11,6 +11,8 @@ export const REQUIRED_IN_ASAR = [
   '/electron/main.js',
   '/electron/preload.cjs',
   '/electron/fileSystem.js',
+  '/electron/starterSnippets.js',
+  '/shared/commandsPack.js',
   '/shared/fileNameChars.js',
   '/shared/typewriterZone.js',
   '/dist/index.html',
