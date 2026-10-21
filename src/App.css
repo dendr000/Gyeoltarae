@@ -3810,3 +3810,15 @@
   border-color: var(--border);
   opacity: 0.8;
 }
+
+/* 돋보기(마우스 휠 클릭): 마우스를 따라다니는 둥근 창. 마우스 입력은 받지 않고(진짜 화면이 받는다), 안쪽은 앱 화면의 복제본이다. src/components/Magnifier.jsx */
+.magnifier-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483000;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--accent), 0 8px 28px rgba(0, 0, 0, 0.35);
+}

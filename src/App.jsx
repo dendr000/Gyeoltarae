@@ -22,6 +22,7 @@ import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { ShortcutSettingsModal } from './components/ShortcutSettingsModal.jsx'
 import { CharCountBar } from './components/CharCountBar.jsx'
+import { Magnifier } from './components/Magnifier.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordLines, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
@@ -472,6 +473,7 @@ export default function App() {
         </div>
         {openPath && <CharCountBar text={rawText} />}
       </main>
+      <Magnifier />
       {shortcutModalOpen && <ShortcutSettingsModal onClose={() => setShortcutModalOpen(false)} />}
       {promptRequest && (
         <PromptModal

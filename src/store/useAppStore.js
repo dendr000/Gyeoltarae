@@ -20,6 +20,7 @@ import { parseSnippetOrder } from '../lib/snippetOrder.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
+import { normalizeMagnifierSize } from '../../shared/magnifier.js'
 import { normalizeTypewriterZone } from '../../shared/typewriterZone.js'
 import { DEFAULT_MODE, modeForDocFields } from '../lib/viewMode.js'
 import { moveTabById } from '../lib/tabOrder.js'
@@ -50,6 +51,7 @@ function settingsPatch(settings) {
     typewriterZone: normalizeTypewriterZone(settings?.typewriterZone),
     headingHighlight: settings?.headingHighlight !== false, // 기본 켜짐 — 값이 없으면 켜짐
     countNewlines: settings?.countNewlines === true, // 기본 꺼짐 — 값이 없으면 꺼짐
+    magnifierSize: normalizeMagnifierSize(settings?.magnifierSize), // 기본 보통 — 값이 없거나 이상하면 보통
   }
 }
 
@@ -511,6 +513,8 @@ export const useAppStore = create((set, get) => ({
   headingHighlight: true,
   // 드래그한 글자의 글자 수를 셀 때 줄바꿈도 1자로 셀지. 기본 꺼짐(줄바꿈을 세지 않는 기본 글자 수). 메인의 config.json 사본(메뉴 "설정" > "줄바꿈 포함 글자 수").
   countNewlines: false,
+  // 돋보기(마우스 휠 클릭) 크기: small·normal·large·xlarge. 기본 보통. 메인의 config.json 사본(메뉴 "설정" > "돋보기 크기").
+  magnifierSize: 'normal',
   lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.

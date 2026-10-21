@@ -164,6 +164,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Ctrl+` (줄 이름순 정렬)**: 편집 모드에서 선택한 줄들을 이름순(숫자 < 한글 < 영문)으로 정렬(항상 오름차순). 메뉴 설정에서 "정렬 뒤집기"를 켜면 다시 눌러 내림차순. 코드블록 여는·닫는 줄이 들어 있으면 하지 않음. [`docs/features/line-sort.md`](docs/features/line-sort.md)
 - **타자기 스크롤**: 메뉴 "설정" > "타자기 스크롤"에서 편집창 세로 5등분 구역을 고르면 글 쓰는 줄이 그 구역 한가운데에 머물도록 자동 스크롤(기본 끔, 30만 자 넘는 글에서는 동작 안 함). [`docs/features/typewriter-scroll.md`](docs/features/typewriter-scroll.md)
 - **제목 강조 끄기**: 메뉴 "설정" > "제목 강조"를 끄면 편집 모드에서 제목 줄에 배경이 입혀지지 않음(기본 켜짐). 코드블록 안의 줄은 제목 모양이어도 강조하지 않고, 필요한 줄만 줄 여백의 점으로 직접 켜고 끔. [`docs/features/editor-gutter.md`](docs/features/editor-gutter.md)
+- **돋보기**: 마우스 휠(가운데 버튼)을 한 번 누르면 마우스 위치를 중심으로 둥근 돋보기가 떠서 그 둘레를 키워 보이고, 한 번 더 누르거나 Esc 를 누르면 꺼짐. 켜진 동안 휠을 굴리면 확대·축소(1.5~8배)되고, 돋보기 안에서도 클릭·마우스 오버·입력이 그대로 되며 팝업·메뉴 글자도 키워 보임. 크기는 메뉴 "설정" > "돋보기 크기"(작게·보통·크게·아주 크게). [`docs/features/magnifier.md`](docs/features/magnifier.md)
 - **글자 수 표시**: 편집·뷰어 아래 표시줄에 맨 오른쪽에 문서 전체 글자 수(줄바꿈 제외, 공백·특수문자·한자 모두 1자)가, 드래그해서 고른 글자 수는 그 왼쪽에 보임. 메뉴 "설정" > "줄바꿈 포함 글자 수"를 켜면 드래그 글자 수에 줄바꿈도 1자로 셈(기본 꺼짐). [`docs/features/char-count.md`](docs/features/char-count.md)
 - **단축키 설정**: 메뉴 "설정" > "단축키…" 에서 줄 이동·복제·정렬, 탭 이동, 새 문서, 사이드바, 화면 모드 전환 키를 바꾸고 없애고 기본값으로 되돌림(Ctrl·Alt 필요, 이미 쓰는 키는 지정 불가, 겹치면 확인). [`docs/features/shortcut-settings.md`](docs/features/shortcut-settings.md)
 - **Alt+↑/↓ (줄 이동)**: 편집 모드에서 현재 줄(여러 줄 선택 시 선택에 걸친 줄 전체)을 위·아래 줄과 자리를 바꿈. VS Code 의 줄 이동과 같음. [`docs/features/line-move.md`](docs/features/line-move.md)

@@ -238,7 +238,7 @@ describe('소스 점검: 메인·preload·화면 연결', () => {
 
   it('메뉴에서 바꾸면 전체 설정을 저장하고 전체 설정을 알린다 (타자기 구역 포함)', () => {
     expect(main).toMatch(/saveConfig\(\{ \.\.\.loadConfig\(\), typewriterZone \}\)/)
-    expect(main.match(/webContents\.send\('settings:changed', readSettings\(\)\)/g) ?? []).toHaveLength(4)
+    expect(main.match(/webContents\.send\('settings:changed', readSettings\(\)\)/g) ?? []).toHaveLength(5)
     expect(main).toContain("from '../shared/typewriterZone.js'")
   })
 

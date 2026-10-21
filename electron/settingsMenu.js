@@ -1,4 +1,5 @@
 // Copyright (c) dendr000. MIT License.
+import { normalizeMagnifierSize } from '../shared/magnifier.js'
 import { normalizeTypewriterZone } from '../shared/typewriterZone.js'
 
 // 최상단 메뉴(파일·편집·보기·설정·창)에 들어갈 "설정" 메뉴를 만든다. 항목 이름은 짧게 기능만 적고, 설명은 docs/features 에 둔다. 값을 읽고 저장하는 일은 호출한 쪽(main.js)이 맡아서, 이 파일은
@@ -17,6 +18,14 @@ const TYPEWRITER_CHOICES = [
   { zone: 5, label: '5 · 맨 아래' },
 ]
 
+// 3. 돋보기 크기: 마우스 휠 클릭으로 켜는 둥근 돋보기의 지름을 4단계로 고른다(기본 보통). 규칙은 shared/magnifier.js.
+const MAGNIFIER_CHOICES = [
+  { size: 'small', label: '작게' },
+  { size: 'normal', label: '보통' },
+  { size: 'large', label: '크게' },
+  { size: 'xlarge', label: '아주 크게' },
+]
+
 export function createSettingsMenu({
   getSortFlip,
   onSortFlipChange,
@@ -24,6 +33,8 @@ export function createSettingsMenu({
   onTypewriterZoneChange = () => {},
   getHeadingHighlight = () => true,
   onHeadingHighlightChange = () => {},
+  getMagnifierSize = () => 'normal',
+  onMagnifierSizeChange = () => {},
   getCountNewlines = () => false,
   onCountNewlinesChange = () => {},
   onOpenShortcuts = () => {},
@@ -61,6 +72,16 @@ export function createSettingsMenu({
           type: 'radio',
           checked: normalizeTypewriterZone(getTypewriterZone()) === zone,
           click: () => onTypewriterZoneChange(zone),
+        })),
+      },
+      {
+        label: '돋보기 크기',
+        // 저장된 값이 이상하면 보통으로 본다.
+        submenu: MAGNIFIER_CHOICES.map(({ size, label }) => ({
+          label,
+          type: 'radio',
+          checked: normalizeMagnifierSize(getMagnifierSize()) === size,
+          click: () => onMagnifierSizeChange(size),
         })),
       },
       { type: 'separator' },

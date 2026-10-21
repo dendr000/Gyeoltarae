@@ -190,7 +190,7 @@ function movePathPrefix(oldPath, newPath) {
 export function createMockApi() {
   let workspace = null
   const watchListeners = new Set()
-  let mockSettings = { sortFlip: false, typewriterZone: 0, headingHighlight: true, countNewlines: false }
+  let mockSettings = { sortFlip: false, typewriterZone: 0, headingHighlight: true, countNewlines: false, magnifierSize: 'normal' }
   const settingsListeners = new Set()
 
   return {

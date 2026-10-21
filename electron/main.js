@@ -9,6 +9,7 @@ import { execFile } from 'node:child_process'
 import chokidar from 'chokidar'
 import { createWatchScheduler } from './watchScheduler.js'
 import { createSettingsMenu } from './settingsMenu.js'
+import { normalizeMagnifierSize } from '../shared/magnifier.js'
 import { normalizeTypewriterZone } from '../shared/typewriterZone.js'
 import {
   scanTree,
@@ -104,6 +105,7 @@ function readSettings() {
     typewriterZone: normalizeTypewriterZone(config.typewriterZone),
     headingHighlight: config.headingHighlight !== false, // 제목 강조는 기본 켜짐 — 꺼 둔(false) 때만 꺼짐
     countNewlines: config.countNewlines === true, // 줄바꿈 포함 글자 수는 기본 꺼짐 — 켠(true) 때만 켜짐
+    magnifierSize: normalizeMagnifierSize(config.magnifierSize), // 돋보기 크기: small·normal·large·xlarge (그 밖은 보통)
   }
 }
 
@@ -336,6 +338,11 @@ function buildMenu() {
       getHeadingHighlight: () => readSettings().headingHighlight,
       onHeadingHighlightChange: (headingHighlight) => {
         saveConfig({ ...loadConfig(), headingHighlight })
+        mainWindow?.webContents.send('settings:changed', readSettings())
+      },
+      getMagnifierSize: () => readSettings().magnifierSize,
+      onMagnifierSizeChange: (magnifierSize) => {
+        saveConfig({ ...loadConfig(), magnifierSize })
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
       getCountNewlines: () => readSettings().countNewlines,
