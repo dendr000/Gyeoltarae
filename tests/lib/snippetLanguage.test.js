@@ -1,7 +1,7 @@
 // Copyright (c) dendr000. MIT License.
 import { describe, expect, it } from 'vitest'
 import { findExactSnippetMatch, findSnippetQuery, isCallEntry } from '../../src/lib/snippetMatch.js'
-import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../../src/lib/snippetLanguage.js'
+import { folderGrammar, isSlashCommand, scopeSnippetsToContext, snippetContextAt } from '../../src/lib/snippetLanguage.js'
 
 const e = (category, title, content = title, extra = {}) => ({ category, title, content, ...extra })
 const titles = (list) => list.map((x) => `${x.category}/${x.title}`)
@@ -217,5 +217,53 @@ describe('findExactSnippetMatch — 스페이스바 자동 치환 규칙', () =>
   it('기호로 시작하는 제목(#include)은 앞이 글자여도 걸린다', () => {
     const inc = e('C', '#include', '#include <{#}>')
     expect(run('x#include', [inc], { wordBoundary: true }).matches).toEqual([inc])
+  })
+})
+
+describe('슬래시 명령 (/접기, /표)', () => {
+  const cmd = (title, content = '내용') => e('명령', title, content)
+  const fold = cmd('/접기')
+  const toc = cmd('/목차')
+  const normal = e('공통', '감사', '감사합니다')
+  const run = (line, entries = [fold, toc, normal], options = {}) => findSnippetQuery(line, line.length, entries, options)
+  const titlesOf = (result) => result?.matches.map((m) => m.title)
+
+  it('isSlashCommand — 제목이 / 로 시작하면 명령이다', () => {
+    expect(isSlashCommand(fold)).toBe(true)
+    expect(isSlashCommand(normal)).toBe(false)
+  })
+
+  it('/ 와 이름 앞부분을 치면 후보에 뜬다', () => {
+    expect(titlesOf(run('/접'))).toEqual(['/접기'])
+    expect(titlesOf(run('/목'))).toEqual(['/목차'])
+  })
+
+  it('줄 맨 앞에서 / 만 쳐도 전체 명령이 뜬다', () => {
+    expect(titlesOf(run('/')).sort()).toEqual(['/목차', '/접기'])
+  })
+
+  it('글 중간에서 / 만 친 것은 후보를 열지 않는다 (A / B)', () => {
+    expect(run('A /')).toBeNull()
+  })
+
+  it('공백 뒤의 /접 은 명령이다', () => {
+    expect(titlesOf(run('문장 끝 /접'))).toEqual(['/접기'])
+  })
+
+  it('글자에 붙은 슬래시(a/접, 주소)는 명령이 아니다', () => {
+    expect(run('a/접')).toBeNull()
+    expect(run('http://example.com/접')).toBeNull()
+  })
+
+  it('코드블록 안에서는 슬래시 명령이 빠진다 (// 주석을 칠 때 명령 목록이 뜨면 안 된다)', () => {
+    const scoped = scopeSnippetsToContext([fold, normal], { grammar: 'java' })
+    expect(scoped.map((x) => x.title)).toEqual(['감사'])
+    expect(scopeSnippetsToContext([fold, normal], null).map((x) => x.title)).toEqual(['/접기', '감사'])
+  })
+
+  it('스페이스바 치환: 단어 시작의 /접기 만 걸린다', () => {
+    expect(findExactSnippetMatch('/접기', 3, [fold]).matches).toEqual([fold])
+    expect(findExactSnippetMatch('문장 /접기', 6, [fold]).matches).toEqual([fold])
+    expect(findExactSnippetMatch('a/접기', 4, [fold])).toBeNull()
   })
 })

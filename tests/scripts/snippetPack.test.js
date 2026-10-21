@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SNIPPET_ORDER_FILE_NAME, scanSnippets, snippetsDirPath } from '../../electron/fileSystem.js'
 import { installSnippetPack } from '../../scripts/install-snippet-pack.mjs'
 import { SQL_PACK } from '../../scripts/snippet-packs/sql.js'
@@ -77,6 +77,8 @@ describe('SQL 키워드 묶음의 추천 순서(order)', () => {
 })
 
 describe('installSnippetPack (설치)', () => {
+  // 파일을 백여 개 만드는 시험이라, 전체 시험을 병렬로 돌려 디스크가 바쁠 때(혼자서는 1초)는 기본 5초를 넘길 수 있다.
+  vi.setConfig({ testTimeout: 60000 })
   let root
 
   beforeEach(() => {

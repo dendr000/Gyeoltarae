@@ -38,7 +38,8 @@ import { getEditorScroll, setEditorScroll } from '../lib/scrollMemory.js'
 import { matchSnippetShortcut } from '../lib/snippetShortcuts.js'
 import { selectActiveSnippets, selectEnabledSnippets } from '../lib/snippetScope.js'
 import { enterAcceptsSuggestion, findSnippetQuery, findExactSnippetMatch } from '../lib/snippetMatch.js'
-import { folderGrammar, scopeSnippetsToContext, snippetContextAt } from '../lib/snippetLanguage.js'
+import { folderGrammar, isSlashCommand, scopeSnippetsToContext, snippetContextAt } from '../lib/snippetLanguage.js'
+import { nextStop, parseSnippetContent, shiftStops } from '../lib/snippetExpansion.js'
 import { fenceAutoCloseEdit, isInCodeFenceAt, isInLanguageCodeFenceAt } from '../lib/codeFence.js'
 import { duplicateLinesEdit } from '../lib/lineDuplicate.js'
 import { isLineMoveKey, moveLinesEdit } from '../lib/lineMove.js'
@@ -442,6 +443,9 @@ function findTableBlock(text, cursorPos) {
   return { blockStart, blockEnd, rows: placeCellsIntoGrid(rawRows) }
 }
 
+// 줄에서 커서 앞이 슬래시 명령을 치는 중인 모양인가 — 줄 맨 앞이나 공백 뒤의 `/` 로 시작해 공백 없이 이어진 글(`/접`).
+const SLASH_TYPING_RE = /(?:^|\s)\/[^\s]*$/
+
 const FOLDING_TEMPLATE = `{{{#!folding 더 보기
 숨겨진 내용
 }}}`
@@ -571,6 +575,23 @@ export function EditorPane({ text, onChange, disabled }) {
   const toggleSnippetSuggest = useAppStore((s) => s.toggleSnippetSuggest)
   const activeTabId = useAppStore((s) => s.activeTabId)
 
+  // 상용구를 펼친 뒤 Tab 으로 건너뛸 자리들({#} 의 두 번째부터, lib/snippetExpansion.js) — { stops: 글 안의 위치들, length: 마지막으로
+  // 본 글 길이 }. 글이 바뀔 때마다 위치를 맞추고(trackSnippetStops), 다 쓰거나 문서를 바꾸면 비운다.
+  const snippetStopsRef = useRef(null)
+  // 상용구 본문 `{!이름}` 이 실행하는 동작들 — 매 렌더마다 최신 함수로 바꿔 둔다(동작은 펼친 글을 지운 뒤에 불러서 옛 렌더의 글을 보면 안 된다).
+  const snippetActionsRef = useRef({})
+  useEffect(() => {
+    snippetActionsRef.current = {
+      표: openTableEditor,
+      그라데이션: () => setGradientModal({ mode: 'text' }),
+      이미지: insertImageRef,
+      자료: insertDataRef,
+      틀: insertTemplateCall,
+      분류: insertCategory,
+      별칭: insertAlias,
+    }
+  })
+
   // Switching to a different document should never leave a stale suggestion
   // popup floating over the new one — but this must key on openPath, not
   // text, since text also changes on every ordinary keystroke (that's the
@@ -579,6 +600,7 @@ export function EditorPane({ text, onChange, disabled }) {
     setFileSuggest(null)
     setSnippetSuggest(null)
     setFindBar(null)
+    snippetStopsRef.current = null
   }, [openPath])
 
   // 탭 전환 시 에디터 스크롤 위치 복원 — activeTabId가 바뀔 때만(타이핑으로 text가 바뀔
@@ -729,7 +751,11 @@ export function EditorPane({ text, onChange, disabled }) {
     // 코드를 쓸 때는 단축어(SELECT 같은)를 바로 불러 쓸 수 있게. 블록 밖으로 나오면 다시 설정을
     // 따른다(꺼져 있으면 꺼짐, 켜져 있으면 켜짐). 판단 규칙은 lib/codeFence.js.
     const inCodeBlock = isInLanguageCodeFenceAt(textarea.value, textarea.selectionStart)
-    if (!snippetSuggestEnabled && !inCodeBlock) {
+    // 추천 팝업이 꺼져 있어도 슬래시 명령(`/접기`)을 치는 중에는 그 명령들만 보여 준다 — 명령은 `/` 를 쳐서 불러 쓰는 것이라 설정과 무관하게 떠야 한다.
+    const lineStartIdx = textarea.value.lastIndexOf('\n', textarea.selectionStart - 1) + 1
+    const typingSlashCommand = SLASH_TYPING_RE.test(textarea.value.slice(lineStartIdx, textarea.selectionStart))
+    const slashOnly = !snippetSuggestEnabled && !inCodeBlock
+    if (slashOnly && !typingSlashCommand) {
       setSnippetSuggest(null)
       return
     }
@@ -740,7 +766,8 @@ export function EditorPane({ text, onChange, disabled }) {
     // 코드블록 안에서는 단어 중간(NAME 의 끝 E)부터 시작하는 글자로는 후보를 찾지 않는다.
     // 글에서는 언어 폴더의 상용구를 빼고, 코드블록 안에서는 그 언어의 폴더만 쓴다(lib/snippetLanguage.js).
     const context = snippetContextAt(textarea.value, textarea.selectionStart)
-    const ctx = detectSnippetQuery(textarea, scopeSnippetsToContext(suggestEntries, context), {
+    const scoped = scopeSnippetsToContext(suggestEntries, context)
+    const ctx = detectSnippetQuery(textarea, slashOnly ? scoped.filter(isSlashCommand) : scoped, {
       wordStartOnly: inCodeBlock,
       grammar: context?.grammar ?? null,
     })
@@ -764,18 +791,41 @@ export function EditorPane({ text, onChange, disabled }) {
   // 지우고, 마커가 없으면 그냥 삽입된 본문 끝에 커서를 둔다. 팝업에서 고를 때
   // (selectSnippetSuggestItem)와 스페이스바 자동 치환(handleKeyDown)이 둘 다 이 함수를
   // 공유— 전자는 snippetSuggest.start/end, 후자는 직접 계산한 범위를 넘겨줌.
+  // 본문 해석은 lib/snippetExpansion.js: 첫 {#} 는 커서 자리, 나머지 {#} 는 Tab 으로 건너뛸 자리, `{!이름}` 은 동작 실행.
   function commitSnippetExpansion(entry, start, end) {
     const textarea = textareaRef.current
     if (!textarea) return
-    const markerIdx = entry.content.indexOf('{#}')
-    const content = markerIdx === -1 ? entry.content : entry.content.slice(0, markerIdx) + entry.content.slice(markerIdx + 3)
+    const parsed = parseSnippetContent(entry.content)
+    // 동작 본문(`{!표}`): 친 글자(`/표`)만 지우고 그 동작을 연다. 모르는 이름이면 본문을 글자 그대로 넣는다.
+    const action = parsed.action ? snippetActionsRef.current[parsed.action] : null
+    if (action) {
+      replaceRange(textarea, start, end, '', onChange)
+      setSnippetSuggest(null)
+      snippetStopsRef.current = null
+      // 지운 글이 화면 상태에 반영된 뒤에 동작을 부른다(표 편집기는 지금 글에서 커서 자리의 표를 찾는다).
+      setTimeout(() => snippetActionsRef.current[parsed.action]?.(), 0)
+      return
+    }
+    const { text: content, caret, stops } = parsed.action ? { text: entry.content, caret: null, stops: [] } : parsed
     replaceRange(textarea, start, end, content, onChange)
     setSnippetSuggest(null)
+    // 방금 넣은 글이 onChange 에서 옛 자리들을 밀지 않도록 글을 넣은 뒤에 새 자리들을 기억한다.
+    snippetStopsRef.current = stops.length > 0 ? { stops: stops.map((stop) => start + stop), length: textarea.value.length } : null
     requestAnimationFrame(() => {
       textarea.focus()
-      const pos = markerIdx === -1 ? start + content.length : start + markerIdx
+      const pos = start + (caret ?? content.length)
       textarea.setSelectionRange(pos, pos)
     })
+  }
+
+  // 글이 바뀔 때마다 남은 Tab 자리들의 위치를 맞춘다(onChange 에서 부른다). 바뀐 자리는 커서에서 거꾸로 센다.
+  function trackSnippetStops(textarea) {
+    const tracked = snippetStopsRef.current
+    if (!tracked) return
+    const delta = textarea.value.length - tracked.length
+    const editAt = delta > 0 ? textarea.selectionStart - delta : textarea.selectionStart
+    tracked.stops = shiftStops(tracked.stops, editAt, delta)
+    tracked.length = textarea.value.length
   }
 
   function selectSnippetSuggestItem(entry) {
@@ -1297,6 +1347,16 @@ export function EditorPane({ text, onChange, disabled }) {
     // 그 밖에는 커서 자리에 공백 4칸. 규칙은 lib/lineIndent.js.
     if (e.key === 'Tab') {
       e.preventDefault()
+      // 상용구를 펼친 직후에는 Tab 이 남은 {#} 자리로 건너뛴다(예: /접기 → 제목 칸에서 Tab → 내용 칸). 갈 자리가 없으면 평소 Tab.
+      if (!e.shiftKey && snippetStopsRef.current && textarea.selectionStart === textarea.selectionEnd) {
+        const jump = nextStop(snippetStopsRef.current.stops, textarea.selectionStart)
+        if (jump) {
+          snippetStopsRef.current.stops = jump.rest
+          textarea.setSelectionRange(jump.stop, jump.stop)
+          return
+        }
+        snippetStopsRef.current = null
+      }
       const direction = textarea.selectionDirection
       const edit = indentLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, e.shiftKey)
       if (edit) {
@@ -1633,6 +1693,7 @@ export function EditorPane({ text, onChange, disabled }) {
               : '=제목=\n\n나무위키 스타일 문법으로 작성하세요.\n\'\'\'굵게\'\'\', __밑줄__, ~~취소선~~, \'\'기울임\'\'\n[* 각주 내용]\n* 목록\n> 인용\n||=칸1=||=칸2=||\n||값1||값2||\n#태그1 #태그2\n\n위 툴바 버튼으로도 문법을 몰라도 서식을 넣을 수 있습니다.'
           }
           onChange={(e) => {
+            trackSnippetStops(e.target)
             const rewrote = maybeAutoResolveLink(e.target, docIndex, onChange)
             if (!rewrote) onChange(e.target.value)
             updateFileSuggest()

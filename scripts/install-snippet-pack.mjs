@@ -3,6 +3,7 @@
 // 상용구 묶음(scripts/snippet-packs/*.js)을 워크스페이스의 상용구 폴더에 만들어 넣는다.
 //   node scripts/install-snippet-pack.mjs sql                 (워크스페이스는 앱이 마지막에 연 곳)
 //   node scripts/install-snippet-pack.mjs sql-practice        (SQL 학습용 이름: emp, dept, student …)
+//   node scripts/install-snippet-pack.mjs commands            (슬래시 명령: /접기 /목차 /표 ...)
 //   node scripts/install-snippet-pack.mjs langs               (C++·Java·HTML·Python 등 언어 폴더 전부)
 //   node scripts/install-snippet-pack.mjs cpp                 (언어 하나만: cpp c java html css python javascript typescript csharp go kotlin rust swift php ruby bash)
 //   node scripts/install-snippet-pack.mjs sql --dry-run       (아무것도 안 만들고 개수만 보여 줌)
@@ -20,10 +21,11 @@ import { SNIPPET_ORDER_FILE_NAME, ensureSnippet, scanSnippets, snippetsDirPath }
 import { SQL_PACK } from './snippet-packs/sql.js'
 import { SQL_PRACTICE_PACK } from './snippet-packs/sql-practice.js'
 import { LANGUAGE_PACKS } from './snippet-packs/langs.js'
+import { COMMANDS_PACK } from './snippet-packs/commands.js'
 import { parseSnippetOrder } from '../src/lib/snippetOrder.js'
 
 // 'langs' 는 프로그래밍 언어 묶음 전부(폴더마다 하나씩)를 한꺼번에 설치하는 이름이다.
-const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK, ...LANGUAGE_PACKS }
+const PACKS = { sql: SQL_PACK, 'sql-practice': SQL_PRACTICE_PACK, commands: COMMANDS_PACK, ...LANGUAGE_PACKS }
 const ALL_LANGUAGES = 'langs'
 
 // 묶음의 항목 하나는 제목 문자열(본문도 같음) 또는 { title, content }.

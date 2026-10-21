@@ -42,6 +42,13 @@ export function findSnippetQuery(value, pos, entries, { wordStartOnly = false, g
       continue
     }
     const suffix = upToCursor.slice(start)
+    // 슬래시 명령(`/접기`)은 단어 시작(줄 맨 앞이나 공백 뒤)에서만 찾는다 — `a/b`, 주소(`http://...`) 속 슬래시는 명령이 아니다.
+    // `/` 하나만 쳤을 때는 줄 맨 앞일 때만 전체 목록을 보여 준다(글 중간의 " / " 에서 팝업이 뜨지 않게).
+    if (suffix[0] === '/') {
+      const before = upToCursor.slice(0, start)
+      if (start > 0 && !/\s$/.test(before)) continue
+      if (suffix === '/' && before.trim() !== '') continue
+    }
     const lowerSuffix = suffix.toLowerCase()
     const prefixMatches = entries.filter((entry) => entry.title.toLowerCase().startsWith(lowerSuffix))
     if (prefixMatches.length === 0) continue
@@ -123,6 +130,12 @@ function languageTier(entry, grammar) {
   return folder === null ? 1 : 2
 }
 
+// 슬래시 명령(`/접기`)이 단어 시작에 있는가 — 줄 맨 앞이거나 바로 앞이 공백일 때. `a/접기` 처럼 글자에 붙은 슬래시는 명령이 아니다.
+function startsSlashCommand(currentLine, title) {
+  const before = currentLine[currentLine.length - title.length - 1]
+  return before === undefined || /\s/.test(before)
+}
+
 // 추천 팝업이 떠 있을 때 Enter 가 후보를 확정하는가. 코드블록 밖(글을 쓰는 중)에서는 예전처럼 항상
 // 확정한다. 코드블록 안에서는 방향키로 후보를 직접 고르기 전에는 확정하지 않고 그냥 줄바꿈이 들어가게
 // 한다 — 코드는 줄 끝이 `NOT NULL` 처럼 키워드로 끝나는 일이 많은데, 그때마다 Enter 가 "NULLIF" 같은
@@ -154,7 +167,8 @@ export function findExactSnippetMatch(value, pos, entries, { auto = false, wordB
       entry.title &&
       currentLine.endsWith(entry.title) &&
       !(auto && isCallEntry(entry)) &&
-      !(wordBoundary && insideIdentifier(currentLine, entry.title)),
+      !(wordBoundary && insideIdentifier(currentLine, entry.title)) &&
+      !(entry.title[0] === '/' && !startsSlashCommand(currentLine, entry.title)),
   )
   if (matches.length === 0) return null
   const maxLen = Math.max(...matches.map((e) => e.title.length))

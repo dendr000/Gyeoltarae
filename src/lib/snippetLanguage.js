@@ -14,6 +14,12 @@
 import { openCodeFenceAt } from './codeFence.js'
 import { resolveCodeLanguage } from './codeHighlight.js'
 
+// 슬래시 명령 상용구인가 — 제목이 `/` 로 시작한다(예: `/접기`, `/표`). 글(문단)에서 문법을 빠르게 넣는 명령이라 코드블록 안에서는
+// 빠진다(코드에서 `//` 주석을 칠 때마다 명령 목록이 뜨면 안 되므로).
+export function isSlashCommand(entry) {
+  return typeof entry.title === 'string' && entry.title[0] === '/'
+}
+
 const grammarByFolder = new Map()
 
 // 폴더 이름이 언어 이름이면 그 언어의 문법표 이름(예: 'cpp'), 아니면 null.
@@ -46,6 +52,7 @@ export function scopeSnippetsToContext(entries, context) {
   if (hit) return hit
 
   const kept = entries.filter((entry) => {
+    if (context !== null && isSlashCommand(entry)) return false
     const grammar = folderGrammar(entry.category)
     if (grammar === null) return true
     return context !== null && grammar === context.grammar

@@ -247,6 +247,10 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
   않게 함). 모달에서 고른 폴더는 에디터가
   쓰는 "활성 폴더"(그 폴더 + '공통'의 상용구만 자동 치환에 사용)가 되고, "닫으면 '전체'로 자동 복귀"
   체크박스(기본 켜짐)가 켜져 있으면 창을 닫을 때 '전체'로 돌아가 모든 폴더의 상용구를 다시 씀
+- **슬래시 명령**: 글에서 `/접기`·`/목차`·`/코드` 처럼 `/` 로 위키 문법을 넣음(상용구 폴더 `명령`, `node scripts/install-snippet-pack.mjs commands`).
+  `/접기` 는 제목 칸에 커서가 서고 Tab 으로 내용 칸으로 이동, `/표` 는 표 편집기를 엶(`/그라데이션`·`/이미지`·`/틀` 등도 툴바 버튼과 같은 창).
+  추천 팝업이 꺼져 있어도 `/` 를 치면 명령이 뜨고 코드블록 안에서는 안 뜸. 상용구 본문의 `{#}` 는 여러 번 쓸 수 있고 두 번째부터는 Tab 자리.
+  자세히: [`docs/features/slash-commands.md`](docs/features/slash-commands.md)
 - **언어 상용구 묶음**: C++·Java·HTML·Python·JavaScript·TypeScript·C·C#·Go·Kotlin·Rust·Swift·PHP·Ruby·Bash·CSS 16개 언어의
   키워드·표준 라이브러리·자주 쓰는 틀 6,262개를 언어별 폴더로 설치 — `node scripts/install-snippet-pack.mjs langs`.
   폴더 이름이 언어 이름이면 그 언어의 코드블록(` ```C++ ` 등) 안에서만 추천·치환에 쓰임(글에는 안 뜸).
