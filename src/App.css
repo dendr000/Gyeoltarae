@@ -3767,7 +3767,8 @@
   margin-top: 14px;
 }
 
-/* 글자 수 표시줄: 편집·뷰어 아래. 문서 전체 글자 수(줄바꿈 포함)와, 드래그한 글자가 있으면 고른 글자 수. */
+/* 글자 수 표시줄: 편집·뷰어 아래. 맨 오른쪽에 문서 전체 글자 수, 드래그한 글자가 있으면 그 왼쪽에 고른 글자 수.
+   전체 글자 수를 오른쪽 끝에 두어 드래그 글자 수가 생기고 사라져도 그 자리가 흔들리지 않는다. */
 .char-count-bar {
   display: flex;
   justify-content: flex-end;
@@ -3786,14 +3787,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.char-count-basis {
-  opacity: 0.6;
-}
-
-.char-count-selected {
-  color: var(--accent);
-}
-
+.char-count-selected,
 .char-count-selected strong {
   color: var(--accent);
 }

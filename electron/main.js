@@ -103,7 +103,7 @@ function readSettings() {
     sortFlip: config.sortFlip === true,
     typewriterZone: normalizeTypewriterZone(config.typewriterZone),
     headingHighlight: config.headingHighlight !== false, // 제목 강조는 기본 켜짐 — 꺼 둔(false) 때만 꺼짐
-    selectionCharCount: config.selectionCharCount !== false, // 선택 글자 수 표시는 기본 켜짐
+    countNewlines: config.countNewlines === true, // 줄바꿈 포함 글자 수는 기본 꺼짐 — 켠(true) 때만 켜짐
   }
 }
 
@@ -338,9 +338,9 @@ function buildMenu() {
         saveConfig({ ...loadConfig(), headingHighlight })
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
-      getSelectionCharCount: () => readSettings().selectionCharCount,
-      onSelectionCharCountChange: (selectionCharCount) => {
-        saveConfig({ ...loadConfig(), selectionCharCount })
+      getCountNewlines: () => readSettings().countNewlines,
+      onCountNewlinesChange: (countNewlines) => {
+        saveConfig({ ...loadConfig(), countNewlines })
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
     }),

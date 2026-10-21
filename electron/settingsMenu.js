@@ -24,8 +24,8 @@ export function createSettingsMenu({
   onTypewriterZoneChange = () => {},
   getHeadingHighlight = () => true,
   onHeadingHighlightChange = () => {},
-  getSelectionCharCount = () => true,
-  onSelectionCharCountChange = () => {},
+  getCountNewlines = () => false,
+  onCountNewlinesChange = () => {},
   onOpenShortcuts = () => {},
 }) {
   return {
@@ -46,11 +46,11 @@ export function createSettingsMenu({
         click: (menuItem) => onHeadingHighlightChange(menuItem.checked === true),
       },
       {
-        // 편집창 아래 표시줄에 드래그한 글자의 글자 수를 보여 줄지(기본 켜짐). 문서 전체 글자 수는 늘 보인다.
-        label: '선택 글자 수',
+        // 드래그한 글자의 글자 수를 셀 때 줄바꿈도 1자로 셀지(기본 꺼짐 = 줄바꿈을 세지 않는 기본 글자 수). 문서 전체 글자 수는 이 설정과 상관없이 기본 글자 수다.
+        label: '줄바꿈 포함 글자 수',
         type: 'checkbox',
-        checked: getSelectionCharCount() !== false,
-        click: (menuItem) => onSelectionCharCountChange(menuItem.checked === true),
+        checked: getCountNewlines() === true,
+        click: (menuItem) => onCountNewlinesChange(menuItem.checked === true),
       },
       { type: 'separator' },
       {
