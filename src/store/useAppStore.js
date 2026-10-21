@@ -49,6 +49,7 @@ function settingsPatch(settings) {
     sortFlip: settings?.sortFlip === true,
     typewriterZone: normalizeTypewriterZone(settings?.typewriterZone),
     headingHighlight: settings?.headingHighlight !== false, // 기본 켜짐 — 값이 없으면 켜짐
+    selectionCharCount: settings?.selectionCharCount !== false, // 기본 켜짐 — 값이 없으면 켜짐
   }
 }
 
@@ -508,6 +509,8 @@ export const useAppStore = create((set, get) => ({
   typewriterZone: 0,
   // 편집 모드에서 제목 줄(=제목=)에 배경을 얹어 강조할지. 기본 켜짐. 메인의 config.json 사본(메뉴 "설정" > "제목 강조").
   headingHighlight: true,
+  // 편집창 아래 표시줄에 드래그한 글자의 글자 수를 보여 줄지. 기본 켜짐. 메인의 config.json 사본(메뉴 "설정" > "선택 글자 수").
+  selectionCharCount: true,
   lineMarks: {},
   // 고유명사 사전(.wikidesk-dict/사전.txt) 원문 그대로 + Alt+H 순환치환용으로
   // 미리 파싱해 둔 Map<원문, 한자[]> — 둘 다 rebuildIndexes에서 같이 채워짐.

@@ -21,6 +21,7 @@ import { EditorPane } from './components/EditorPane.jsx'
 import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { ShortcutSettingsModal } from './components/ShortcutSettingsModal.jsx'
+import { CharCountBar } from './components/CharCountBar.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
 import { formatKeywordLines, parseKeywordInput } from './lib/autoCategory.js'
 import { NO_TEMPLATE } from './lib/defaultTemplate.js'
@@ -467,6 +468,7 @@ export default function App() {
             <EditorPane text={rawText} onChange={updateText} disabled={!openPath} />
           )}
         </div>
+        {openPath && <CharCountBar text={rawText} />}
       </main>
       {shortcutModalOpen && <ShortcutSettingsModal onClose={() => setShortcutModalOpen(false)} />}
       {promptRequest && (

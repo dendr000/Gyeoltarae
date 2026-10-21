@@ -24,6 +24,8 @@ export function createSettingsMenu({
   onTypewriterZoneChange = () => {},
   getHeadingHighlight = () => true,
   onHeadingHighlightChange = () => {},
+  getSelectionCharCount = () => true,
+  onSelectionCharCountChange = () => {},
   onOpenShortcuts = () => {},
 }) {
   return {
@@ -42,6 +44,13 @@ export function createSettingsMenu({
         type: 'checkbox',
         checked: getHeadingHighlight() !== false,
         click: (menuItem) => onHeadingHighlightChange(menuItem.checked === true),
+      },
+      {
+        // 편집창 아래 표시줄에 드래그한 글자의 글자 수를 보여 줄지(기본 켜짐). 문서 전체 글자 수는 늘 보인다.
+        label: '선택 글자 수',
+        type: 'checkbox',
+        checked: getSelectionCharCount() !== false,
+        click: (menuItem) => onSelectionCharCountChange(menuItem.checked === true),
       },
       { type: 'separator' },
       {
