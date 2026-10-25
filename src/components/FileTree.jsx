@@ -326,10 +326,6 @@ export function FileTree({
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
-      <div className="file-tree-root-actions">
-        <button onClick={() => onCreateDoc(workspacePath)}>+ 새 문서</button>
-        <button onClick={() => onCreateFolder(workspacePath)}>+ 새 폴더</button>
-      </div>
       {dragOver && (
         <div className="file-tree-drop-hint">
           여기에 놓으면 .md/.txt는 새 문서로, 이미지는 "이미지" 공간으로 불러옵니다

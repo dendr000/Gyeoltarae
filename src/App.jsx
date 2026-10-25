@@ -380,8 +380,15 @@ export default function App() {
     <div className="app-shell">
       <aside className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="app-sidebar-title">결타래</div>
-        <div className="app-sidebar-body">
+        {/* 검색칸과 "+ 새 문서"·"+ 새 폴더" 는 목록을 스크롤해도 늘 보이도록 스크롤 영역(app-sidebar-body) 밖에 둔다. */}
+        <div className="app-sidebar-fixed">
           <SearchBar />
+          <div className="file-tree-root-actions">
+            <button onClick={() => handleCreateDoc(workspacePath)}>+ 새 문서</button>
+            <button onClick={() => handleCreateFolder(workspacePath)}>+ 새 폴더</button>
+          </div>
+        </div>
+        <div className="app-sidebar-body">
           <FileTree
             tree={tree}
             workspacePath={workspacePath}

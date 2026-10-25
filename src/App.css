@@ -59,6 +59,20 @@
   overflow-y: auto;
 }
 
+/* 검색칸과 + 새 문서·+ 새 폴더: 스크롤 영역 밖에 두어 목록을 스크롤해도 늘 보인다. 검색 결과 창이 아래 목록 위로 뜨도록 위에 쌓는다. */
+.app-sidebar-fixed {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  padding-bottom: 8px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-sidebar-fixed .file-tree-root-actions {
+  padding-bottom: 0;
+}
+
 .sidebar-toggle-btn {
   flex-shrink: 0;
   width: 16px;

@@ -174,6 +174,8 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **설정 메뉴**: 창 맨 위 메뉴의 "설정"에서 "정렬 뒤집기"를 켜고 끔(기본 꺼짐 = 항상 오름차순)과 "타자기 스크롤"을 고름. [`docs/features/settings-menu.md`](docs/features/settings-menu.md)
 - **Ctrl+Shift+` (묶음 정렬)**: 선택한 줄들을 묶음(맨 윗줄 + 딸린 들여쓴 줄) 단위로 이름순 정렬. `* 항목`·`1. 항목`·들여쓰기·빈 줄로 묶음을 나누고, 번호 목록은 번호를 제자리에 둠. [`docs/features/block-sort.md`](docs/features/block-sort.md)
 - **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)
+- **사이드바 고정 머리**: 검색칸과 "+ 새 문서"·"+ 새 폴더" 는 목록을 스크롤해도 맨 위에 늘 보임. [`docs/features/sidebar-fixed-header.md`](docs/features/sidebar-fixed-header.md)
+- **AI챗 폴더의 별표 짝 맞추기**: 최상위 폴더 "AI챗" 안의 문서에서 `*` 를 치면 `*|*`(한 번 더 치면 `**|**`), 글을 선택하고 치면 `*글*` 로 감쌈. 다른 폴더에서는 동작하지 않음. [`docs/features/ai-chat-asterisk.md`](docs/features/ai-chat-asterisk.md)
 - **Ctrl+M (사이드바 열기·닫기)**: 왼쪽 문서/폴더 목록 사이드바를 열고 닫음. 편집 중에도 됨. [`docs/features/sidebar-toggle.md`](docs/features/sidebar-toggle.md)
 - **문서 찾기·바꾸기의 줄바꿈**: 찾을 내용·바꿀 내용 칸에서 Shift+Enter 로 줄바꿈을 넣거나 여러 줄을 붙여 넣어 줄바꿈까지 찾고 바꿈(`
 ` 표기 없이 보이는 대로). 이전 찾기는 Ctrl+Enter/Shift+F3, 다음은 Enter/F3. 현재 찾은 글을 노란 배경으로 표시, 모두 바꾸기는 Ctrl+Z 한 번으로 되돌림. [`docs/features/doc-find-multiline.md`](docs/features/doc-find-multiline.md)

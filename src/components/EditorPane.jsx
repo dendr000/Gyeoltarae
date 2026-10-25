@@ -58,6 +58,7 @@ import { wordCandidates } from '../lib/scopeWords.js'
 import { lineIndexAt } from '../lib/lineMarks.js'
 import { headingLineFlags } from '../lib/editorHeading.js'
 import { isNumpadEnterKey } from '../lib/numpadEnter.js'
+import { asteriskPairEdit, isAiChatDoc } from '../lib/asteriskPair.js'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -553,6 +554,9 @@ export function EditorPane({ text, onChange, disabled }) {
   const scopeWordIndex = useAppStore((s) => s.scopeWordIndex)
   const wholeScopeTopFolders = useAppStore((s) => s.wholeScopeTopFolders)
   const workspacePath = useAppStore((s) => s.workspacePath)
+  // 최상위 폴더 "AI챗" 안의 문서에서만 별표(*)를 치면 짝(**)을 맞춰 준다(규칙: lib/asteriskPair.js). asteriskFreshRef 는 방금 짝을 만든 자리(커서 위치)이다.
+  const aiChatDoc = isAiChatDoc(openPath, workspacePath)
+  const asteriskFreshRef = useRef(-1)
   const suggestEntries = useMemo(() => {
     if (!scopeWordIndex || !openPath || !workspacePath) return activeSnippets
     // 언어 폴더(C++, Java ...)의 상용구는 그 언어의 코드블록에서만 쓰이므로(lib/snippetLanguage.js) 같은 이름의 영어 단어를
@@ -1422,6 +1426,27 @@ export function EditorPane({ text, onChange, disabled }) {
           requestAnimationFrame(() => {
             textarea.focus()
             textarea.setSelectionRange(selectionStart + edit.caret, selectionStart + edit.caret)
+          })
+          return
+        }
+      }
+      // 별표 짝 맞추기("AI챗" 폴더 문서만). 방금 짝을 만든 자리는 기억해 두었다가 바로 이어서 치는 별표(굵게)·공백(목록 표시)에만 쓴다.
+      const asteriskFresh = asteriskFreshRef.current
+      if (e.key !== 'Shift') asteriskFreshRef.current = -1
+      if (aiChatDoc && (e.key === '*' || e.key === ' ')) {
+        const edit = asteriskPairEdit(value, selectionStart, selectionEnd, e.key, asteriskFresh)
+        if (edit) {
+          e.preventDefault()
+          if (edit.type === 'move') {
+            textarea.setSelectionRange(edit.caret, edit.caret)
+            return
+          }
+          replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+          textarea.setSelectionRange(edit.selStart, edit.selEnd)
+          if (edit.fresh) asteriskFreshRef.current = edit.selStart
+          requestAnimationFrame(() => {
+            textarea.focus()
+            textarea.setSelectionRange(edit.selStart, edit.selEnd)
           })
           return
         }
