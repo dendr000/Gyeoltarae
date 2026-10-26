@@ -156,6 +156,6 @@ describe('헤더의 진행 표시 (소스 점검)', () => {
   })
 
   it('스토어는 불러오기가 실패해도 표시를 끄도록 finally 에서 null 로 돌린다', () => {
-    expect(store).toMatch(/\} finally \{\s*if \(showSnippetLoad\) set\(\{ snippetLoad: null \}\)/)
+    expect(store).toMatch(/\} finally \{\s*if \(show\) useAppStore\.setState\(\{ snippetLoad: null \}\)/)
   })
 })

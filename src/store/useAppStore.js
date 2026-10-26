@@ -12,12 +12,11 @@ import {
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
 import { clearScroll } from '../lib/scrollMemory.js'
-import { ALL_FOLDER, nextFolderAfterClose, withFolderEnabled } from '../lib/snippetScope.js'
+import { ALL_FOLDER, diffDisabledFolders, nextFolderAfterClose, selectLoadableItems, summarizeSnippetFolders, withFolderEnabled } from '../lib/snippetScope.js'
 import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
-import { parseSnippetOrder } from '../lib/snippetOrder.js'
-import { isProgressTick, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
+import { isProgressTick, loadSnippetEntries, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
@@ -208,6 +207,42 @@ function loadDisabledSnippetFolders() {
     return Array.isArray(parsed) ? parsed.filter((name) => typeof name === 'string') : []
   } catch {
     return []
+  }
+}
+
+function persistDisabledSnippetFolders(folders) {
+  const next = [...new Set(folders)]
+  try {
+    localStorage.setItem(SNIPPET_DISABLED_FOLDERS_STORAGE_KEY, JSON.stringify(next))
+  } catch {
+    /* localStorage unavailable; 재시작하면 전부 사용으로 돌아갈 뿐 */
+  }
+  return next
+}
+
+// 상용구를 새로 등록하는 폴더가 읽지 않기로 한 폴더이면 다시 켠다 — 안 그러면 방금 만든 상용구가 목록에 안 나온다. 읽기는 뒤따르는 색인 다시 만들기가 한다.
+function enableSnippetFolderQuietly(folder) {
+  const state = useAppStore.getState()
+  if (!state.disabledSnippetFolders.includes(folder)) return
+  useAppStore.setState({ disabledSnippetFolders: persistDisabledSnippetFolders(state.disabledSnippetFolders.filter((name) => name !== folder)) })
+}
+
+// 상용구 파일들을 읽어 색인을 만든다. 많으면(lib/snippetLoad.js) 읽는 동안 헤더에 진행 표시(snippetLoad)를 띄우고, 끝나거나 실패하면 반드시 끈다.
+async function readSnippetsWithProgress(api, items, orderTexts) {
+  const total = items.length
+  const show = shouldShowSnippetLoad(total)
+  if (show) useAppStore.setState({ snippetLoad: { done: 0, total } })
+  try {
+    return await loadSnippetEntries({
+      readFile: (filePath) => api.readFile(filePath),
+      items,
+      orderTexts,
+      onProgress: (done) => {
+        if (show && isProgressTick(done)) useAppStore.setState({ snippetLoad: { done, total } })
+      },
+    })
+  } finally {
+    if (show) useAppStore.setState({ snippetLoad: null })
   }
 }
 
@@ -489,6 +524,8 @@ export const useAppStore = create((set, get) => ({
   snippetIndex: {},
   // 상용구를 불러오는 중이면 { done, total }, 아니면 null. 상용구가 많을 때만 채워진다(lib/snippetLoad.js). 헤더의 "저장됨" 옆 진행 표시가 읽는다.
   snippetLoad: null,
+  // 작업 폴더에 있는 상용구 폴더 전체의 [{ name, count }](가나다순) — 읽지 않기로 한 폴더도 포함한다. "폴더별 사용" 탭이 읽는다(rebuildIndexes 가 채운다).
+  snippetFolders: [],
   // 상용구 자동완성 관련 스위치 둘 다 localStorage 저장(테마와 동일 패턴) — 워크스페이스와
   // 무관한 사용자 UI 설정이라 파일로 저장하지 않음.
   snippetSuggestEnabled: loadSnippetSuggestEnabled(),
@@ -585,14 +622,38 @@ export const useAppStore = create((set, get) => ({
   },
 
   // 체크를 푼 폴더 목록을 통째로 바꾼다("모두 선택", "모두 해제", "이것만" 이 쓴다).
+  // 체크를 바꾸면 그에 맞춰 상용구를 바로 정리한다: 새로 끈 폴더는 색인에서 빼고, 새로 켠 폴더는 그 폴더만 읽어 온다(약속을 돌려준다).
   setDisabledSnippetFolders(folders) {
-    const next = [...new Set(folders)]
-    try {
-      localStorage.setItem(SNIPPET_DISABLED_FOLDERS_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      /* localStorage unavailable; 재시작하면 전부 사용으로 돌아갈 뿐 */
-    }
+    const before = get().disabledSnippetFolders
+    const next = persistDisabledSnippetFolders(folders)
     set({ disabledSnippetFolders: next })
+    return get().applySnippetFolderChange(before, next)
+  },
+
+  async applySnippetFolderChange(before, after) {
+    const { newlyDisabled, newlyEnabled } = diffDisabledFolders(before, after)
+    if (newlyDisabled.length > 0) {
+      const gone = new Set(newlyDisabled)
+      const kept = {}
+      for (const [key, entry] of Object.entries(get().snippetIndex)) if (!gone.has(entry.category)) kept[key] = entry
+      set({ snippetIndex: kept })
+    }
+    if (newlyEnabled.length > 0) await get().loadSnippetFolders(newlyEnabled)
+  },
+
+  // 다시 켠 폴더(들)의 상용구만 읽어 색인에 더한다. 읽는 동안 다시 꺼진 폴더의 것은 더하지 않는다.
+  async loadSnippetFolders(names) {
+    const api = getApi()
+    const { workspacePath } = get()
+    if (!workspacePath || names.length === 0) return
+    const wanted = new Set(names)
+    const items = (await api.scanSnippets(workspacePath)).filter((item) => wanted.has(item.category))
+    const orderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
+    const loaded = await readSnippetsWithProgress(api, items, orderTexts)
+    const stillOff = new Set(get().disabledSnippetFolders)
+    const additions = {}
+    for (const [key, entry] of Object.entries(loaded)) if (!stillOff.has(entry.category)) additions[key] = entry
+    set({ snippetIndex: { ...get().snippetIndex, ...additions } })
   },
 
   // 켤 때는 지금 색인에서 바로 단어 색인을 만들고, 끄면 비워서 저장할 때마다 드는 계산을 없앤다.
@@ -649,7 +710,7 @@ export const useAppStore = create((set, get) => ({
   },
 
   setSnippetFolderEnabled(folder, enabled) {
-    get().setDisabledSnippetFolders(withFolderEnabled(get().disabledSnippetFolders, folder, enabled))
+    return get().setDisabledSnippetFolders(withFolderEnabled(get().disabledSnippetFolders, folder, enabled))
   },
 
   setSnippetResetFolderOnClose(enabled) {
@@ -897,34 +958,9 @@ export const useAppStore = create((set, get) => ({
     // 폴더별 순서 목록(_순서.txt, lib/snippetOrder.js)을 한 번에 받아 폴더마다 해석해 둔다. 후보에
     // rank(목록에서의 위치, 작을수록 위)를 붙여 추천 팝업이 SELECT 를 SET 보다 위에 올리게 하는 데 쓴다.
     const snippetOrderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
-    const snippetOrders = {}
-    const snippetIndex = {}
-    // 상용구가 많으면 읽는 데 시간이 걸리므로 진행 상황(done/total)을 알려 헤더에 진행 표시를 띄운다. 끝나거나 실패하면 반드시 끈다.
-    const showSnippetLoad = shouldShowSnippetLoad(snippetItems.length)
-    if (showSnippetLoad) set({ snippetLoad: { done: 0, total: snippetItems.length } })
-    try {
-      let done = 0
-      for (const item of snippetItems) {
-        done += 1
-        if (showSnippetLoad && isProgressTick(done)) set({ snippetLoad: { done, total: snippetItems.length } })
-        let content = ''
-        try {
-          content = await api.readFile(item.path)
-        } catch {
-          continue
-        }
-        snippetOrders[item.category] ??= parseSnippetOrder(snippetOrderTexts[item.category])
-        snippetIndex[`${item.category}/${item.title}`] = {
-          category: item.category,
-          title: item.title,
-          path: item.path,
-          content,
-          rank: snippetOrders[item.category].get(item.title),
-        }
-      }
-    } finally {
-      if (showSnippetLoad) set({ snippetLoad: null })
-    }
+    // 체크를 푼 폴더(폴더별 사용 탭)는 파일을 읽지 않는다 — 시작이 빨라진다. 폴더 목록(snippetFolders)에는 그대로 남겨 다시 켤 수 있게 한다.
+    const snippetFolders = summarizeSnippetFolders(snippetItems)
+    const snippetIndex = await readSnippetsWithProgress(api, selectLoadableItems(snippetItems, get().disabledSnippetFolders), snippetOrderTexts)
 
     // 고유명사 사전 — one flat file, re-read fresh from disk every rebuild
     // same as everything else here (the ~800ms autosave debounce means this
@@ -945,7 +981,7 @@ export const useAppStore = create((set, get) => ({
 
     // 폴더 범위 영어 단어 색인 — 추천이 켜져 있을 때만 만든다(문서 전체를 한 번 훑는 계산이라서).
     const scopeWordIndex = get().scopeWordSuggestEnabled ? buildScopeWordIndex(searchIndex, workspacePath) : null
-    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, snippetIndex, dictText, dictMap, scopeWordIndex })
+    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, snippetIndex, snippetFolders, dictText, dictMap, scopeWordIndex })
   },
 
   // Opens a category: loads its page for editing if one already exists,
@@ -1091,6 +1127,7 @@ export const useAppStore = create((set, get) => ({
     const { workspacePath } = get()
     if (!workspacePath) return
     const safeCategory = category?.trim() || '공통'
+    enableSnippetFolderQuietly(safeCategory)
     const filePath = await api.ensureSnippet(workspacePath, safeCategory, title)
     await api.writeFile(filePath, content)
     await get().rebuildIndexes()
@@ -1106,6 +1143,7 @@ export const useAppStore = create((set, get) => ({
     const { workspacePath, snippetIndex } = get()
     if (!workspacePath) return 0
     const safeCategory = category?.trim() || '공통'
+    enableSnippetFolderQuietly(safeCategory)
     const lines = rawText.split('\n')
     let count = 0
     for (const rawLine of lines) {

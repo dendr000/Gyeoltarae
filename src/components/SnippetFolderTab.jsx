@@ -3,11 +3,11 @@ import { useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
 import { disabledAllExcept } from '../lib/snippetScope.js'
 
-// 상용구 모달의 "폴더별 사용" 탭 — 폴더마다 "자동 추천에 쓰기" 체크를 둔다. 체크를 푼 폴더의 상용구는
-// 에디터의 자동 추천 팝업·스페이스바 치환·Alt+Enter 에서 빠진다(규칙: lib/snippetScope.js). 기본은 전부
-// 체크(= 전체)이고, 설정은 이 PC 에 저장된다. 목록 탭에서 보는 폴더·상용구 자체는 그대로다.
+// 상용구 모달의 "폴더별 사용" 탭 — 폴더마다 "사용" 체크를 둔다. 체크를 푼 폴더의 상용구는 앱이 켜질 때 읽지 않아서(시작이 빨라짐)
+// 에디터의 자동 추천 팝업·스페이스바 치환·Alt+Enter, 이 창의 목록, 툴바 "상용구 삽입" 목록 어디에도 나오지 않는다(규칙: lib/snippetScope.js).
+// 기본은 전부 체크(= 전체)이고, 설정은 이 PC 에 저장된다. 폴더 목록(이 탭)은 읽지 않은 폴더도 보여 준다. 다시 체크하면 그 폴더만 읽어 온다.
 export function SnippetFolderTab() {
-  const snippetIndex = useAppStore((s) => s.snippetIndex)
+  const folders = useAppStore((s) => s.snippetFolders)
   const disabledFolders = useAppStore((s) => s.disabledSnippetFolders)
   const setFolderEnabled = useAppStore((s) => s.setSnippetFolderEnabled)
   const setDisabledFolders = useAppStore((s) => s.setDisabledSnippetFolders)
@@ -28,15 +28,6 @@ export function SnippetFolderTab() {
       .sort((a, b) => a.localeCompare(b, 'ko'))
   }, [tree, workspacePath])
 
-  // 폴더별 상용구 개수(가나다순). 상용구가 하나도 없는 폴더는 목록에 나오지 않는다.
-  const folders = useMemo(() => {
-    const counts = new Map()
-    for (const entry of Object.values(snippetIndex)) counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1)
-    return [...counts.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-  }, [snippetIndex])
-
   const disabledSet = new Set(disabledFolders)
   const enabledFolders = folders.filter((f) => !disabledSet.has(f.name))
   const enabledSnippetCount = enabledFolders.reduce((sum, f) => sum + f.count, 0)
@@ -45,9 +36,9 @@ export function SnippetFolderTab() {
   return (
     <div className="snippet-folder-tab">
       <div className="snippet-folder-summary">
-        자동 추천에 쓰는 폴더 {enabledFolders.length}/{folders.length}개 (상용구 {enabledSnippetCount}개)
+        사용하는 폴더 {enabledFolders.length}/{folders.length}개 (상용구 {enabledSnippetCount}개)
         {enabledFolders.length === 0 && folders.length > 0 && (
-          <span className="snippet-folder-warning"> — 모두 꺼져 있어서 추천 팝업과 자동 치환이 아무것도 못 찾습니다</span>
+          <span className="snippet-folder-warning"> — 모두 꺼져 있어서 상용구를 하나도 읽지 않습니다</span>
         )}
       </div>
       <div className="snippet-folder-actions">
@@ -116,8 +107,9 @@ export function SnippetFolderTab() {
           ))}
       </div>
       <p className="snippet-folder-hint">
-        체크를 푼 폴더의 상용구는 글을 쓰다가 뜨는 추천 팝업, 스페이스바 자동 치환, Alt+Enter 에서 빠집니다. 툴바의
-        &quot;상용구 삽입&quot; 목록과 이 창의 &quot;상용구&quot; 탭 목록에는 그대로 보입니다. 새로 만든 폴더는 처음에 체크된 상태입니다.
+        체크를 푼 폴더는 앱을 켤 때 <b>읽지 않아서</b> 시작이 빨라지고, 추천 팝업·스페이스바 자동 치환·Alt+Enter, 이 창의
+        &quot;상용구&quot; 탭 목록, 툴바의 &quot;상용구 삽입&quot; 목록에서 <b>모두 사라집니다</b>(파일은 그대로 있습니다). 다시 체크하면 그 폴더만 바로
+        읽어 옵니다. 새로 만든 폴더는 처음에 체크된 상태입니다.
       </p>
     </div>
   )

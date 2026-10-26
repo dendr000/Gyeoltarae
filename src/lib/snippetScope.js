@@ -35,6 +35,31 @@ export function withFolderEnabled(disabledFolders, folder, enabled) {
   return enabled ? rest : [...rest, folder]
 }
 
+// 읽어 올 상용구만 고른다. 체크를 푼 폴더(disabledFolders)의 상용구는 앱이 켜질 때 파일을 읽지 않는다 — 상용구가 수천 개일 때
+// 시작이 느려지는 것을 줄이려는 것이다. 읽지 않은 폴더는 이 창의 목록·툴바 "상용구 삽입" 목록에도 나오지 않는다(원본 파일은 그대로).
+export function selectLoadableItems(items, disabledFolders) {
+  if (!disabledFolders || disabledFolders.length === 0) return items
+  const disabled = new Set(disabledFolders)
+  return items.filter((item) => !disabled.has(item.category))
+}
+
+// 폴더별 상용구 개수(가나다순). 읽지 않은 폴더도 포함한다 — "폴더별 사용" 탭에서 다시 켤 수 있어야 하기 때문이다.
+export function summarizeSnippetFolders(items) {
+  const counts = new Map()
+  for (const item of items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1)
+  return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+}
+
+// 폴더 체크가 바뀌었을 때 무엇을 해야 하는지: 새로 끈 폴더(색인에서 뺀다)와 새로 켠 폴더(그 폴더만 읽어 온다).
+export function diffDisabledFolders(before, after) {
+  const was = new Set(before)
+  const now = new Set(after)
+  return {
+    newlyDisabled: [...now].filter((name) => !was.has(name)),
+    newlyEnabled: [...was].filter((name) => !now.has(name)),
+  }
+}
+
 // 고른 폴더만 쓰고 나머지는 전부 끈 목록 — "이것만" 버튼.
 export function disabledAllExcept(allFolders, folder) {
   return allFolders.filter((name) => name !== folder)
