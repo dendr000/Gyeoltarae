@@ -1,4 +1,7 @@
 import { FontSettings } from './FontSettings.jsx'
+import { snippetLoadPercent } from '../lib/snippetLoad.js'
+import { formatCount } from '../lib/charCount.js'
+import { useAppStore } from '../store/useAppStore.js'
 
 const MODES = [
   { key: 'preview', label: '뷰어', shortcut: 'Ctrl+1' },
@@ -27,6 +30,8 @@ const SAVE_LABEL = {
 }
 
 export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onThemeChange }) {
+  // 상용구를 불러오는 중이면 { done, total }(lib/snippetLoad.js). "저장됨" 옆에 돌아가는 표시와 게이지바로 보여 준다.
+  const snippetLoad = useAppStore((s) => s.snippetLoad)
   const nextTheme = () => {
     const idx = THEME_ORDER.indexOf(theme)
     onThemeChange(THEME_ORDER[(idx + 1) % THEME_ORDER.length])
@@ -48,6 +53,21 @@ export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onT
         ))}
       </div>
       <div className="editor-header-right">
+        {snippetLoad && (
+          <span
+            className="snippet-load"
+            role="status"
+            title={`상용구 ${formatCount(snippetLoad.total)}개를 불러오는 중입니다. 끝나면 사라집니다.`}
+          >
+            <span className="snippet-load-spinner" aria-hidden="true" />
+            <span className="snippet-load-text">
+              상용구 {formatCount(snippetLoad.done)}/{formatCount(snippetLoad.total)}
+            </span>
+            <span className="snippet-load-bar" aria-hidden="true">
+              <span className="snippet-load-bar-fill" style={{ width: `${snippetLoadPercent(snippetLoad)}%` }} />
+            </span>
+          </span>
+        )}
         <span className={`save-status save-status-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
         <FontSettings />
         <button

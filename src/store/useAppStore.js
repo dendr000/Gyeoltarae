@@ -17,6 +17,7 @@ import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
 import { parseSnippetOrder } from '../lib/snippetOrder.js'
+import { isProgressTick, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
@@ -486,6 +487,8 @@ export const useAppStore = create((set, get) => ({
   // { ["카테고리/제목"]: { category, title, path, content } } — 상용구
   // (텍스트 자동완성). See rebuildIndexes and createSnippetWithContent/deleteSnippet.
   snippetIndex: {},
+  // 상용구를 불러오는 중이면 { done, total }, 아니면 null. 상용구가 많을 때만 채워진다(lib/snippetLoad.js). 헤더의 "저장됨" 옆 진행 표시가 읽는다.
+  snippetLoad: null,
   // 상용구 자동완성 관련 스위치 둘 다 localStorage 저장(테마와 동일 패턴) — 워크스페이스와
   // 무관한 사용자 UI 설정이라 파일로 저장하지 않음.
   snippetSuggestEnabled: loadSnippetSuggestEnabled(),
@@ -896,21 +899,31 @@ export const useAppStore = create((set, get) => ({
     const snippetOrderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
     const snippetOrders = {}
     const snippetIndex = {}
-    for (const item of snippetItems) {
-      let content = ''
-      try {
-        content = await api.readFile(item.path)
-      } catch {
-        continue
+    // 상용구가 많으면 읽는 데 시간이 걸리므로 진행 상황(done/total)을 알려 헤더에 진행 표시를 띄운다. 끝나거나 실패하면 반드시 끈다.
+    const showSnippetLoad = shouldShowSnippetLoad(snippetItems.length)
+    if (showSnippetLoad) set({ snippetLoad: { done: 0, total: snippetItems.length } })
+    try {
+      let done = 0
+      for (const item of snippetItems) {
+        done += 1
+        if (showSnippetLoad && isProgressTick(done)) set({ snippetLoad: { done, total: snippetItems.length } })
+        let content = ''
+        try {
+          content = await api.readFile(item.path)
+        } catch {
+          continue
+        }
+        snippetOrders[item.category] ??= parseSnippetOrder(snippetOrderTexts[item.category])
+        snippetIndex[`${item.category}/${item.title}`] = {
+          category: item.category,
+          title: item.title,
+          path: item.path,
+          content,
+          rank: snippetOrders[item.category].get(item.title),
+        }
       }
-      snippetOrders[item.category] ??= parseSnippetOrder(snippetOrderTexts[item.category])
-      snippetIndex[`${item.category}/${item.title}`] = {
-        category: item.category,
-        title: item.title,
-        path: item.path,
-        content,
-        rank: snippetOrders[item.category].get(item.title),
-      }
+    } finally {
+      if (showSnippetLoad) set({ snippetLoad: null })
     }
 
     // 고유명사 사전 — one flat file, re-read fresh from disk every rebuild
