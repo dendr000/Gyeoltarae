@@ -607,6 +607,21 @@ export function EditorPane({ text, onChange, disabled }) {
     snippetStopsRef.current = null
   }, [openPath])
 
+  // 이미지 공간 우클릭 "문서에 넣기" — 클립보드를 거치지 않고 커서 자리에 단독 줄로 넣는다(스토어 editorInsertRequest). 받으면 바로 지워서 한 번만 넣는다.
+  // 효과(렌더 직후) 안에서 바로 넣으면 리액트가 입력 칸의 값을 옛 글로 되돌려 버려서(글자를 넣은 직후 옛 값으로 다시 저장됨) 한 틱 미룬다.
+  const editorInsertRequest = useAppStore((s) => s.editorInsertRequest)
+  const clearEditorInsert = useAppStore((s) => s.clearEditorInsert)
+  useEffect(() => {
+    if (!editorInsertRequest) return undefined
+    const request = editorInsertRequest
+    const timer = setTimeout(() => {
+      const textarea = textareaRef.current
+      if (textarea && !disabled) insertBlockText(textarea, onChange, request.text)
+      clearEditorInsert(request.id)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [editorInsertRequest, disabled, onChange, clearEditorInsert])
+
   // 탭 전환 시 에디터 스크롤 위치 복원 — activeTabId가 바뀔 때만(타이핑으로 text가 바뀔
   // 때마다는 아님) 그 탭에서 마지막으로 기억해 둔 위치로 되돌림. 실제 저장은 아래
   // textarea의 onScroll에서 매 스크롤마다 scrollMemory.js에 직접 씀 — 리액트 상태를 거치지

@@ -17,6 +17,7 @@ import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
 import { isProgressTick, loadSnippetEntries, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
+import { hasImageRef, renameImageRefs } from '../lib/imageRefs.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
 import { decodeFileNameChars } from '../../shared/fileNameChars.js'
@@ -526,6 +527,8 @@ export const useAppStore = create((set, get) => ({
   snippetLoad: null,
   // 작업 폴더에 있는 상용구 폴더 전체의 [{ name, count }](가나다순) — 읽지 않기로 한 폴더도 포함한다. "폴더별 사용" 탭이 읽는다(rebuildIndexes 가 채운다).
   snippetFolders: [],
+  // 이미지 공간의 "문서에 넣기"가 편집창에 글을 넣어 달라고 보내는 요청({ id, text }) 또는 null. 편집창(EditorPane)이 받아 커서 자리에 넣고 지운다(클립보드를 쓰지 않으려는 것).
+  editorInsertRequest: null,
   // 상용구 자동완성 관련 스위치 둘 다 localStorage 저장(테마와 동일 패턴) — 워크스페이스와
   // 무관한 사용자 UI 설정이라 파일로 저장하지 않음.
   snippetSuggestEnabled: loadSnippetSuggestEnabled(),
@@ -1367,12 +1370,65 @@ export const useAppStore = create((set, get) => ({
   // renameImage). Same as delete: existing [[파일:이름]] references using
   // the old name just go back to showing the "파일 없음" placeholder,
   // they're not rewritten.
+  // 이미지 이름을 바꾸고, 문서에 이미 쓰여 있는 [[파일:옛이름]] 참조도 새 이름으로 같이 바꾼다(lib/imageRefs.js). 바꾼 문서 수를 돌려준다.
   async renameImage(oldName, newName) {
     const api = getApi()
     const { workspacePath } = get()
-    if (!workspacePath) return
-    await api.renameImage(workspacePath, oldName, newName)
+    if (!workspacePath) return 0
+    // 열어 둔 문서의 저장 안 된 글이 아래에서 디스크 글을 고칠 때 덮어써지거나 되돌려지지 않도록 먼저 저장한다.
+    await get().flushActiveTabToDisk()
+    const renamed = await api.renameImage(workspacePath, oldName, newName)
+    const finalName = renamed?.name ?? newName
+    const changed = finalName !== oldName ? await get().rewriteImageReferences(oldName, finalName) : 0
     await get().rebuildIndexes()
+    return changed
+  },
+
+  // 문서·틀·자료·분류 페이지·상용구 중 oldName 이미지를 참조하는 글을 찾아 newName 으로 바꿔 저장하고, 열려 있는 탭의 글도 같이 맞춘다. 바꾼 개수를 돌려준다.
+  async rewriteImageReferences(oldName, newName) {
+    const api = getApi()
+    const state = get()
+    const candidates = new Map() // 경로 -> 색인에 있는 글(후보를 빨리 가리는 용도, 실제 글은 디스크에서 다시 읽는다)
+    for (const [path, entry] of Object.entries(state.searchIndex)) candidates.set(path, entry.content)
+    for (const entry of Object.values(state.templateIndex)) if (entry.path) candidates.set(entry.path, entry.rawText)
+    for (const entry of Object.values(state.dataIndex)) if (entry.path) candidates.set(entry.path, entry.rawText)
+    for (const entry of Object.values(state.categoryIndex)) if (entry.pagePath) candidates.set(entry.pagePath, entry.pageRawText)
+    for (const entry of Object.values(state.snippetIndex)) candidates.set(entry.path, entry.content)
+    // 지금 열어 둔 탭의 글과 화면에 열린 문서의 글(색인보다 새로울 수 있다)도 후보에 넣는다.
+    for (const tab of state.tabs) if (tab.openPath) candidates.set(tab.openPath, tab.rawText)
+    if (state.openPath) candidates.set(state.openPath, state.rawText) // 화면에 열린 문서의 지금 글(탭 스냅샷보다 새롭다)
+
+    const rewritten = new Map() // 경로 -> 바뀐 글
+    for (const [path, indexed] of candidates) {
+      if (typeof indexed !== 'string' || !hasImageRef(indexed, oldName)) continue
+      let content
+      try {
+        content = await api.readFile(path)
+      } catch {
+        continue
+      }
+      const updated = renameImageRefs(content, oldName, newName)
+      if (updated === content) continue
+      await api.writeFile(path, updated)
+      rewritten.set(path, updated)
+    }
+    if (rewritten.size === 0) return 0
+
+    // 열려 있는 탭의 글을 방금 쓴 글로 바꾼다(안 그러면 그 탭이 나중에 저장되면서 옛 참조로 되돌려 버린다).
+    set((s) => {
+      const tabs = s.tabs.map((tab) => (rewritten.has(tab.openPath) ? { ...tab, rawText: rewritten.get(tab.openPath), isDirty: false } : tab))
+      return rewritten.has(s.openPath) ? { tabs, rawText: rewritten.get(s.openPath), isDirty: false } : { tabs }
+    })
+    return rewritten.size
+  },
+
+  // 편집창에 글을 넣어 달라는 요청을 올린다(이미지 공간 우클릭 "문서에 넣기"). 편집창이 받아 커서 자리에 넣고 clearEditorInsert 로 지운다.
+  requestEditorInsert(text) {
+    set({ editorInsertRequest: { id: Date.now() + Math.random(), text } })
+  },
+
+  clearEditorInsert(id) {
+    if (get().editorInsertRequest?.id === id) set({ editorInsertRequest: null })
   },
 
   async openFile(filePath, name) {

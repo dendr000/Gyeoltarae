@@ -5,6 +5,8 @@
 // images:import 참고). 항목을 클릭하면 문서에 붙여넣을 수 있게 [[파일:이름]]
 // 문법을 클립보드로 복사해 줌 — 자료/틀처럼 "열어서 편집"할 텍스트 내용이
 // 없기 때문. 더블클릭하면 FileTree.jsx와 같은 방식으로 이름을 바꿀 수 있음.
+// 우클릭하면 메뉴(문서에 넣기·문법 복사·이름 바꾸기·삭제)가 뜬다. "문서에 넣기"는 클립보드를 쓰지 않고 편집창 커서 자리에 바로 넣는다.
+// 이름을 바꾸면 문서에 이미 쓰인 [[파일:옛이름]] 도 같이 바뀐다(store renameImage, lib/imageRefs.js).
 // 파일 탐색기에서 이미지를 이 영역에 직접 끌어다 놓아도 등록됨 — FileTree의
 // 드롭 영역과는 별개로, 여기 자체가 "이미지"의 자연스러운 드롭 대상이기
 // 때문에(사용자가 실제로 여기다 먼저 끌어다 놔봄) 이 컴포넌트도 직접
@@ -13,6 +15,8 @@ import { useState } from 'react'
 import { getApi } from '../lib/api.js'
 import { readFileAsBase64, IMPORTABLE_IMAGE_EXT } from '../lib/fileEncoding.js'
 import { SidebarSection } from './SidebarSection.jsx'
+import { ContextMenu } from './ContextMenu.jsx'
+import { useAppStore } from '../store/useAppStore.js'
 
 export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteImage, onRenameImage }) {
   const names = Object.keys(imageIndex).sort((a, b) => a.localeCompare(b, 'ko'))
@@ -20,6 +24,11 @@ export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteIma
   const [renamingName, setRenamingName] = useState(null)
   const [draft, setDraft] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [menu, setMenu] = useState(null)
+  const [renameNotice, setRenameNotice] = useState('')
+  // 편집창이 보이는 모드(듀얼·편집)에서 문서가 열려 있을 때만 "문서에 넣기"가 가능하다.
+  const editorAvailable = useAppStore((s) => Boolean(s.openPath) && s.mode !== 'preview')
+  const requestEditorInsert = useAppStore((s) => s.requestEditorInsert)
 
   async function handleDrop(e) {
     e.preventDefault()
@@ -64,10 +73,28 @@ export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteIma
     const trimmed = draft.trim()
     if (!trimmed || trimmed === name) return
     try {
-      await onRenameImage(name, trimmed)
+      const changed = await onRenameImage(name, trimmed)
+      // 문서 속 참조도 같이 바뀐 개수를 잠깐 알려 준다.
+      if (changed > 0) {
+        setRenameNotice(`문서 ${changed}개의 이미지 링크도 함께 바꿨습니다`)
+        setTimeout(() => setRenameNotice(''), 3500)
+      }
     } catch (err) {
       window.alert(`이름을 바꾸지 못했습니다.\n\n${err.message}`)
     }
+  }
+
+  function openImageMenu(e, name) {
+    e.preventDefault()
+    e.stopPropagation()
+    const items = []
+    if (editorAvailable) items.push({ label: '문서에 넣기', onClick: () => requestEditorInsert(`[[파일:${name}]]`) })
+    items.push(
+      { label: '문법 복사 ([[파일:이름]])', onClick: () => handleCopy(name) },
+      { label: '이름 바꾸기', onClick: () => beginRename(name) },
+      { label: '삭제', danger: true, onClick: () => onDeleteImage(name) },
+    )
+    setMenu({ x: e.clientX, y: e.clientY, items })
   }
 
   return (
@@ -101,8 +128,9 @@ export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteIma
                 <div
                   key={name}
                   className="image-sidebar-item"
-                  title={isRenaming ? undefined : '클릭해서 [[파일:이름]] 문법 복사, 더블클릭해서 이름 바꾸기'}
+                  title={isRenaming ? undefined : '클릭: [[파일:이름]] 문법 복사 · 더블클릭: 이름 바꾸기 · 우클릭: 메뉴'}
                   onClick={() => !isRenaming && handleCopy(name)}
+                  onContextMenu={(e) => !isRenaming && openImageMenu(e, name)}
                   onDoubleClick={(e) => {
                     e.stopPropagation()
                     if (!isRenaming) beginRename(name)
@@ -144,7 +172,13 @@ export function ImageSidebar({ imageIndex, onImport, onImportImages, onDeleteIma
             })}
           </div>
         )}
+        {renameNotice && (
+          <div className="image-sidebar-notice" role="status">
+            {renameNotice}
+          </div>
+        )}
       </SidebarSection>
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
   )
 }

@@ -3437,6 +3437,17 @@
   text-align: center;
 }
 
+.image-sidebar-notice {
+  margin: 4px 10px 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 12px;
+  white-space: normal;
+}
+
 .image-sidebar-add-btn {
   border: none;
   background: transparent;
