@@ -38,6 +38,7 @@ export function createSettingsMenu({
   getCountNewlines = () => false,
   onCountNewlinesChange = () => {},
   onOpenShortcuts = () => {},
+  onOpenSnippetLoad = () => {},
 }) {
   return {
     label: '설정',
@@ -83,6 +84,11 @@ export function createSettingsMenu({
           checked: normalizeMagnifierSize(getMagnifierSize()) === size,
           click: () => onMagnifierSizeChange(size),
         })),
+      },
+      {
+        // 상용구 폴더 중 앱을 켤 때 읽을 폴더를 고르는 창("폴더별 사용" 탭)을 연다. 안 읽는 폴더는 시작이 빨라진다.
+        label: '상용구 불러오기…',
+        click: () => onOpenSnippetLoad(),
       },
       { type: 'separator' },
       {

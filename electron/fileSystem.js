@@ -291,6 +291,18 @@ export function snippetsDirPath(workspacePath) {
 // Every snippet across every category subfolder, for the sidebar's "상용구"
 // space and for rebuilding the snippet index. Structurally identical to
 // scanDataEntries — see its own comment for why the shape has to be this.
+// 파일 여러 개를 한꺼번에 읽는다(IPC 한 번). 못 읽은 파일은 null 이다. 파일마다 화면과 IPC 를 주고받으면 수천 개일 때 메인 프로세스가 계속 바빠 창이
+// "응답 없음"이 되고, 반대로 수천 개를 한 번에 읽으면 그동안 메인이 통째로 멈춘다(처음 읽는 파일은 개당 수 ms) — 화면이 100개 안팎씩 나눠 부른다.
+export function readManyFiles(paths) {
+  return paths.map((filePath) => {
+    try {
+      return readDoc(filePath)
+    } catch {
+      return null
+    }
+  })
+}
+
 export function scanSnippets(workspacePath) {
   const root = snippetsDirPath(workspacePath)
   if (!fs.existsSync(root)) return []

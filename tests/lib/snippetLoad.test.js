@@ -86,11 +86,11 @@ describe('스토어의 snippetLoad', () => {
     expect(state().snippetLoad).toBeNull()
   })
 
-  it('상용구가 많으면 0 에서 시작해 STEP 마다 진행 상황을 알리고 끝나면 null 로 돌아온다', async () => {
+  it('상용구가 많으면 0 에서 시작해 chunk(100개)마다 진행 상황을 알리고 끝나면 null 로 돌아온다', async () => {
     const { seen, state } = await observe(120)
     expect(seen[0]).toEqual({ done: 0, total: 120 })
-    expect(seen).toContainEqual({ done: 50, total: 120 })
     expect(seen).toContainEqual({ done: 100, total: 120 })
+    expect(seen).toContainEqual({ done: 120, total: 120 })
     expect(seen.at(-1)).toBeNull()
     expect(state().snippetLoad).toBeNull()
   })
@@ -99,7 +99,7 @@ describe('스토어의 snippetLoad', () => {
     const { seen } = await observe(260)
     const dones = seen.filter(Boolean).map((p) => p.done)
     expect([...dones].sort((a, b) => a - b)).toEqual(dones)
-    expect(Math.max(...dones)).toBe(250)
+    expect(Math.max(...dones)).toBe(260)
   })
 
   it('상용구가 적으면 진행 표시를 한 번도 켜지 않는다', async () => {
@@ -156,6 +156,6 @@ describe('헤더의 진행 표시 (소스 점검)', () => {
   })
 
   it('스토어는 불러오기가 실패해도 표시를 끄도록 finally 에서 null 로 돌린다', () => {
-    expect(store).toMatch(/\} finally \{\s*if \(show\) useAppStore\.setState\(\{ snippetLoad: null \}\)/)
+    expect(store).toMatch(/\} finally \{\s*if \(show && generation === snippetLoadGeneration\) useAppStore\.setState\(\{ snippetLoad: null \}\)/)
   })
 })

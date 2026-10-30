@@ -16,7 +16,7 @@ import { ALL_FOLDER, diffDisabledFolders, nextFolderAfterClose, selectLoadableIt
 import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
 import { buildScopeWordIndex, withWholeTop } from '../lib/scopeWords.js'
 import { shiftMarks, toggleMark } from '../lib/lineMarks.js'
-import { isProgressTick, loadSnippetEntries, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
+import { loadSnippetEntries, shouldShowSnippetLoad } from '../lib/snippetLoad.js'
 import { hasImageRef, renameImageRefs } from '../lib/imageRefs.js'
 import { fillCategoryTags, matchKeywords, relativeSegments } from '../lib/autoCategory.js'
 import { sanitizeFontFamily } from '../lib/monoFont.js'
@@ -228,22 +228,41 @@ function enableSnippetFolderQuietly(folder) {
   useAppStore.setState({ disabledSnippetFolders: persistDisabledSnippetFolders(state.disabledSnippetFolders.filter((name) => name !== folder)) })
 }
 
-// 상용구 파일들을 읽어 색인을 만든다. 많으면(lib/snippetLoad.js) 읽는 동안 헤더에 진행 표시(snippetLoad)를 띄우고, 끝나거나 실패하면 반드시 끈다.
+// 가장 최근에 시작한 상용구 불러오기의 번호. 더 새로운 불러오기가 시작되면 옛 불러오기는 다음 chunk 에서 멈춘다(같은 파일을 두 번 읽거나 옛 결과가 새 결과를 덮지 않게).
+let snippetLoadGeneration = 0
+
+// 감시기가 알려 준 경로가 상용구 폴더 안인지(윈도·맥 경로 모두).
+let watchSnippetsDirty = false
+function isSnippetPath(changedPath) {
+  return typeof changedPath === 'string' && /[\\/]\.wikidesk-snippets([\\/]|$)/.test(changedPath)
+}
+
+// 파일 여러 개를 한 번에 읽는 함수(메인의 files:readMany). 없는 옛 API 면 하나씩 읽는다.
+function readManyOf(api) {
+  if (api.readFiles) return (paths) => api.readFiles(paths)
+  return (paths) => Promise.all(paths.map((filePath) => api.readFile(filePath).catch(() => null)))
+}
+
+// 상용구 파일들을 100개 안팎씩 나눠 읽어 색인을 만든다(lib/snippetLoad.js). 많으면 읽는 동안 헤더에 진행 표시(snippetLoad)를 띄우고, 끝나거나 실패하면 반드시 끈다.
+// 나눌 때마다 한 틱 쉬어서 창이 계속 응답하게 한다. 더 새로운 불러오기가 시작되면 null 을 돌려준다(이 결과는 버려야 한다).
 async function readSnippetsWithProgress(api, items, orderTexts) {
+  const generation = ++snippetLoadGeneration
   const total = items.length
   const show = shouldShowSnippetLoad(total)
   if (show) useAppStore.setState({ snippetLoad: { done: 0, total } })
   try {
     return await loadSnippetEntries({
-      readFile: (filePath) => api.readFile(filePath),
+      readFiles: readManyOf(api),
       items,
       orderTexts,
       onProgress: (done) => {
-        if (show && isProgressTick(done)) useAppStore.setState({ snippetLoad: { done, total } })
+        if (show && generation === snippetLoadGeneration) useAppStore.setState({ snippetLoad: { done, total } })
       },
+      shouldCancel: () => generation !== snippetLoadGeneration,
+      yieldFn: () => new Promise((resolve) => setTimeout(resolve, 0)),
     })
   } finally {
-    if (show) useAppStore.setState({ snippetLoad: null })
+    if (show && generation === snippetLoadGeneration) useAppStore.setState({ snippetLoad: null })
   }
 }
 
@@ -578,6 +597,8 @@ export const useAppStore = create((set, get) => ({
   // 모달을 공유. snippetModalPrefillContent 는 Alt+T 를 누른 순간 선택돼 있던 글자로, 있으면
   // 새 상용구의 "본문" 칸에 미리 채워 줌(갈피의 "선택 영역을 템플릿으로 저장"과 같은 동작).
   snippetModalOpen: false,
+  // 상용구 창을 열 때 처음 보여 줄 탭: 'snippets'(등록·목록) 또는 'folders'(폴더별 사용). 메뉴 "상용구 불러오기…"가 'folders' 로 연다.
+  snippetModalInitialTab: 'snippets',
   snippetModalPrefillContent: '',
 
   requestPrompt(config) {
@@ -602,8 +623,8 @@ export const useAppStore = create((set, get) => ({
     set({ dictModalOpen: false, dictModalPrefillWord: '' })
   },
 
-  openSnippetModal(prefillContent = '') {
-    set({ snippetModalOpen: true, snippetModalPrefillContent: prefillContent })
+  openSnippetModal(prefillContent = '', tab = 'snippets') {
+    set({ snippetModalOpen: true, snippetModalPrefillContent: prefillContent, snippetModalInitialTab: tab === 'folders' ? 'folders' : 'snippets' })
   },
 
   // 닫을 때 "'전체'로 자동 복귀" 설정이 켜져 있으면 활성 폴더를 '전체'로 되돌림(저장값까지) — 사이드바
@@ -653,6 +674,7 @@ export const useAppStore = create((set, get) => ({
     const items = (await api.scanSnippets(workspacePath)).filter((item) => wanted.has(item.category))
     const orderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
     const loaded = await readSnippetsWithProgress(api, items, orderTexts)
+    if (!loaded) return // 더 새로운 불러오기가 시작돼서 이 결과는 버린다
     const stillOff = new Set(get().disabledSnippetFolders)
     const additions = {}
     for (const [key, entry] of Object.entries(loaded)) if (!stillOff.has(entry.category)) additions[key] = entry
@@ -803,15 +825,19 @@ export const useAppStore = create((set, get) => ({
     // every time, and every future file change fires as many redundant
     // full rebuildIndexes() calls as times this has ever run.
     unsubscribeWatch?.()
-    unsubscribeWatch = api.onWatchEvent?.(() => {
+    unsubscribeWatch = api.onWatchEvent?.((event) => {
       // A single save/import/rename easily fires several raw fs events in
       // a burst (chokidar) — debouncing coalesces a burst into one
       // rebuild instead of one per event.
+      // 상용구 폴더(.wikidesk-snippets)가 바뀐 때만 상용구를 다시 읽는다 — 문서를 저장할 때마다 수천 개를 다시 읽으면 저장할 때마다 앱이 멎는다.
+      if (isSnippetPath(event?.path)) watchSnippetsDirty = true
       if (watchRebuildTimer) clearTimeout(watchRebuildTimer)
       watchRebuildTimer = setTimeout(async () => {
+        const reloadSnippets = watchSnippetsDirty
+        watchSnippetsDirty = false
         const freshTree = await api.scanWorkspace(get().workspacePath)
         set({ tree: freshTree })
-        await get().rebuildIndexes()
+        await get().rebuildIndexes({ snippets: reloadSnippets ? 'reload' : 'keep' })
       }, WATCH_REBUILD_DEBOUNCE_MS)
     })
   },
@@ -834,7 +860,7 @@ export const useAppStore = create((set, get) => ({
   //  - templateIndex: {{틀:이름...}}/[include(이름...)] refs (→ usedBy) +
   //    every file in .wikidesk-templates (→ that template's raw body, used
   //    both for the sidebar view and to actually expand calls at render time)
-  async rebuildIndexes() {
+  async rebuildIndexes(options = {}) {
     const api = getApi()
     const { workspacePath } = get()
     if (!workspacePath) return
@@ -955,16 +981,6 @@ export const useAppStore = create((set, get) => ({
       entry.rawText = content
     }
 
-    // 상용구 — same shape as 자료 above, keyed by "카테고리/제목" (a title
-    // can legitimately repeat across different categories).
-    const snippetItems = await api.scanSnippets(workspacePath)
-    // 폴더별 순서 목록(_순서.txt, lib/snippetOrder.js)을 한 번에 받아 폴더마다 해석해 둔다. 후보에
-    // rank(목록에서의 위치, 작을수록 위)를 붙여 추천 팝업이 SELECT 를 SET 보다 위에 올리게 하는 데 쓴다.
-    const snippetOrderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
-    // 체크를 푼 폴더(폴더별 사용 탭)는 파일을 읽지 않는다 — 시작이 빨라진다. 폴더 목록(snippetFolders)에는 그대로 남겨 다시 켤 수 있게 한다.
-    const snippetFolders = summarizeSnippetFolders(snippetItems)
-    const snippetIndex = await readSnippetsWithProgress(api, selectLoadableItems(snippetItems, get().disabledSnippetFolders), snippetOrderTexts)
-
     // 고유명사 사전 — one flat file, re-read fresh from disk every rebuild
     // same as everything else here (the ~800ms autosave debounce means this
     // is never more than momentarily behind whatever's actually being typed
@@ -984,7 +1000,21 @@ export const useAppStore = create((set, get) => ({
 
     // 폴더 범위 영어 단어 색인 — 추천이 켜져 있을 때만 만든다(문서 전체를 한 번 훑는 계산이라서).
     const scopeWordIndex = get().scopeWordSuggestEnabled ? buildScopeWordIndex(searchIndex, workspacePath) : null
-    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, snippetIndex, snippetFolders, dictText, dictMap, scopeWordIndex })
+    // 상용구를 뺀 나머지 색인을 먼저 내보낸다 — 상용구가 수천 개여서 오래 걸려도 검색·문서 링크·분류 같은 것은 바로 쓸 수 있다.
+    set({ categoryIndex, dataIndex, templateIndex, searchIndex, docIndex, imageIndex, dictText, dictMap, scopeWordIndex })
+
+    // 상용구 — same shape as 자료 above, keyed by "카테고리/제목" (a title
+    // can legitimately repeat across different categories).
+    // options.snippets === 'keep' 이면 상용구는 다시 읽지 않는다(문서를 저장할 때마다 상용구 수천 개를 다시 읽을 필요는 없다 — 상용구 폴더가 바뀐 때만 다시 읽는다).
+    if (options.snippets === 'keep') return
+    const snippetItems = await api.scanSnippets(workspacePath)
+    // 폴더별 순서 목록(_순서.txt, lib/snippetOrder.js)을 한 번에 받아 폴더마다 해석해 둔다. 후보에
+    // rank(목록에서의 위치, 작을수록 위)를 붙여 추천 팝업이 SELECT 를 SET 보다 위에 올리게 하는 데 쓴다.
+    const snippetOrderTexts = (await api.readSnippetOrders?.(workspacePath)) ?? {}
+    // 체크를 푼 폴더(폴더별 사용 탭)는 파일을 읽지 않는다 — 시작이 빨라진다. 폴더 목록(snippetFolders)에는 그대로 남겨 다시 켤 수 있게 한다.
+    set({ snippetFolders: summarizeSnippetFolders(snippetItems) })
+    const snippetIndex = await readSnippetsWithProgress(api, selectLoadableItems(snippetItems, get().disabledSnippetFolders), snippetOrderTexts)
+    if (snippetIndex) set({ snippetIndex }) // null 이면 더 새로운 불러오기가 시작됐다는 뜻이라 이 결과는 버린다
   },
 
   // Opens a category: loads its page for editing if one already exists,

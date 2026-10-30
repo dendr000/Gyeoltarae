@@ -58,7 +58,7 @@ export function SnippetModal({ onClose, onOpenInEditor, initialContent = '' }) {
   const [bulkResult, setBulkResult] = useState('')
   const [search, setSearch] = useState('')
   // 'snippets' = 등록·목록, 'folders' = 폴더별 자동 추천 사용 체크
-  const [tab, setTab] = useState('snippets')
+  const [tab, setTab] = useState(() => useAppStore.getState().snippetModalInitialTab)
 
   const targetCategory = folder === '전체' ? '공통' : folder
 

@@ -169,6 +169,12 @@ export default function App() {
     return unsubscribe
   }, [])
 
+  // 메뉴 "설정" > "상용구 불러오기…": 상용구 창을 "폴더별 사용" 탭으로 연다.
+  useEffect(() => {
+    const unsubscribe = getApi().onMenuOpenSnippetLoad?.(() => useAppStore.getState().openSnippetModal('', 'folders'))
+    return unsubscribe
+  }, [])
+
   // Ctrl+W — 탭 닫기. electron/main.js가 "창" 메뉴의 role:'close' 기본 가속기(Ctrl+W)를
   // Alt+F4로 옮겨 뒀으니 여기까지 살아서 도착함 — 그거 없이는 Ctrl+W가 창(=앱) 자체를
   // 닫아버렸음("Ctrl+W 눌렀는데 그냥 exe가 닫혀 버리네" 제보). PromptModal이 떠 있는

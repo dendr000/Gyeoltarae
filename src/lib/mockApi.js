@@ -359,6 +359,18 @@ export function createMockApi() {
       }
       return orders
     },
+    // 파일 여러 개를 한꺼번에 읽는다(메인의 files:readMany 와 같다). 못 읽은 파일은 null.
+    async readFiles(paths) {
+      const out = []
+      for (const filePath of paths) {
+        try {
+          out.push(await this.readFile(filePath))
+        } catch {
+          out.push(null)
+        }
+      }
+      return out
+    },
     async scanSnippets(workspacePath) {
       const prefix = `${workspacePath}/${SNIPPETS_DIR_NAME}/`
       return Object.keys(sampleDocs)
@@ -481,6 +493,9 @@ export function createMockApi() {
       return () => {}
     },
     onMenuOpenShortcuts() {
+      return () => {}
+    },
+    onMenuOpenSnippetLoad() {
       return () => {}
     },
     __isMock: true,

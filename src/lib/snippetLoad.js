@@ -5,31 +5,34 @@
 
 import { parseSnippetOrder } from './snippetOrder.js'
 
-// 상용구 파일들을 읽어 색인({ "카테고리/제목": { category, title, path, content, rank } })을 만든다. readFile 은 앱의 파일 읽기 함수다.
-// 못 읽은 파일은 건너뛴다. onProgress(done) 는 파일 하나를 읽으러 갈 때마다(1부터) 불린다. orderTexts 는 폴더별 _순서.txt 원문이다.
-export async function loadSnippetEntries({ readFile, items, orderTexts = {}, onProgress }) {
+// 상용구 파일들을 읽어 색인({ "카테고리/제목": { category, title, path, content, rank } })을 만든다. readFiles(경로들) 는 앱의 "파일 여러 개 읽기"로, 글 또는 null(못 읽음)의
+// 배열을 돌려준다. 못 읽은 파일은 건너뛴다. 파일을 chunkSize 개씩 나눠 읽고, 나눌 때마다 yieldFn 을 기다려 화면(창 메시지)이 숨 쉬게 한다 — 수천 개를 한꺼번에 읽으면 그동안
+// 메인 프로세스가 통째로 멈춰 창이 "응답 없음"이 되기 때문이다. onProgress(done) 는 chunk 하나를 읽을 때마다 불린다. shouldCancel() 이 true 면 중단하고 null 을 돌려준다
+// (더 새로운 불러오기가 시작된 경우). orderTexts 는 폴더별 _순서.txt 원문이다.
+export const SNIPPET_CHUNK_SIZE = 100
+export async function loadSnippetEntries({ readFiles, items, orderTexts = {}, onProgress, shouldCancel, yieldFn, chunkSize = SNIPPET_CHUNK_SIZE }) {
   const orders = {}
   const index = {}
-  let done = 0
-  for (const item of items) {
-    done += 1
-    onProgress?.(done)
-    let content = ''
-    try {
-      content = await readFile(item.path)
-    } catch {
-      continue
-    }
-    orders[item.category] ??= parseSnippetOrder(orderTexts[item.category])
-    index[`${item.category}/${item.title}`] = {
-      category: item.category,
-      title: item.title,
-      path: item.path,
-      content,
-      rank: orders[item.category].get(item.title),
-    }
+  for (let start = 0; start < items.length; start += chunkSize) {
+    if (shouldCancel?.()) return null
+    const chunk = items.slice(start, start + chunkSize)
+    const contents = await readFiles(chunk.map((item) => item.path))
+    chunk.forEach((item, i) => {
+      const content = contents[i]
+      if (typeof content !== 'string') return
+      orders[item.category] ??= parseSnippetOrder(orderTexts[item.category])
+      index[`${item.category}/${item.title}`] = {
+        category: item.category,
+        title: item.title,
+        path: item.path,
+        content,
+        rank: orders[item.category].get(item.title),
+      }
+    })
+    onProgress?.(Math.min(start + chunkSize, items.length))
+    await yieldFn?.()
   }
-  return index
+  return shouldCancel?.() ? null : index
 }
 
 // 상용구가 이 개수 미만이면 순식간에 끝나므로 표시를 띄우지 않는다(번쩍이는 깜빡임 방지). 이 개수 이상일 때만 진행 표시를 켠다.

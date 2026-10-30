@@ -28,6 +28,7 @@ import {
   ensureDataEntry,
   SNIPPETS_DIR_NAME,
   scanSnippets,
+  readManyFiles,
   readSnippetOrders,
   readAutoCategory,
   writeAutoCategory,
@@ -348,6 +349,7 @@ function buildMenu() {
         mainWindow?.webContents.send('settings:changed', readSettings())
       },
       onOpenShortcuts: () => mainWindow?.webContents.send('menu:open-shortcuts'),
+      onOpenSnippetLoad: () => mainWindow?.webContents.send('menu:open-snippet-load'),
       getHeadingHighlight: () => readSettings().headingHighlight,
       onHeadingHighlightChange: (headingHighlight) => {
         saveConfig({ ...loadConfig(), headingHighlight })
@@ -549,6 +551,10 @@ ipcMain.handle('data:ensure', (_event, workspacePath, type, name) => {
 
 ipcMain.handle('snippets:scan', (_event, workspacePath) => {
   return scanSnippets(workspacePath)
+})
+
+ipcMain.handle('files:readMany', (_event, paths) => {
+  return readManyFiles(paths)
 })
 
 ipcMain.handle('snippets:readOrders', (_event, workspacePath) => {

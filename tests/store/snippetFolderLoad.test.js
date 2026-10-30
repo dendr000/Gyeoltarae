@@ -49,33 +49,6 @@ describe('selectLoadableItems / summarizeSnippetFolders / diffDisabledFolders', 
   })
 })
 
-describe('loadSnippetEntries', () => {
-  it('파일을 읽어 "폴더/제목" 키의 색인을 만들고 못 읽은 것은 건너뛴다', async () => {
-    const readFile = async (path) => {
-      if (path.includes('bad')) throw new Error('읽기 실패')
-      return `본문:${path}`
-    }
-    const index = await loadSnippetEntries({ readFile, items: [item('A', 'ok'), item('A', 'bad')] })
-    expect(Object.keys(index)).toEqual(['A/ok'])
-    expect(index['A/ok']).toMatchObject({ category: 'A', title: 'ok', content: '본문:/mock/snip/A/ok.md' })
-  })
-
-  it('폴더별 순서 파일의 위치(rank)를 붙인다', async () => {
-    const index = await loadSnippetEntries({
-      readFile: async () => '',
-      items: [item('A', 'x'), item('A', 'y')],
-      orderTexts: { A: 'y\nx' },
-    })
-    expect(index['A/y'].rank).toBeLessThan(index['A/x'].rank)
-  })
-
-  it('파일 하나를 읽으러 갈 때마다 1부터 진행을 알린다', async () => {
-    const seen = []
-    await loadSnippetEntries({ readFile: async () => '', items: [item('A', '1'), item('A', '2'), item('A', '3')], onProgress: (n) => seen.push(n) })
-    expect(seen).toEqual([1, 2, 3])
-  })
-})
-
 describe('스토어: 읽지 않는 폴더', () => {
   async function setup({ disabled = [] } = {}) {
     vi.stubGlobal('localStorage', fakeLocalStorage({ 'wikidesk-snippet-disabled-folders': JSON.stringify(disabled) }))

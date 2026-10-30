@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   ensureDataEntry: (workspacePath, type, name) => ipcRenderer.invoke('data:ensure', workspacePath, type, name),
 
   scanSnippets: (workspacePath) => ipcRenderer.invoke('snippets:scan', workspacePath),
+  readFiles: (paths) => ipcRenderer.invoke('files:readMany', paths),
   readSnippetOrders: (workspacePath) => ipcRenderer.invoke('snippets:readOrders', workspacePath),
   readAutoCategory: (workspacePath, dirPath, ownOnly) =>
     ipcRenderer.invoke('autocategory:read', workspacePath, dirPath, ownOnly),
@@ -74,6 +75,13 @@ contextBridge.exposeInMainWorld('api', {
     const listener = () => callback()
     ipcRenderer.on('menu:open-shortcuts', listener)
     return () => ipcRenderer.removeListener('menu:open-shortcuts', listener)
+  },
+
+  // 메뉴 "설정" > "상용구 불러오기…" — 상용구 창의 "폴더별 사용" 탭을 연다.
+  onMenuOpenSnippetLoad: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('menu:open-snippet-load', listener)
+    return () => ipcRenderer.removeListener('menu:open-snippet-load', listener)
   },
 
   onMenuChooseWorkspace: (callback) => {

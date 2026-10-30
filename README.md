@@ -175,6 +175,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **Ctrl+Shift+` (묶음 정렬)**: 선택한 줄들을 묶음(맨 윗줄 + 딸린 들여쓴 줄) 단위로 이름순 정렬. `* 항목`·`1. 항목`·들여쓰기·빈 줄로 묶음을 나누고, 번호 목록은 번호를 제자리에 둠. [`docs/features/block-sort.md`](docs/features/block-sort.md)
 - **이름에 못 쓰는 글자**: 문서·폴더 이름에 `:` `/` `?` 등을 써도 결타래 안에서는 쓴 그대로 보임(디스크에는 `：` `／` `？` 같은 전각 글자로 저장, 예전에는 `_` 로 바뀜). [`docs/features/file-name-chars.md`](docs/features/file-name-chars.md)
 - **이미지 이름 바꾸기·우클릭 메뉴**: 이미지 영역의 이미지를 우클릭하면 문서에 넣기(클립보드 없이 커서 자리에)·문법 복사·이름 바꾸기·삭제 메뉴가 뜸. 이름을 바꾸면 문서에 이미 쓴 `[[파일:옛이름]]` 도 같이 바뀜. [`docs/features/image-rename.md`](docs/features/image-rename.md)
+- **시작할 때 창이 멈추지 않음**: 상용구를 100개씩 나눠 읽고(수천 개여도 창이 응답), 문서를 저장할 때마다 상용구를 다시 읽지 않음. 메뉴 "설정 > 상용구 불러오기…" 로 읽을 상용구 폴더를 고름. [`docs/features/startup-responsiveness.md`](docs/features/startup-responsiveness.md)
 - **상용구 불러오는 중 표시**: 상용구가 100개 이상이면 불러오는 동안 위쪽 "저장됨" 옆에 돌아가는 동그라미·"상용구 750/4,000"·게이지바가 나타나고 끝나면 사라짐. [`docs/features/snippet-load-indicator.md`](docs/features/snippet-load-indicator.md)
 - **사이드바 고정 머리**: 검색칸과 "+ 새 문서"·"+ 새 폴더" 는 목록을 스크롤해도 맨 위에 늘 보임. [`docs/features/sidebar-fixed-header.md`](docs/features/sidebar-fixed-header.md)
 - **AI챗 폴더의 별표 짝 맞추기**: 최상위 폴더 "AI챗" 안의 문서에서 `*` 를 치면 `*|*`(한 번 더 치면 `**|**`), 글을 선택하고 치면 `*글*` 로 감쌈. 다른 폴더에서는 동작하지 않음. [`docs/features/ai-chat-asterisk.md`](docs/features/ai-chat-asterisk.md)
