@@ -3911,3 +3911,18 @@
   background: var(--accent-bg);
   pointer-events: none;
 }
+
+/* 수식(KaTeX, lib/mathRender.js): 글 속 수식은 본문 글자 크기에 맞추고, 줄 단독 수식은 길면 옆으로 스크롤한다. */
+.wiki-rendered .katex {
+  font-size: 1.1em;
+}
+
+.wiki-rendered .katex-display {
+  margin: 0.8em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.wiki-rendered .katex-display > .katex {
+  font-size: 1.2em;
+}

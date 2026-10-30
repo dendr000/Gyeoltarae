@@ -6,6 +6,7 @@ import { matchCodeFenceOpen, isCodeFenceClose } from './codeFence.js'
 import { resolveCodeLanguage, highlightCode } from './codeHighlight.js'
 import { applySmartQuotes } from './smartQuotes.js'
 import { preserveSpaces } from './preserveSpaces.js'
+import { extractMath, restoreMath, restoreRawMath } from './mathRender.js'
 import { wrapSections } from './sectionFold.js'
 import { lookupDocCandidates } from './docLink.js'
 //
@@ -1350,7 +1351,8 @@ export function parseWikiText(
   const expandedSource = expandTemplates(source ?? '', templateIndex)
   const categories = extractCategories(expandedSource)
   const categoryTags = extractCategoryTags(expandedSource)
-  const cleanedSource = expandedSource.replace(CATEGORY_LINK_RE, '').replace(ALIAS_TAG_RE, '')
+  // 수식(\( \), \[ \], $$ $$)은 위키 문법이 건드리지 않도록 자리 표시 글자로 바꿔 두었다가 맨 끝에서 그려 낸다(lib/mathRender.js).
+  const cleanedSource = extractMath(expandedSource).replace(CATEGORY_LINK_RE, '').replace(ALIAS_TAG_RE, '')
   const lines = mergeMultilineTableRows(cleanedSource.split(/\r?\n/))
   // Only meaningful for the real, top-level "this is literally what's in
   // the editor" call (ViewerPane.jsx's main document render passes
@@ -1584,8 +1586,8 @@ export function parseWikiText(
       const text = heading[3]
       const id = slugifyHeading(text)
       const number = nextHeadingNumber(level)
-      toc.push({ level, text, id, number })
-      const rawOffset = findRawHeadingOffset?.(level, text)
+      toc.push({ level, text: restoreRawMath(text), id, number })
+      const rawOffset = findRawHeadingOffset?.(level, restoreRawMath(text))
       const editLink =
         rawOffset === undefined
           ? ''
@@ -1722,7 +1724,7 @@ export function parseWikiText(
 
   // 화면에 그릴 때만 따옴표를 둥근 것으로 바꾼다(원문은 그대로) — lib/smartQuotes.js. 목차 데이터(toc)의
   // 제목 글은 [[#제목]] 이동이 원문 제목과 맞춰 보는 값이라 바꾸지 않는다.
-  return { html: preserveSpaces(applySmartQuotes(html)), footnotes, tags: [...tags], toc, categories }
+  return { html: restoreMath(preserveSpaces(applySmartQuotes(html))), footnotes, tags: [...tags], toc, categories }
 }
 
 const CHOSEONG = [
