@@ -59,6 +59,8 @@ import { lineIndexAt } from '../lib/lineMarks.js'
 import { headingLineFlags } from '../lib/editorHeading.js'
 import { isNumpadEnterKey } from '../lib/numpadEnter.js'
 import { asteriskPairEdit, isAiChatDoc } from '../lib/asteriskPair.js'
+import { bodyToEditable, editableToBody, footnoteAt, footnoteBodyEdit, footnoteLineSegments } from '../lib/footnoteEdit.js'
+import { FootnoteEditBox } from './FootnoteEditBox.jsx'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
 // All edits go through document.execCommand('insertText', ...) instead of
@@ -473,6 +475,8 @@ function renderHighlightLines(text, marks, headingOn = true) {
   const marked = new Set(marks)
   // 제목 줄 판단은 lib/editorHeading.js — 코드블록(```) 안의 줄은 제목처럼 생겨도 제외한다. 설정(메뉴 "설정" > "제목 강조")을 끄면 제목 줄도 자동 강조가 없다.
   const headingFlags = headingLineFlags(text)
+  // 각주([* 내용])는 각주마다 네 가지 옅은 색을 돌려 칠하고, 그 안의 [br] 은 더 진하게 칠한다(lib/footnoteEdit.js). 글자 크기·여백은 건드리지 않는다(App.css .fn-hl).
+  const footnoteLines = footnoteLineSegments(text)
   return text.split('\n').map((line, i) => {
     const heading = headingOn && headingFlags[i]
     // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄(코드블록 안 포함)은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
@@ -480,19 +484,43 @@ function renderHighlightLines(text, marks, headingOn = true) {
     // 빈 줄은 <br> 로 한 줄 높이를 만든다(내용이 없으면 block 의 높이가 0 이 되어 입력칸과 줄 수가 어긋난다).
     return (
       <div key={i} className={className}>
-        {line === '' ? <br /> : line}
+        {line === '' ? <br /> : renderLineContent(line, footnoteLines[i])}
       </div>
     )
   })
 }
 
+// 줄 하나의 내용. 각주가 있으면 조각마다 색 표시(span)를 입히되, 조각을 이은 글이 원래 줄과 다르면(줄 끝 \r 등) 안전하게 그냥 글로 둔다.
+function renderLineContent(line, segments) {
+  if (!segments || segments.map((s) => s.text).join('') !== line) return line
+  return segments.map((s, k) =>
+    s.footnote === undefined ? (
+      s.text
+    ) : (
+      <span key={k} className={`fn-hl fn-c${s.footnote % 4}${s.br ? ' fn-br' : ''}`}>
+        {s.text}
+      </span>
+    ),
+  )
+}
+
 // 글 안의 위치(offset)에 해당하는 배경판(줄마다 <div> 하나)의 지점 [노드, 칸]. 빈 줄(<br>)이면 그 줄 요소의 맨 앞이다. 없으면 null.
+// 줄 안에 색 표시(span)가 섞여 있어도 글자 노드를 차례로 세어 찾는다.
 function backdropPoint(backdrop, text, offset) {
   const { line, column } = offsetToLineColumn(text, offset)
   const row = backdrop.children[line]
   if (!row) return null
-  const node = row.firstChild
-  return node && node.nodeType === Node.TEXT_NODE ? [node, Math.min(column, node.length)] : [row, 0]
+  const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT)
+  let remaining = column
+  let node = walker.nextNode()
+  let last = null
+  while (node) {
+    if (remaining <= node.length) return [node, remaining]
+    remaining -= node.length
+    last = node
+    node = walker.nextNode()
+  }
+  return last ? [last, last.length] : [row, 0]
 }
 
 function ToolbarButton({ icon: Icon, label, title, onClick, active = false }) {
@@ -529,6 +557,9 @@ export function EditorPane({ text, onChange, disabled }) {
   const [gradientModal, setGradientModal] = useState(null)
   const [fileSuggest, setFileSuggest] = useState(null)
   const [snippetSuggest, setSnippetSuggest] = useState(null)
+  // 각주 편집: 커서가 각주([* ...]) 안에 있으면 그 옆에 "각주 편집" 단추(footnoteChip)가 뜨고, Alt+E 나 단추로 여러 줄 편집 상자(footnoteBox)를 연다.
+  const [footnoteChip, setFootnoteChip] = useState(null) // { top, left }
+  const [footnoteBox, setFootnoteBox] = useState(null) // { fn, value, top, left }
   const [findBar, setFindBar] = useState(null)
   const saveOpenFile = useAppStore((s) => s.saveOpenFile)
   const requestPrompt = useAppStore((s) => s.requestPrompt)
@@ -604,6 +635,8 @@ export function EditorPane({ text, onChange, disabled }) {
     setFileSuggest(null)
     setSnippetSuggest(null)
     setFindBar(null)
+    setFootnoteChip(null)
+    setFootnoteBox(null)
     snippetStopsRef.current = null
   }, [openPath])
 
@@ -722,6 +755,73 @@ export function EditorPane({ text, onChange, disabled }) {
       .slice(0, 8)
     const caret = getCaretCoordinates(textarea, ctx.end)
     setFileSuggest({ start: ctx.start, end: ctx.end, items, activeIndex: 0, top: caret.top + caret.height, left: caret.left })
+  }
+
+  // 커서가 각주 안(글을 고르지 않은 상태)이면 "각주 편집" 단추를 커서 아래에 띄우고, 아니면 숨긴다. 글자·커서가 움직일 때마다 부른다.
+  function updateFootnoteChip() {
+    const textarea = textareaRef.current
+    if (!textarea || disabled || footnoteBox || textarea.selectionStart !== textarea.selectionEnd) {
+      setFootnoteChip((prev) => (prev === null ? prev : null))
+      return
+    }
+    if (!footnoteAt(textarea.value, textarea.selectionStart)) {
+      setFootnoteChip((prev) => (prev === null ? prev : null))
+      return
+    }
+    const caret = getCaretCoordinates(textarea, textarea.selectionStart)
+    const next = { top: caret.top + caret.height + 2, left: Math.max(8, Math.min(caret.left, window.innerWidth - 150)) }
+    setFootnoteChip((prev) => (prev && prev.top === next.top && prev.left === next.left ? prev : next))
+  }
+
+  // 커서가 있는 각주를 여러 줄 편집 상자로 연다. 각주 안이 아니면 아무것도 하지 않는다.
+  function openFootnoteBox() {
+    const textarea = textareaRef.current
+    if (!textarea || disabled) return false
+    const fn = footnoteAt(textarea.value, textarea.selectionStart)
+    if (!fn) return false
+    const caret = getCaretCoordinates(textarea, textarea.selectionStart)
+    const width = 440
+    const height = 230
+    const left = Math.max(8, Math.min(caret.left, window.innerWidth - width - 8))
+    let top = caret.top + caret.height + 4
+    if (top + height > window.innerHeight - 8) top = Math.max(8, caret.top - height - 4)
+    setFootnoteChip(null)
+    setFootnoteBox({ fn, value: bodyToEditable(fn.body), top, left, caret: textarea.selectionStart })
+    return true
+  }
+
+  // 편집 상자의 글을 각주 내용으로 반영한다. 그사이 글이 달라졌으면(다른 문서로 옮겼거나 고쳤으면) 아무것도 바꾸지 않는다.
+  function applyFootnoteBox(value) {
+    const box = footnoteBox
+    const textarea = textareaRef.current
+    setFootnoteBox(null)
+    if (!box || !textarea) return
+    const body = editableToBody(value)
+    const { fn } = box
+    const focusAt = (pos) =>
+      requestAnimationFrame(() => {
+        textarea.focus()
+        textarea.setSelectionRange(pos, pos)
+      })
+    if (body === fn.body || textarea.value.slice(fn.bodyStart, fn.end - 1) !== fn.body) {
+      focusAt(Math.min(box.caret, textarea.value.length))
+      return
+    }
+    const { from, to, insert } = footnoteBodyEdit(fn, body)
+    replaceRange(textarea, from, to, insert, onChange)
+    focusAt(from + insert.length) // 각주 내용의 끝(] 바로 앞) — 이어서 Alt+E 로 다시 열 수 있다
+  }
+
+  function cancelFootnoteBox() {
+    const box = footnoteBox
+    const textarea = textareaRef.current
+    setFootnoteBox(null)
+    if (!box || !textarea) return
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const pos = Math.min(box.caret, textarea.value.length)
+      textarea.setSelectionRange(pos, pos)
+    })
   }
 
   function selectFileSuggestItem(name) {
@@ -1166,6 +1266,13 @@ export function EditorPane({ text, onChange, disabled }) {
         openSnippetModalWithSelection()
       }
       return
+    }
+    // Alt+E — 커서가 있는 각주([* ...])를 여러 줄 편집 상자로 연다(각주 안이 아니면 아무것도 하지 않고 키를 그대로 둔다).
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyE' || e.key.toLowerCase() === 'e') && !e.nativeEvent.isComposing) {
+      if (openFootnoteBox()) {
+        e.preventDefault()
+        return
+      }
     }
     // Alt+Shift+H — 한자(사전) 등록. 선택된 텍스트가 있으면 그걸 "원문" 칸에 미리 채운 채로
     // 사전 모달을 열어서, 선택 → 단축키 → 한자만 입력하고 저장으로 바로 등록할 수 있게 함.
@@ -1738,6 +1845,7 @@ export function EditorPane({ text, onChange, disabled }) {
             if (!rewrote) onChange(e.target.value)
             updateFileSuggest()
             updateSnippetSuggest()
+            updateFootnoteChip()
             recenterCaret()
           }}
           onKeyDown={handleKeyDown}
@@ -1762,20 +1870,24 @@ export function EditorPane({ text, onChange, disabled }) {
           onClick={() => {
             updateFileSuggest()
             updateSnippetSuggest()
+            updateFootnoteChip()
           }}
           onKeyUp={(e) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') {
               updateFileSuggest()
               updateSnippetSuggest()
             }
+            if (!e.altKey && !e.ctrlKey && !e.metaKey && e.key !== 'Escape') updateFootnoteChip()
           }}
           onBlur={() => {
             setFileSuggest(null)
             setSnippetSuggest(null)
+            setFootnoteChip(null)
           }}
           onScroll={(e) => {
             setEditorScroll(activeTabId, e.target.scrollTop)
             setGutterHover(null)
+            setFootnoteChip((prev) => (prev === null ? prev : null))
             if (backdropRef.current) backdropRef.current.scrollTop = e.target.scrollTop
           }}
           spellCheck={false}
@@ -1816,6 +1928,30 @@ export function EditorPane({ text, onChange, disabled }) {
             ))
           )}
         </div>
+      )}
+      {footnoteChip && !footnoteBox && (
+        <button
+          type="button"
+          className="footnote-edit-chip"
+          style={{ top: footnoteChip.top, left: footnoteChip.left }}
+          title="이 각주를 여러 줄 상자에서 고칩니다 (Alt+E)"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            openFootnoteBox()
+          }}
+        >
+          각주 편집 <kbd>Alt+E</kbd>
+        </button>
+      )}
+      {footnoteBox && (
+        <FootnoteEditBox
+          key={`${footnoteBox.fn.start}:${footnoteBox.fn.end}`}
+          initialValue={footnoteBox.value}
+          top={footnoteBox.top}
+          left={footnoteBox.left}
+          onApply={applyFootnoteBox}
+          onCancel={cancelFootnoteBox}
+        />
       )}
       {snippetSuggest && (
         <div className="file-suggest-menu snippet-suggest-menu" style={{ top: snippetSuggest.top, left: snippetSuggest.left }}>

@@ -1470,6 +1470,131 @@
   background: var(--accent-bg);
 }
 
+/* 각주([* 내용])의 색 구분 — 배경판의 각주 조각(span.fn-hl)에만 배경색을 칠한다. 각주마다 네 색을 돌려 쓰고(fn-c0~3, 문서 위에서부터 센 번호), 그 안의
+   [br](줄 안 줄바꿈)은 같은 색을 더 진하게 칠한다(fn-br). 글자 크기·여백·테두리를 주면 입력칸과 글자 위치가 어긋나므로 배경색만 쓴다
+   (tests/components/footnoteEditor.test.js 가 지킨다). 밝은/어두운 테마 모두 보이도록 투명도로 섞는다. */
+.fn-c0 {
+  --fn-hue: #3b82f6;
+}
+
+.fn-c1 {
+  --fn-hue: #16a34a;
+}
+
+.fn-c2 {
+  --fn-hue: #f59e0b;
+}
+
+.fn-c3 {
+  --fn-hue: #a855f7;
+}
+
+.fn-hl {
+  background: color-mix(in srgb, var(--fn-hue) 17%, transparent);
+  border-radius: 3px;
+}
+
+.fn-hl.fn-br {
+  background: color-mix(in srgb, var(--fn-hue) 48%, transparent);
+}
+
+/* 커서가 각주 안에 있을 때 커서 아래에 뜨는 "각주 편집" 단추와, 눌렀을 때 열리는 여러 줄 편집 상자(FootnoteEditBox). */
+.footnote-edit-chip {
+  position: fixed;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-h);
+  background: var(--bg-pane);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.footnote-edit-chip:hover {
+  border-color: var(--accent);
+}
+
+.footnote-edit-chip kbd {
+  font: 11px var(--mono);
+  opacity: 0.6;
+}
+
+.footnote-edit-box {
+  position: fixed;
+  z-index: 210;
+  width: 440px;
+  max-width: calc(100vw - 16px);
+  padding: 8px;
+  background: var(--bg-pane);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+}
+
+.footnote-edit-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font: 14px/22px var(--mono);
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  resize: vertical;
+}
+
+.footnote-edit-input:focus {
+  border-color: var(--accent);
+}
+
+.footnote-edit-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.footnote-edit-hint {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.6;
+}
+
+.footnote-edit-actions {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+}
+
+.footnote-edit-btn {
+  padding: 3px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-h);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.footnote-edit-btn.primary {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 /* 줄 여백(줄 번호·점) — 배경판의 padding-left 안쪽(글 왼쪽)에 그린다. 줄 번호는 CSS counter 로 줄마다 붙이고 그 줄의
    첫 화면 줄 옆에 놓인다(긴 줄이 접혀도 번호는 한 번만). 좌표는 .eline 의 안쪽 여백 왼쪽 끝(= 글 시작 - 6px) 기준이다. */
 .editor-highlight-backdrop {
