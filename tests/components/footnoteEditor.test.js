@@ -28,8 +28,13 @@ describe('각주 색 구분 (배경판)', () => {
     expect(editor).toMatch(/createTreeWalker\(row, NodeFilter\.SHOW_TEXT\)/)
   })
 
-  it('제목 강조 호출 모양은 그대로다', () => {
-    expect(editor).toMatch(/renderHighlightLines\(text, lineMarks, headingHighlight\)/)
+  it('제목 강조·각주 색 구분 설정을 함께 넘겨 그린다', () => {
+    expect(editor).toMatch(/renderHighlightLines\(text, lineMarks, headingHighlight, footnoteColor\)/)
+  })
+
+  it('각주 색 구분 설정이 꺼져 있으면 색 조각을 만들지 않는다', () => {
+    expect(editor).toMatch(/useAppStore\(\(s\) => s\.footnoteColor\)/)
+    expect(editor).toMatch(/footnoteOn \? footnoteLineSegments\(text\) : \[\]/)
   })
 
   for (const sel of ['.fn-hl', '.fn-hl.fn-br']) {

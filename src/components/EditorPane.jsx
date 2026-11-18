@@ -471,12 +471,13 @@ const GUTTER_WIDTH = 56
 // 줄 번호(CSS counter)를 그 줄의 첫 화면 줄 옆에 붙이고, 줄 위치(offsetTop)를 바로 읽어 점 클릭의 줄을 찾을 수 있다.
 // 입력칸과 같은 폭·글꼴·줄 높이·여백이어야 줄 위치가 맞는다(App.css 의 .editor-highlight-backdrop 와
 // tests/components/editorLayers.test.js 참고).
-function renderHighlightLines(text, marks, headingOn = true) {
+function renderHighlightLines(text, marks, headingOn = true, footnoteOn = true) {
   const marked = new Set(marks)
   // 제목 줄 판단은 lib/editorHeading.js — 코드블록(```) 안의 줄은 제목처럼 생겨도 제외한다. 설정(메뉴 "설정" > "제목 강조")을 끄면 제목 줄도 자동 강조가 없다.
   const headingFlags = headingLineFlags(text)
   // 각주([* 내용])는 각주마다 네 가지 옅은 색을 돌려 칠하고, 그 안의 [br] 은 더 진하게 칠한다(lib/footnoteEdit.js). 글자 크기·여백은 건드리지 않는다(App.css .fn-hl).
-  const footnoteLines = footnoteLineSegments(text)
+  // 설정(메뉴 "설정" > "각주 색")을 끄면 색 조각을 만들지 않아 각주도 일반 글처럼 보인다.
+  const footnoteLines = footnoteOn ? footnoteLineSegments(text) : []
   return text.split('\n').map((line, i) => {
     const heading = headingOn && headingFlags[i]
     // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄(코드블록 안 포함)은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
@@ -552,7 +553,11 @@ export function EditorPane({ text, onChange, disabled }) {
   const [gutterHover, setGutterHover] = useState(null) // { line, top, on } — 점이 보일 줄
   // 메뉴 "설정" > "제목 강조": 꺼 두면 제목 줄(=제목=)에 배경을 얹지 않는다(기본 켜짐).
   const headingHighlight = useAppStore((s) => s.headingHighlight)
-  const highlightLines = useMemo(() => renderHighlightLines(text, lineMarks, headingHighlight), [text, lineMarks, headingHighlight])
+  const footnoteColor = useAppStore((s) => s.footnoteColor)
+  const highlightLines = useMemo(
+    () => renderHighlightLines(text, lineMarks, headingHighlight, footnoteColor),
+    [text, lineMarks, headingHighlight, footnoteColor],
+  )
   const [tableModal, setTableModal] = useState(null)
   const [gradientModal, setGradientModal] = useState(null)
   const [fileSuggest, setFileSuggest] = useState(null)

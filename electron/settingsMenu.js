@@ -33,6 +33,8 @@ export function createSettingsMenu({
   onTypewriterZoneChange = () => {},
   getHeadingHighlight = () => true,
   onHeadingHighlightChange = () => {},
+  getFootnoteColor = () => true,
+  onFootnoteColorChange = () => {},
   getMagnifierSize = () => 'normal',
   onMagnifierSizeChange = () => {},
   getCountNewlines = () => false,
@@ -56,6 +58,13 @@ export function createSettingsMenu({
         type: 'checkbox',
         checked: getHeadingHighlight() !== false,
         click: (menuItem) => onHeadingHighlightChange(menuItem.checked === true),
+      },
+      {
+        // 편집 모드에서 각주([* 내용])마다 옅은 색 배경을 칠할지(기본 켜짐). 끄면 각주도 일반 글처럼 보인다(각주 편집 상자·Alt+E 는 그대로).
+        label: '각주 색',
+        type: 'checkbox',
+        checked: getFootnoteColor() !== false,
+        click: (menuItem) => onFootnoteColorChange(menuItem.checked === true),
       },
       {
         // 드래그한 글자의 글자 수를 셀 때 줄바꿈도 1자로 셀지(기본 꺼짐 = 줄바꿈을 세지 않는 기본 글자 수). 문서 전체 글자 수는 이 설정과 상관없이 기본 글자 수다.

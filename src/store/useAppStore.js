@@ -51,6 +51,7 @@ function settingsPatch(settings) {
     sortFlip: settings?.sortFlip === true,
     typewriterZone: normalizeTypewriterZone(settings?.typewriterZone),
     headingHighlight: settings?.headingHighlight !== false, // 기본 켜짐 — 값이 없으면 켜짐
+    footnoteColor: settings?.footnoteColor !== false, // 기본 켜짐 — 값이 없으면 켜짐
     countNewlines: settings?.countNewlines === true, // 기본 꺼짐 — 값이 없으면 꺼짐
     magnifierSize: normalizeMagnifierSize(settings?.magnifierSize), // 기본 보통 — 값이 없거나 이상하면 보통
   }
@@ -573,6 +574,7 @@ export const useAppStore = create((set, get) => ({
   typewriterZone: 0,
   // 편집 모드에서 제목 줄(=제목=)에 배경을 얹어 강조할지. 기본 켜짐. 메인의 config.json 사본(메뉴 "설정" > "제목 강조").
   headingHighlight: true,
+  footnoteColor: true,
   // 드래그한 글자의 글자 수를 셀 때 줄바꿈도 1자로 셀지. 기본 꺼짐(줄바꿈을 세지 않는 기본 글자 수). 메인의 config.json 사본(메뉴 "설정" > "줄바꿈 포함 글자 수").
   countNewlines: false,
   // 돋보기(마우스 휠 클릭) 크기: small·normal·large·xlarge. 기본 보통. 메인의 config.json 사본(메뉴 "설정" > "돋보기 크기").

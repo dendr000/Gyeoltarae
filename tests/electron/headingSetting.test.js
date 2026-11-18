@@ -99,6 +99,58 @@ describe('소스 점검: 메인·편집기 연결', () => {
     expect(pane).toContain("from '../lib/editorHeading.js'")
     expect(pane).toMatch(/useAppStore\(\(s\) => s\.headingHighlight\)/)
     expect(pane).toMatch(/headingOn && headingFlags\[i\]/)
-    expect(pane).toMatch(/renderHighlightLines\(text, lineMarks, headingHighlight\)/)
+    expect(pane).toMatch(/renderHighlightLines\(text, lineMarks, headingHighlight, footnoteColor\)/)
+  })
+})
+
+// 메뉴 "설정" > "각주 색": 편집 모드의 각주 색칠을 켜고 끈다. 기본 켜짐, 꺼 둔(false) 때만 꺼짐.
+describe('설정 메뉴 항목: 각주 색', () => {
+  function make(initial) {
+    const changes = []
+    const menu = createSettingsMenu({
+      getSortFlip: () => false,
+      onSortFlipChange: () => {},
+      getFootnoteColor: initial === undefined ? undefined : () => initial,
+      onFootnoteColorChange: (value) => changes.push(value),
+    })
+    return { item: menu.submenu.find((entry) => entry.label === '각주 색'), changes }
+  }
+
+  it('체크 항목이고 저장된 값(켜짐/꺼짐)을 따르며, 값이 없으면 켜짐이다', () => {
+    expect(make(true).item.type).toBe('checkbox')
+    expect(make(true).item.checked).toBe(true)
+    expect(make(false).item.checked).toBe(false)
+    expect(make(undefined).item.checked).toBe(true)
+  })
+
+  it('클릭하면 바뀐 체크 상태를 알려 준다', () => {
+    const { item, changes } = make(true)
+    item.click({ checked: false })
+    item.click({ checked: true })
+    expect(changes).toEqual([false, true])
+  })
+
+  it('스토어: 기본 켜짐, 꺼짐 읽기, 값 없으면 켜짐, 메뉴 변경을 따라간다', async () => {
+    const { state, api } = await freshStore()
+    expect(state().footnoteColor).toBe(true)
+    let notify
+    api.onSettingsChanged = (callback) => {
+      notify = callback
+      return () => {}
+    }
+    api.getSettings = async () => ({ footnoteColor: false })
+    await state().initSettings()
+    expect(state().footnoteColor).toBe(false)
+    notify({ sortFlip: true })
+    expect(state().footnoteColor).toBe(true)
+    notify({ footnoteColor: false })
+    expect(state().footnoteColor).toBe(false)
+  })
+
+  it('메인이 값을 읽고(꺼짐 false 만 꺼짐) 바꾸면 저장하고 알린다', () => {
+    const main = read('electron/main.js')
+    expect(main).toMatch(/footnoteColor: config\.footnoteColor !== false/)
+    expect(main).toMatch(/saveConfig\(\{ \.\.\.loadConfig\(\), footnoteColor \}\)/)
+    expect(main).toContain('getFootnoteColor: () => readSettings().footnoteColor')
   })
 })
