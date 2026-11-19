@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
+import { hasHangul } from '../lib/dictEntry.js'
 
 const MAX_RESULTS = 300
 
@@ -34,6 +35,7 @@ export function DictModal({ onClose, initialWord = '' }) {
   const [word, setWord] = useState(initialWord)
   const [translation, setTranslation] = useState('')
   const [editing, setEditing] = useState(null)
+  const [formError, setFormError] = useState('')
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkText, setBulkText] = useState('')
   const [bulkResult, setBulkResult] = useState('')
@@ -48,6 +50,7 @@ export function DictModal({ onClose, initialWord = '' }) {
 
   const handleCancelEdit = () => {
     setEditing(null)
+    setFormError('')
     setWord('')
     setTranslation('')
   }
@@ -55,6 +58,11 @@ export function DictModal({ onClose, initialWord = '' }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!word.trim() || !translation.trim()) return
+    if (hasHangul(translation)) {
+      setFormError('한자/영문 칸에는 한글을 쓸 수 없습니다. 한자나 영문으로 적어 주세요.')
+      return
+    }
+    setFormError('')
     getApi().refocusWindow?.()
     if (editing) await deleteDictEntry(editing.word, editing.translation)
     await bulkAddDictEntries(`${word.trim()}(${translation.trim()})`)
@@ -80,7 +88,7 @@ export function DictModal({ onClose, initialWord = '' }) {
     if (!bulkText.trim()) return
     getApi().refocusWindow?.()
     const count = await bulkAddDictEntries(bulkText)
-    setBulkResult(count > 0 ? `${count}개 추가됨` : '추가된 항목 없음')
+    setBulkResult(count > 0 ? `${count}개 추가됨` : '추가된 항목 없음 (한자/영문 쪽에 한글이 있는 줄은 등록되지 않습니다)')
     if (count > 0) setBulkText('')
     if (results !== null) runSearch(searchInput)
   }
@@ -109,7 +117,10 @@ export function DictModal({ onClose, initialWord = '' }) {
             type="text"
             placeholder="한자/영문"
             value={translation}
-            onChange={(e) => setTranslation(e.target.value)}
+            onChange={(e) => {
+              setTranslation(e.target.value)
+              setFormError('')
+            }}
             autoFocus={!!initialWord}
           />
           <button type="submit" className="snippet-inline-submit-btn">
@@ -124,6 +135,12 @@ export function DictModal({ onClose, initialWord = '' }) {
             일괄
           </button>
         </form>
+
+        {formError && (
+          <p className="dict-form-error" role="alert">
+            {formError}
+          </p>
+        )}
 
         {bulkMode && (
           <form className="snippet-modal-bulk-row" onSubmit={handleBulkSubmit}>

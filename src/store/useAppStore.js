@@ -11,6 +11,7 @@ import {
 } from '../lib/wikiParser.js'
 import { stripLeadingNumber } from '../lib/displayName.js'
 import { parseDictText } from '../lib/dictCycle.js'
+import { normalizeDictPair } from '../lib/dictEntry.js'
 import { clearScroll } from '../lib/scrollMemory.js'
 import { ALL_FOLDER, diffDisabledFolders, nextFolderAfterClose, selectLoadableItems, summarizeSnippetFolders, withFolderEnabled } from '../lib/snippetScope.js'
 import { NO_TEMPLATE, chooseStartTemplate } from '../lib/defaultTemplate.js'
@@ -1245,10 +1246,10 @@ export const useAppStore = create((set, get) => ({
       if (!line) continue
       const match = line.match(/^([^()]+)\(([^()]+)\)$/)
       if (!match) continue
-      let word = match[1].trim()
-      let translation = match[2].trim()
-      if (/[가-힣]/.test(translation) && !/[가-힣]/.test(word)) [word, translation] = [translation, word]
-      if (!word || !translation) continue
+      // 한글이 아닌 쪽이 한자/영문 칸이 되도록 순서를 바로잡고, 한자/영문 쪽에 한글이 남으면(`중(중)`) 등록하지 않는다(lib/dictEntry.js).
+      const pair = normalizeDictPair(match[1], match[2])
+      if (!pair) continue
+      const { word, translation } = pair
       const existingTranslations = dictMapNow.get(word) ?? []
       if (existingTranslations.includes(translation)) continue
       existingTranslations.push(translation)

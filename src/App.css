@@ -4145,3 +4145,11 @@
 .wiki-rendered .katex-display > .katex {
   font-size: 1.2em;
 }
+
+/* 사전 창: 한자/영문 칸에 한글을 썼을 때의 안내 */
+.dict-form-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #dc2626;
+  overflow-wrap: anywhere;
+}
