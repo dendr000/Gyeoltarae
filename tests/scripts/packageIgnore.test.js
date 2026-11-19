@@ -64,6 +64,9 @@ describe('createIgnore: 반드시 들어가야 하는 파일', () => {
     '/electron/fileSystem.js',
     '/electron/settingsMenu.js',
     '/electron/starterSnippets.js',
+    '/electron/watchProcess.js',
+    '/electron/watchWorker.js',
+    '/electron/watchIgnore.js',
     '/electron/watchScheduler.js',
     '/electron/create-workspace-shortcut.ps1', // 별도 프로세스가 읽는 스크립트(asar 밖으로 풀어 둔다)
     '/shared',
@@ -246,6 +249,9 @@ describe('checkAsarFiles: 만든 뒤 app.asar 점검', () => {
     '/electron/preload.cjs',
     '/electron/fileSystem.js',
     '/electron/starterSnippets.js',
+    '/electron/watchProcess.js',
+    '/electron/watchWorker.js',
+    '/electron/watchIgnore.js',
     '/shared/commandsPack.js',
     '/shared/fileNameChars.js',
     '/shared/typewriterZone.js',
@@ -296,7 +302,7 @@ describe('checkAsarFiles: 만든 뒤 app.asar 점검', () => {
   })
 
   it('빈 폴더로만 남은 쓰지 않는 모듈(react 껍데기)은 문제로 보지 않지만, 그 안에 파일이 있으면 문제다', () => {
-    const files = ['/package.json', '/electron/main.js', '/electron/preload.cjs', '/electron/fileSystem.js', '/shared/fileNameChars.js', '/shared/typewriterZone.js', '/dist/index.html', '/build/icon.ico', '/node_modules/chokidar/package.json']
+    const files = ['/package.json', '/electron/main.js', '/electron/preload.cjs', '/electron/fileSystem.js', '/electron/watchProcess.js', '/electron/watchWorker.js', '/electron/watchIgnore.js', '/shared/fileNameChars.js', '/shared/typewriterZone.js', '/dist/index.html', '/build/icon.ico', '/node_modules/chokidar/package.json']
     const runtime = new Set(['chokidar'])
     expect(checkAsarFiles(files, runtime).forbidden).toEqual([]) // 폴더 항목은 파일 목록에 없다
     expect(checkAsarFiles([...files, '/node_modules/react/index.js'], runtime).forbidden).toEqual(['/node_modules/react/index.js'])

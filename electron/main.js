@@ -1,13 +1,13 @@
 // 제작자(Creator): dendr000 · 制作者: dendr000 · المُنشئ: dendr000
 // hex: 43726561746f723a2064656e6472303030 ("Creator: dendr000")
 // const CREATOR = "dendr000" — MIT License, see ../LICENSE
-import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu, utilityProcess } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { execFile } from 'node:child_process'
-import chokidar from 'chokidar'
 import { createWatchScheduler } from './watchScheduler.js'
+import { createWatchProcess } from './watchProcess.js'
 import { createSettingsMenu } from './settingsMenu.js'
 import { ensureStarterCommands } from './starterSnippets.js'
 import { normalizeMagnifierSize } from '../shared/magnifier.js'
@@ -69,8 +69,17 @@ app.setName('wikidesk')
 app.setAppUserModelId('com.gyeoltarae.app')
 
 let mainWindow = null
-let watcher = null
 let currentWorkspacePath = null
+
+// 폴더 감시기는 별도 프로세스에서 돈다(electron/watchWorker.js). 메인에서 직접 돌리면 문서 1만 개 폴더를 처음 훑는 동안 메인이 막혀
+// 입력·자동 저장이 최대 18초 멈췄다. 바뀐 파일은 메시지로 받아 화면에 그대로 전달한다.
+const watchProcess = createWatchProcess({
+  fork: () => utilityProcess.fork(path.join(__dirname, 'watchWorker.js'), [], { serviceName: 'gyeoltarae-watch' }),
+  onEvent: (eventType, changedPath) => {
+    mainWindow?.webContents.send('watch:event', { eventType, path: changedPath })
+  },
+  onExit: (code) => console.error('폴더 감시 프로세스가 끝났습니다. 종료 코드:', code),
+})
 
 // 감시기는 켜자마자 작업 폴더 전체를 훑어서 화면의 첫 색인 읽기와 서로 늦춘다(상용구 4천여 개에서 시작이 15초 걸림).
 // 그래서 직접 켜지 않고, 화면이 첫 색인을 끝냈다고 알린 뒤(workspace:watch) 사용자가 3초 입력이 없는 틈에 켠다.
@@ -196,20 +205,14 @@ function softRefocusMainWindow() {
 // outright) — closing the watcher first, then restarting it after, avoids
 // that race. See stopWatching's callers below.
 async function stopWatching() {
-  if (watcher) {
-    await watcher.close()
-    watcher = null
-  }
+  await watchProcess.stop()
 }
 
 // 작업 폴더를 정한다. 감시는 여기서 켜지 않는다 — 옛 감시기와 대기 중이던 예약만 치우고, 화면이 알려 주면(workspace:watch) 켠다.
 function selectWorkspace(workspacePath) {
   currentWorkspacePath = workspacePath
   watchScheduler.cancel()
-  if (watcher) {
-    watcher.close()
-    watcher = null
-  }
+  void watchProcess.stop()
 }
 
 // 새 워크스페이스를 열 때 슬래시 명령(상용구 폴더 `명령`)을 자동으로 넣는다(규칙: electron/starterSnippets.js). 이미 확인한 폴더는 이 PC 의 설정
@@ -226,16 +229,8 @@ function offerStarterCommands(workspacePath) {
 
 function startWatching(workspacePath) {
   currentWorkspacePath = workspacePath
-  if (watcher) {
-    watcher.close()
-    watcher = null
-  }
-  // Dotfiles/node_modules are ignored as usual, except .wikidesk-categories,
-  // .wikidesk-data, .wikidesk-templates, .wikidesk-images, .wikidesk-snippets
-  // and .wikidesk-dict — those hold real content (category pages, data
-  // entries, templates, images, snippets, the dictionary) and need
-  // watch:event notifications like any other document folder.
-  const CONTENT_DIRS = [
+  // 점 파일·node_modules 는 감시에서 빼지만, 분류·자료·틀·이미지·상용구·사전 폴더는 진짜 내용이라 문서 폴더처럼 감시한다(규칙: electron/watchIgnore.js).
+  const contentDirs = [
     CATEGORIES_DIR_NAME,
     DATA_DIR_NAME,
     TEMPLATES_DIR_NAME,
@@ -243,25 +238,7 @@ function startWatching(workspacePath) {
     SNIPPETS_DIR_NAME,
     DICT_DIR_NAME,
   ]
-  watcher = chokidar.watch(workspacePath, {
-    ignored: (watchPath) => {
-      const rel = path.relative(workspacePath, watchPath)
-      if (CONTENT_DIRS.some((d) => rel === d || rel.startsWith(d + path.sep))) {
-        return false
-      }
-      return /(^|[/\\])\.|node_modules/.test(rel)
-    },
-    ignoreInitial: true,
-  })
-  const notify = (eventType) => (changedPath) => {
-    mainWindow?.webContents.send('watch:event', { eventType, path: changedPath })
-  }
-  watcher
-    .on('add', notify('add'))
-    .on('change', notify('change'))
-    .on('unlink', notify('unlink'))
-    .on('addDir', notify('addDir'))
-    .on('unlinkDir', notify('unlinkDir'))
+  watchProcess.start(workspacePath, contentDirs)
 }
 
 function createWindow() {
@@ -402,7 +379,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (watcher) watcher.close()
+  void watchProcess.stop()
   if (process.platform !== 'darwin') app.quit()
 })
 

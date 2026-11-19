@@ -287,7 +287,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 
 ## 구조
 
-- `electron/` — 메인 프로세스: 파일 읽기/쓰기, 워크스페이스 스캔, 실시간 감시(chokidar), 메타데이터 인덱스.
+- `electron/` — 메인 프로세스: 파일 읽기/쓰기, 워크스페이스 스캔, 실시간 감시(chokidar, 별도 작업 프로세스에서 실행), 메타데이터 인덱스.
   분류(`.wikidesk-categories`)·자료(`.wikidesk-data`)·틀(`.wikidesk-templates`)·이미지(`.wikidesk-images`)·
   상용구(`.wikidesk-snippets`)·사전(`.wikidesk-dict`) 전용 공간도 여기서 스캔/생성함
 - `src/lib/wikiParser.js` — 커스텀 위키 문법 파서 (틀 매개변수 치환용 `expandTemplates`도 여기에 있음)
