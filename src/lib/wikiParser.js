@@ -10,6 +10,7 @@ import { extractMath, restoreMath, restoreRawMath } from './mathRender.js'
 import { wrapSections } from './sectionFold.js'
 import { lookupDocCandidates } from './docLink.js'
 import { footnoteRegExp } from './footnoteSyntax.js'
+import { INLINE_BACKTICK_CODE_RE, INLINE_BRACE_CODE_RE } from './inlineCode.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -374,10 +375,7 @@ function renderResolvedLink(resolved, innerHtml) {
 }
 
 // 글 속 코드 — `{{{ 코드 }}}` (한 줄) 와 `백틱 코드`. 안의 글은 위키 문법으로 해석하지 않고 글자 그대로 코드 모양으로 보여 준다(SQL 의 `*`·`''`,
-// 파이썬의 `__init__`, C 의 `자료형*` 같은 글이 기울임·밑줄로 바뀌지 않게). `{{{+1 글}}}`·`{{{#색 글}}}`·`{{{#!...` 는 코드가 아니라 기존 문법이다.
-// 백틱은 여는 쪽 뒤와 닫는 쪽 앞이 공백이 아닐 때만 코드로 본다(`Ctrl+` 와 Ctrl+Shift+`` 처럼 글 속에 백틱이 두 개 있는 경우를 코드로 오해하지 않으려고).
-const INLINE_BRACE_CODE_RE = /\{\{\{(?![+-][1-5]\s|#)([^\n]+?)\}\}\}/g
-const INLINE_BACKTICK_CODE_RE = /`([^`\s](?:[^`\n]*[^`\s])?)`/g
+// 파이썬의 `__init__`, C 의 `자료형*` 같은 글이 기울임·밑줄로 바뀌지 않게). 찾는 규칙(정규식)은 lib/inlineCode.js — 편집기의 배경 색칠과 같다.
 const CODE_TOKEN_RE = /@@WDCODE(\d+)@@/g
 
 function applyInline(text, footnotes, docIndex = {}) {

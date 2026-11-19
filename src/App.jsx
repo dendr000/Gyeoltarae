@@ -21,6 +21,7 @@ import { EditorPane } from './components/EditorPane.jsx'
 import { ViewerPane } from './components/ViewerPane.jsx'
 import { PromptModal } from './components/PromptModal.jsx'
 import { ShortcutSettingsModal } from './components/ShortcutSettingsModal.jsx'
+import { DocCheckModal } from './components/DocCheckModal.jsx'
 import { CharCountBar } from './components/CharCountBar.jsx'
 import { Magnifier } from './components/Magnifier.jsx'
 import { stripLeadingNumber } from './lib/displayName.js'
@@ -44,6 +45,8 @@ export default function App() {
   const createDocRef = useRef(null)
   // 메뉴 "설정" > "단축키…" 로 여는 단축키 설정 창.
   const [shortcutModalOpen, setShortcutModalOpen] = useState(false)
+  // 메뉴 "편집" > "문서 점검" 으로 여는 문서 점검 창.
+  const [docCheckOpen, setDocCheckOpen] = useState(false)
   // 편집기·코드블록 글꼴: 고른 글꼴을 CSS 변수 --mono 에 넣는다(index.css 의 기본값을 덮어씀). 기본이면 index.css 의 값 그대로다.
   const monoFont = useAppStore((s) => s.monoFont)
   useEffect(() => {
@@ -166,6 +169,11 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = getApi().onMenuOpenShortcuts?.(() => setShortcutModalOpen(true))
+    return unsubscribe
+  }, [])
+
+  useEffect(() => {
+    const unsubscribe = getApi().onMenuOpenDocCheck?.(() => setDocCheckOpen(true))
     return unsubscribe
   }, [])
 
@@ -488,6 +496,7 @@ export default function App() {
       </main>
       <Magnifier />
       {shortcutModalOpen && <ShortcutSettingsModal onClose={() => setShortcutModalOpen(false)} />}
+      {docCheckOpen && <DocCheckModal onClose={() => setDocCheckOpen(false)} />}
       {promptRequest && (
         <PromptModal
           {...promptRequest}

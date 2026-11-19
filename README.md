@@ -178,6 +178,7 @@ MediaWiki 계열 위키에서 템플릿 문서를 `{{subst:틀}}`로 한 번만 
 - **수식 표시**: 모든 문서에서 `\(\sigma ^{2}\)`·`\(x_{i}\)` 처럼 쓰면 뷰어에서 진짜 수식으로 그려짐(`\[ \]`·`$$ $$` 는 큰 수식, 코드블록 안은 제외, 인터넷 불필요). [`docs/features/math-formula.md`](docs/features/math-formula.md)
 - **각주 색 구분·각주 편집 상자**: 메뉴 "설정" > "각주 색"으로 끌 수 있고(기본 켜짐), 편집 모드에서 각주(`[* 내용]`)마다 색을 칠해 구별하고(`[br]` 은 더 진하게), 각주 안에서 Alt+E(또는 뜨는 "각주 편집" 단추)를 누르면 그 각주만 여러 줄 상자에서 고쳐 적용(Ctrl+Enter)할 수 있음. [`docs/features/footnote-editor.md`](docs/features/footnote-editor.md)
 - **본문 문법 검수 결과**: 글 속 코드(`{{{ }}}`·`` `백틱` ``)가 고정폭으로 보이고 안의 `*`·`__` 가 꾸밈으로 바뀌지 않으며, 표 칸의 글자색(`<color=>`·`<rowcolor=>`·`<colcolor=>`)과 번호 목록 시작 번호를 읽고, 제목 번호·목차·`[[A&B]]` 링크·수식 경계·각주 안 `[[링크]]` 오류를 고쳤다. [`docs/features/wiki-syntax-review.md`](docs/features/wiki-syntax-review.md)
+- **문서 점검**: 메뉴 "편집" > "문서 점검"으로 열린 문서의 닫히지 않은 코드블록·`{{{`·각주·수식, `=` 개수가 다른 제목, 없는 문서 링크를 모아 보고 눌러서 그 줄로 이동한다. 편집 모드에서는 글 속 코드(`{{{ }}}`·백틱)에 옅은 배경이 깔리고, 본문 `[목차]` 상자의 접힘 상태는 문서별로 기억한다. [`docs/features/doc-check.md`](docs/features/doc-check.md)
 - **시작할 때 창이 멈추지 않음**: 상용구를 100개씩 나눠 읽고(수천 개여도 창이 응답), 문서를 저장할 때마다 상용구를 다시 읽지 않음. 메뉴 "설정 > 상용구 불러오기…" 로 읽을 상용구 폴더를 고름. [`docs/features/startup-responsiveness.md`](docs/features/startup-responsiveness.md)
 - **상용구 불러오는 중 표시**: 상용구가 100개 이상이면 불러오는 동안 위쪽 "저장됨" 옆에 돌아가는 동그라미·"상용구 750/4,000"·게이지바가 나타나고 끝나면 사라짐. [`docs/features/snippet-load-indicator.md`](docs/features/snippet-load-indicator.md)
 - **사이드바 고정 머리**: 검색칸과 "+ 새 문서"·"+ 새 폴더" 는 목록을 스크롤해도 맨 위에 늘 보임. [`docs/features/sidebar-fixed-header.md`](docs/features/sidebar-fixed-header.md)

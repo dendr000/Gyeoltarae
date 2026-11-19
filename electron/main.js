@@ -321,6 +321,9 @@ function buildMenu() {
         { role: 'copy', label: '복사' },
         { role: 'paste', label: '붙여넣기' },
         { role: 'selectAll', label: '모두 선택' },
+        { type: 'separator' },
+        // 지금 열린 문서의 흔한 실수(닫히지 않은 코드블록·{{{·각주 등)를 모아 보여 주는 창(렌더러)을 연다. 규칙은 src/lib/docCheck.js.
+        { label: '문서 점검', click: () => mainWindow?.webContents.send('menu:open-doc-check') },
       ],
     },
     {

@@ -70,6 +70,13 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('settings:changed', listener)
   },
 
+  // 메뉴 "편집" > "문서 점검" — 화면의 문서 점검 창을 연다.
+  onMenuOpenDocCheck: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('menu:open-doc-check', listener)
+    return () => ipcRenderer.removeListener('menu:open-doc-check', listener)
+  },
+
   // 메뉴 "설정" > "단축키…" — 화면의 단축키 설정 창을 연다.
   onMenuOpenShortcuts: (callback) => {
     const listener = () => callback()

@@ -9,6 +9,7 @@ import { copyCodeBlock } from '../lib/codeCopy.js'
 import { toStraightQuotes } from '../lib/smartQuotes.js'
 import { lookupDocCandidates } from '../lib/docLink.js'
 import { applyFoldOverrides, findFoldHeading, toggleFold, unfoldAncestors } from '../lib/sectionFoldDom.js'
+import { applyTocOpen, findTocDetails } from '../lib/tocFoldDom.js'
 
 function dirnameOf(filePath) {
   const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
@@ -462,6 +463,13 @@ function rememberFold(id, folded) {
   foldOverridesByPath.get(path).set(id, folded)
 }
 
+// 본문 [목차] 상자를 접거나 편 상태도 문서 경로별로 기억한다(true 펼침, false 접힘). 글이 다시 그려지거나 다른 문서에 갔다 와도 사용자가 정한 상태가 이어진다.
+const tocOpenByPath = new Map()
+
+function rememberTocOpen(open) {
+  tocOpenByPath.set(useAppStore.getState().openPath ?? '', open)
+}
+
 // 목차·[[문서#제목]] 이동: 대상이 접힌 문단 안에 숨어 있으면 먼저 펴고(기억해 둔다) 스크롤한다.
 function revealAndScroll(element) {
   for (const heading of unfoldAncestors(element)) rememberFold(heading.id, false)
@@ -590,7 +598,21 @@ export function ViewerPane({ text, emptyHint }) {
 
   // 글이 다시 그려지면 접힌 상태가 글에 적힌 처음 상태로 돌아가므로, 사용자가 접거나 편 상태를 다시 입힌다(화면에 그려지기 전에).
   useLayoutEffect(() => {
-    applyFoldOverrides(scrollRef.current?.querySelector('.wiki-rendered'), foldOverridesByPath.get(openPath ?? ''))
+    const root = scrollRef.current?.querySelector('.wiki-rendered')
+    applyFoldOverrides(root, foldOverridesByPath.get(openPath ?? ''))
+    applyTocOpen(root, tocOpenByPath.get(openPath ?? ''))
+  }, [html, openPath])
+
+  // 목차 상자(<details>)를 사용자가 접거나 펴면 기억한다. toggle 이벤트는 위로 올라가지 않아서 맨 위(capture)에서 받는다.
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return undefined
+    const onToggle = (e) => {
+      const details = findTocDetails(e.target)
+      if (details) rememberTocOpen(details.open)
+    }
+    scroller.addEventListener('toggle', onToggle, true)
+    return () => scroller.removeEventListener('toggle', onToggle, true)
   }, [html, openPath])
 
   const categoryEntry = useMemo(() => {

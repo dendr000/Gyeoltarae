@@ -1506,6 +1506,12 @@
   background: color-mix(in srgb, var(--fn-hue) 48%, transparent);
 }
 
+/* 글 속 코드({{{ }}}·`백틱`) 표시 — 배경판의 코드 조각(span.ic-hl)에 옅은 회색 배경만 칠한다. 글자 크기·여백·테두리를 주면 입력칸과 글자 위치가 어긋난다. */
+.ic-hl {
+  background: color-mix(in srgb, var(--text) 13%, transparent);
+  border-radius: 3px;
+}
+
 /* 커서가 각주 안에 있을 때 커서 아래에 뜨는 "각주 편집" 단추와, 눌렀을 때 열리는 여러 줄 편집 상자(FootnoteEditBox). */
 .footnote-edit-chip {
   position: fixed;
@@ -3860,6 +3866,84 @@
 .font-settings-message {
   margin-top: 6px;
   color: var(--accent);
+}
+
+/* 문서 점검 창(메뉴 "편집" > "문서 점검") */
+.doc-check-panel {
+  width: min(640px, 94vw);
+}
+
+.doc-check-close {
+  white-space: nowrap;
+}
+
+.doc-check-summary {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.doc-check-empty,
+.doc-check-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.doc-check-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--text-h);
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.doc-check-item:hover {
+  background: var(--accent-bg);
+}
+
+.doc-check-warn {
+  border-left-color: #f59e0b;
+}
+
+.doc-check-info {
+  border-left-color: var(--accent);
+}
+
+.doc-check-line {
+  flex: none;
+  min-width: 48px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.doc-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-check-text span {
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 /* 단축키 설정 창(메뉴 "설정" > "단축키…") */

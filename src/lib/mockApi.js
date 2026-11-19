@@ -495,6 +495,9 @@ export function createMockApi() {
     onMenuOpenShortcuts() {
       return () => {}
     },
+    onMenuOpenDocCheck() {
+      return () => {}
+    },
     onMenuOpenSnippetLoad() {
       return () => {}
     },

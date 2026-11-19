@@ -27,8 +27,16 @@ describe('뷰어 연결', () => {
 
   it('사용자가 정한 접힘 상태를 문서 경로별로 기억하고, 다시 그릴 때마다 입힌다', () => {
     expect(viewer).toContain('foldOverridesByPath')
-    expect(viewer).toMatch(/useLayoutEffect\(\(\) => \{\s*applyFoldOverrides\(/)
+    expect(viewer).toMatch(/applyFoldOverrides\(root, foldOverridesByPath\.get\(openPath \?\? ''\)\)/)
     expect(viewer).toMatch(/onFoldChange: rememberFold/)
+  })
+
+  it('본문 [목차] 상자를 접고 편 상태도 문서 경로별로 기억하고, 다시 그릴 때마다 입힌다', () => {
+    expect(viewer).toContain('tocOpenByPath')
+    expect(viewer).toMatch(/applyTocOpen\(root, tocOpenByPath\.get\(openPath \?\? ''\)\)/)
+    // toggle 이벤트는 위로 올라가지 않으므로 capture 로 받는다
+    expect(viewer).toMatch(/addEventListener\('toggle', onToggle, true\)/)
+    expect(viewer).toMatch(/rememberTocOpen\(details\.open\)/)
   })
 
   it('목차(본문 목차·떠 있는 목차)와 [[문서#제목]] 이동은 숨은 제목이면 먼저 펴고 이동한다', () => {

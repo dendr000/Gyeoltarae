@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   Heading1,
   Bold,
@@ -60,6 +60,7 @@ import { headingLineFlags } from '../lib/editorHeading.js'
 import { isNumpadEnterKey } from '../lib/numpadEnter.js'
 import { asteriskPairEdit, isAiChatDoc } from '../lib/asteriskPair.js'
 import { bodyToEditable, editableToBody, footnoteAt, footnoteBodyEdit, footnoteLineSegments } from '../lib/footnoteEdit.js'
+import { inlineCodeLineRanges, splitByRanges } from '../lib/inlineCode.js'
 import { FootnoteEditBox } from './FootnoteEditBox.jsx'
 import { useHorizontalWheelScroll } from './useHorizontalWheelScroll.js'
 
@@ -478,6 +479,8 @@ function renderHighlightLines(text, marks, headingOn = true, footnoteOn = true) 
   // 각주([* 내용])는 각주마다 네 가지 옅은 색을 돌려 칠하고, 그 안의 [br] 은 더 진하게 칠한다(lib/footnoteEdit.js). 글자 크기·여백은 건드리지 않는다(App.css .fn-hl).
   // 설정(메뉴 "설정" > "각주 색")을 끄면 색 조각을 만들지 않아 각주도 일반 글처럼 보인다.
   const footnoteLines = footnoteOn ? footnoteLineSegments(text) : []
+  // 글 속 코드({{{ }}}·`백틱`)는 옅은 배경으로 표시한다(lib/inlineCode.js, 뷰어와 같은 규칙). 글자 크기·여백은 건드리지 않는다(App.css .ic-hl).
+  const codeLines = inlineCodeLineRanges(text)
   return text.split('\n').map((line, i) => {
     const heading = headingOn && headingFlags[i]
     // 제목 줄은 자동으로 강조가 켜진 상태이고, 그 밖의 줄(코드블록 안 포함)은 줄 여백의 점을 눌러 켠 줄(marks)만 강조한다.
@@ -485,24 +488,42 @@ function renderHighlightLines(text, marks, headingOn = true, footnoteOn = true) 
     // 빈 줄은 <br> 로 한 줄 높이를 만든다(내용이 없으면 block 의 높이가 0 이 되어 입력칸과 줄 수가 어긋난다).
     return (
       <div key={i} className={className}>
-        {line === '' ? <br /> : renderLineContent(line, footnoteLines[i])}
+        {line === '' ? <br /> : renderLineContent(line, footnoteLines[i], codeLines[i])}
       </div>
     )
   })
 }
 
 // 줄 하나의 내용. 각주가 있으면 조각마다 색 표시(span)를 입히되, 조각을 이은 글이 원래 줄과 다르면(줄 끝 \r 등) 안전하게 그냥 글로 둔다.
-function renderLineContent(line, segments) {
-  if (!segments || segments.map((s) => s.text).join('') !== line) return line
-  return segments.map((s, k) =>
-    s.footnote === undefined ? (
-      s.text
-    ) : (
-      <span key={k} className={`fn-hl fn-c${s.footnote % 4}${s.br ? ' fn-br' : ''}`}>
-        {s.text}
-      </span>
-    ),
-  )
+// codeRanges: 글 속 코드의 줄 안 위치([시작, 끝) 목록). 각주 조각 안에 있는 코드도 같이 표시한다.
+function renderLineContent(line, segments, codeRanges = []) {
+  const usable = segments && segments.map((s) => s.text).join('') === line ? segments : null
+  if (!usable && codeRanges.length === 0) return line
+  const base = usable ?? [{ text: line }]
+  const out = []
+  let offset = 0
+  base.forEach((s, k) => {
+    const inner = splitByRanges(s.text, offset, codeRanges).map((piece, n) =>
+      piece.code ? (
+        <span key={n} className="ic-hl">
+          {piece.text}
+        </span>
+      ) : (
+        piece.text
+      ),
+    )
+    offset += s.text.length
+    out.push(
+      s.footnote === undefined ? (
+        <Fragment key={k}>{inner}</Fragment>
+      ) : (
+        <span key={k} className={`fn-hl fn-c${s.footnote % 4}${s.br ? ' fn-br' : ''}`}>
+          {inner}
+        </span>
+      ),
+    )
+  })
+  return out
 }
 
 // 글 안의 위치(offset)에 해당하는 배경판(줄마다 <div> 하나)의 지점 [노드, 칸]. 빈 줄(<br>)이면 그 줄 요소의 맨 앞이다. 없으면 null.

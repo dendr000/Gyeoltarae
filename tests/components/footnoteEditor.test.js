@@ -21,7 +21,13 @@ describe('각주 색 구분 (배경판)', () => {
   })
 
   it('조각을 이은 글이 원래 줄과 다르면 그냥 글로 둔다(글자 위치 보호)', () => {
-    expect(editor).toMatch(/segments\.map\(\(s\) => s\.text\)\.join\(''\) !== line\) return line/)
+    expect(editor).toMatch(/segments && segments\.map\(\(s\) => s\.text\)\.join\(''\) === line \? segments : null/)
+  })
+
+  it('글 속 코드({{{ }}}·`백틱`)는 배경판에 ic-hl 조각으로 칠하고, 글자 모양을 바꾸는 값은 주지 않는다', () => {
+    expect(editor).toMatch(/inlineCodeLineRanges\(text\)/)
+    expect(editor).toMatch(/className="ic-hl"/)
+    expect(ruleBody('.ic-hl')).not.toMatch(/(^|[\s;])(font|font-size|font-weight|font-style|letter-spacing|word-spacing|padding|margin|border|border-width|width|height|line-height|display|position)\s*:/)
   })
 
   it('찾기 강조 위치는 색 표시(span)가 섞여도 글자 노드를 차례로 세어 찾는다', () => {
