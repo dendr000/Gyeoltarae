@@ -1,10 +1,11 @@
 // Copyright (c) dendr000. MIT License.
 import { isCodeFenceClose, matchCodeFenceOpen } from './codeFence.js'
+import { escapeFootnoteClosers, footnoteRegExp } from './footnoteSyntax.js'
 
 // 편집 모드의 각주([* 내용]) 도우미. 화면과 분리한 순수 함수라서 시험할 수 있다(tests/lib/footnoteEdit.test.js).
-// 각주 모양은 wikiParser.js 의 규칙과 같다: `[*` 뒤에 공백 하나(없어도 됨), 내용은 `]` 가 나오기 전까지이고, 내용 안의 `[br]`(줄 안 줄바꿈)은 닫는 표시가 아니다.
+// 각주 모양은 wikiParser.js 의 규칙과 같다(lib/footnoteSyntax.js): `[*` 뒤에 공백 하나(없어도 됨), 내용은 `]` 가 나오기 전까지이고, 내용 안의 `[br]`·`[[링크]]`·`[0]` 같은 대괄호 묶음은 닫는 표시가 아니다.
 // 각주는 한 줄 안에서만 센다(편집기는 줄 단위로 색을 칠하고, 각주 편집 상자도 한 줄 속 각주 하나를 다룬다).
-const FOOTNOTE_RE = /\[\*\s?((?:\[br\]|[^\]\n])*)\]/g
+const FOOTNOTE_RE = footnoteRegExp(false)
 
 // 한 줄 안의 각주들: [{ start, end, bodyStart, body }]. start 는 `[` 자리, end 는 `]` 바로 다음 자리(줄 안 위치), bodyStart 는 내용이 시작하는 자리.
 export function findFootnotes(line) {
@@ -39,11 +40,9 @@ export function bodyToEditable(body) {
 }
 
 // 편집 상자의 글 -> 각주 내용. 줄바꿈은 [br] 로 저장한다. 줄 끝 공백과 앞뒤 빈 줄은 지운다.
-// `]` 는 각주를 닫아 버리므로(원래 각주 안에 쓸 수 없는 글자) 전각 `］` 로 바꾼다.
+// 각주를 닫아 버릴 `]` 는(`[[링크]]`·`[0]` 처럼 짝이 맞는 대괄호 묶음 밖의 것) 전각 `］` 로 바꾼다.
 export function editableToBody(value) {
-  const lines = value
-    .replace(/\r\n?/g, '\n')
-    .replace(/\]/g, '］')
+  const lines = escapeFootnoteClosers(value.replace(/\r\n?/g, '\n'))
     .split('\n')
     .map((l) => l.replace(/[ \t]+$/, ''))
   while (lines.length > 0 && lines[0].trim() === '') lines.shift()

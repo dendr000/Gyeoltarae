@@ -9,6 +9,7 @@ import { preserveSpaces } from './preserveSpaces.js'
 import { extractMath, restoreMath, restoreRawMath } from './mathRender.js'
 import { wrapSections } from './sectionFold.js'
 import { lookupDocCandidates } from './docLink.js'
+import { footnoteRegExp } from './footnoteSyntax.js'
 //
 // Headings   : =제목= ~ ======제목======  (also accepts markdown # ~ ######)
 // Emphasis   : '''굵게''' / **굵게**, ''기울임'' / *기울임*, __밑줄__,
@@ -114,6 +115,12 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+}
+
+// escapeHtml 의 반대. applyInline 은 글 전체를 먼저 이스케이프한 뒤 링크를 찾으므로, 링크 대상(문서 이름)을 문서 목록에서
+// 찾을 때는 원래 글자로 되돌려야 한다(이름에 & 가 든 문서 [[A&B]] 가 "없는 문서"로 나오던 문제).
+function unescapeHtml(text) {
+  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
 }
 
 // Allowlist for {{{#!wiki style="..."}}}. Anything not listed here is
@@ -259,6 +266,21 @@ function safeColor(value) {
   return withLightDark(value, safeColorSingle)
 }
 
+// 배경색만 정한 칸의 글자색. 밝은 배경에 테마의 밝은 글자(다크 모드)나 어두운 배경에 어두운 글자(라이트 모드)가 겹쳐 읽을 수 없게 되는 것을 막는다.
+// #rgb / #rrggbb(알파는 무시) 한 가지 값일 때만 계산한다 — 색 이름이나 "밝은색,어두운색" 쌍은 작성자가 테마별로 맞춘 값이라 그대로 둔다.
+function contrastTextColor(bg) {
+  const m = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?$/.exec(bg ?? '')
+  if (!m) return null
+  const hex = m[1].length === 3 ? [...m[1]].map((c) => c + c).join('') : m[1]
+  const lin = [0, 2, 4].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  })
+  const lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+  // 검정 글자와의 대비 (lum+0.05)/0.05 가 흰 글자와의 대비 1.05/(lum+0.05) 보다 크면 어두운 글자
+  return (lum + 0.05) / 0.05 > 1.05 / (lum + 0.05) ? '#1a1a1a' : '#f5f5f5'
+}
+
 function safeLength(value) {
   if (/^\d{1,4}(px|%)?$/.test(value)) return /%|px$/.test(value) ? value : `${value}px`
   return null
@@ -351,7 +373,32 @@ function renderResolvedLink(resolved, innerHtml) {
   }
 }
 
+// 글 속 코드 — `{{{ 코드 }}}` (한 줄) 와 `백틱 코드`. 안의 글은 위키 문법으로 해석하지 않고 글자 그대로 코드 모양으로 보여 준다(SQL 의 `*`·`''`,
+// 파이썬의 `__init__`, C 의 `자료형*` 같은 글이 기울임·밑줄로 바뀌지 않게). `{{{+1 글}}}`·`{{{#색 글}}}`·`{{{#!...` 는 코드가 아니라 기존 문법이다.
+// 백틱은 여는 쪽 뒤와 닫는 쪽 앞이 공백이 아닐 때만 코드로 본다(`Ctrl+` 와 Ctrl+Shift+`` 처럼 글 속에 백틱이 두 개 있는 경우를 코드로 오해하지 않으려고).
+const INLINE_BRACE_CODE_RE = /\{\{\{(?![+-][1-5]\s|#)([^\n]+?)\}\}\}/g
+const INLINE_BACKTICK_CODE_RE = /`([^`\s](?:[^`\n]*[^`\s])?)`/g
+const CODE_TOKEN_RE = /@@WDCODE(\d+)@@/g
+
 function applyInline(text, footnotes, docIndex = {}) {
+  // 코드는 가장 먼저 꺼내 자리 표시 글자로 바꿔 둔다 — 아래의 각주·링크·꾸밈 처리가 코드 안을 건드리지 못하게. 맨 끝에서 코드 모양으로 되돌린다.
+  // 각주 안에 들어 있는 코드는 각주를 따로 그릴 때(팝오버·각주 목록) 원래 글로 되돌려 넘겨, 그쪽 호출이 다시 코드로 처리한다.
+  const codeRaw = []
+  const codeHtml = []
+  const restoreCodeSource = (s) => s.replace(CODE_TOKEN_RE, (m, i) => codeRaw[Number(i)] ?? m)
+  const stashCode = (whole, content, trim) => {
+    // 백틱 코드 안에 먼저 꺼낸 {{{ }}} 코드의 자리 표시가 들어 있을 수 있다 — 원문으로 되돌려 저장해야 화면에 자리 표시가 새지 않는다.
+    const rawContent = restoreCodeSource(content)
+    const shown = trim ? rawContent.trim() : rawContent
+    if (shown === '') return whole
+    codeRaw.push(restoreCodeSource(whole))
+    codeHtml.push(`<code class="wiki-inline-code">${escapeHtml(shown)}</code>`)
+    return `@@WDCODE${codeRaw.length - 1}@@`
+  }
+  text = text
+    .replace(INLINE_BRACE_CODE_RE, (whole, content) => stashCode(whole, content, true))
+    .replace(INLINE_BACKTICK_CODE_RE, (whole, content) => stashCode(whole, content, false))
+
   // Footnotes are pulled out of the RAW (still-unescaped) source first,
   // before escapeHtml runs below — each match is swapped for a plain-ASCII
   // placeholder token so escapeHtml can't touch it, and the footnote's own
@@ -370,7 +417,9 @@ function applyInline(text, footnotes, docIndex = {}) {
   // 여전히 최하단 각주 목록으로도 이동함(각주가 길어 팝오버에 다 안 보일
   // 때의 대안).
   const footnoteHtmlByMarker = []
-  const withFootnoteMarkers = text.replace(/\[\*\s?((?:\[br\]|[^\]])*)\]/g, (_m, rawContent) => {
+  // 각주 모양(내용 안의 [br]·[[링크]]·[0] 은 닫는 표시가 아님)은 lib/footnoteSyntax.js — 편집기의 각주 색칠과 같은 규칙이다.
+  const withFootnoteMarkers = text.replace(footnoteRegExp(true), (_m, rawBody) => {
+    const rawContent = restoreCodeSource(rawBody)
     footnotes.push(rawContent)
     const n = footnotes.length
     const popoverHtml = applyInline(rawContent, [], docIndex)
@@ -442,7 +491,9 @@ function applyInline(text, footnotes, docIndex = {}) {
   // since that's the one part specific to a text link (an image link has
   // no such thing — see renderImageBlock).
   out = out.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_m, target, label) => {
-    const trimmedTarget = target.trim()
+    // target 과 label 은 이미 이스케이프된 글이다. 문서를 찾고 링크 속성에 싣는 것은 원래 글자(& 등)로 하고(renderResolvedLink 가 다시 이스케이프한다),
+    // 보이는 글자는 이스케이프된 채로 쓴다.
+    const trimmedTarget = unescapeHtml(target.trim())
     if (RESERVED_LINK_PREFIX_RE.test(trimmedTarget)) {
       return `<span class="wiki-link-pending" title="이 문법은 그 줄에 단독으로 있어야 동작합니다">${label || target}</span>`
     }
@@ -455,24 +506,37 @@ function applyInline(text, footnotes, docIndex = {}) {
     // uses the original untrimmed target, same as always.
     const displayText =
       resolved.type === 'same-doc-anchor'
-        ? label || resolved.anchorName
+        ? label || escapeHtml(resolved.anchorName)
         : resolved.type === 'anchor'
-          ? label || trimmedTarget
+          ? label || escapeHtml(trimmedTarget)
           : label || target
     return renderResolvedLink(resolved, displayText)
   })
 
+  // 꾸밈 표시. 곱셈·포인터·SQL 글(`a*2 > b*3`, `자료형* 포인터명`, `SELECT * FROM`, `'' OR x = ''`)을 기울임으로 오해하지 않도록
+  // 여는 표시 바로 뒤와 닫는 표시 바로 앞은 공백이 아니어야 한다. 한 줄 별표(*)는 더해서 ① 여는 별표 앞이 글자·숫자·`)`·`]` 가 아니고
+  // ② 안에 글자나 숫자가 있어야 한다(`*(*(배열명))` 처럼 괄호만 낀 경우 제외). `--취소--` 는 여는 표시 앞이 숫자·영문이면 취소선이 아니다(`09:00--10:00`).
   out = out.replace(/'''([^'\n]+)'''/g, '<strong>$1</strong>')
-  out = out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-  out = out.replace(/''([^'\n]+)''/g, '<em>$1</em>')
-  out = out.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+  out = out.replace(/\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*/g, '<strong>$1</strong>')
+  out = out.replace(/''(?=[^\s'])([^'\n]*?[^\s'])''/g, '<em>$1</em>')
+  out = out.replace(/(?<![*\p{L}\p{N})\]])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/gu, (whole, content) =>
+    /[\p{L}\p{N}]/u.test(content) ? `<em>${content}</em>` : whole,
+  )
   out = out.replace(/__([^_\n]+)__/g, '<u>$1</u>')
   out = out.replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
-  out = out.replace(/(?<!-)--([^-\n]+)--(?!-)/g, '<del>$1</del>')
+  out = out.replace(/(?<![-\dA-Za-z])--([^-\n]+)--(?!-)/g, '<del>$1</del>')
   out = out.replace(/\^\^([^^\n]+)\^\^/g, '<sup>$1</sup>')
   out = out.replace(/,,([^,\n]+),,/g, '<sub>$1</sub>')
 
-  return out
+  // 맨 처음 꺼내 둔 코드를 코드 모양으로 되돌린다.
+  return out.replace(CODE_TOKEN_RE, (m, i) => codeHtml[Number(i)] ?? m)
+}
+
+// 제목의 화면용 글(목차에 보임): 꾸밈·링크·색·코드 표시와 각주를 뺀 보이는 글자만. 원문 text 는 [[#제목]] 이동이 맞춰 보는 값이라 따로 둔다.
+function headingLabel(text, docIndex) {
+  const withoutFootnotes = text.replace(footnoteRegExp(true), '')
+  const shown = applyInline(withoutFootnotes, [], docIndex).replace(/<br>/g, ' ').replace(/<[^>]*>/g, '')
+  return unescapeHtml(shown).replace(/\s+/g, ' ').trim()
 }
 
 const TOC_PLACEHOLDER = '@@WIKIDESK_TOC_PLACEHOLDER@@'
@@ -491,7 +555,8 @@ const TABLE_ROW_RE = /^\|\|([\s\S]+)\|\|$/
 // a caption placed on its own line right before or after a table block.
 const TABLE_CAPTION_RE = /^\|([^|]+)\|$/
 const LIST_RE = /^(\*+)\s+(.+)$/
-const OLIST_RE = /^\d+\.\s+(.+)$/
+// 1~3자리 숫자만 번호 목록이다. "2024. 11. 19. 작성" 같은 날짜 줄(4자리 연도)이 목록이 되지 않게 한다.
+const OLIST_RE = /^(\d{1,3})\.\s+(.+)$/
 const QUOTE_RE = /^(>+)\s?(.*)$/
 const BLOCK_OPEN_RE = /^\{\{\{(.*)$/
 
@@ -690,6 +755,23 @@ function mergeMultilineTableRows(lines) {
   return out
 }
 
+// 표 칸 앞의 <...> 중 지원하는 표시인지. parseTableCell 의 처리 목록과 같아야 한다.
+const KNOWN_CELL_ATTR_RE = new RegExp(
+  `^(?:${[
+    String.raw`-\d+`, // <-2> 가로 병합
+    String.raw`[\^v]?\|\d+`, // <|2> <^|2> <v|2> 세로 병합
+    '[:()]', // 가운데·왼쪽·오른쪽 정렬
+    'nopad',
+    String.raw`(?:bgcolor|rowbgcolor|colbgcolor|color|rowcolor|colcolor|width|height|rowclass)=.+`,
+    String.raw`table\s*(?:bordercolor|bgcolor|width|color|class)=.+`,
+    String.raw`table\s*align=(?:left|center|right)`,
+  ].join('|')})$`,
+)
+
+function isKnownCellAttr(attrStr) {
+  return KNOWN_CELL_ATTR_RE.test(attrStr)
+}
+
 function parseTableCell(raw) {
   let content = raw.trim()
   const attrs = {
@@ -697,6 +779,10 @@ function parseTableCell(raw) {
     colspan: 1,
     rowspan: 1,
     align: null,
+    valign: null,
+    color: null,
+    rowcolor: null,
+    colcolor: null,
     bgcolor: null,
     rowbgcolor: null,
     colbgcolor: null,
@@ -718,15 +804,21 @@ function parseTableCell(raw) {
   // <bgcolor=#eee><:>text — keep peeling them off until none remain.
   // table*=... tokens are conventionally written on one cell (usually the
   // first) but apply to the whole <table>, not just that cell.
+  // 아는 표시만 벗겨 낸다. 모르는 <...>(<중요>, <b>글</b> 등)를 만나면 거기서 멈추고 그 뒤는 칸의 글자로 둔다 — 예전에는 모르는 표시도
+  // 지워서 칸 글자가 사라지거나 `</b>` 만 남았다.
   let attrMatch = content.match(/^<([^>]*)>([\s\S]*)$/)
   while (attrMatch) {
     const attrStr = attrMatch[1]
+    if (!isKnownCellAttr(attrStr)) break
     content = attrMatch[2].trim()
     const colspan = attrStr.match(/^-(\d+)$/)
-    const rowspan = attrStr.match(/^\|(\d+)$/)
+    const rowspan = attrStr.match(/^([\^v]?)\|(\d+)$/)
     const bg = attrStr.match(/^bgcolor=(.+)$/)
     const rowbg = attrStr.match(/^rowbgcolor=(.+)$/)
     const colbg = attrStr.match(/^colbgcolor=(.+)$/)
+    const textColor = attrStr.match(/^color=(.+)$/)
+    const rowTextColor = attrStr.match(/^rowcolor=(.+)$/)
+    const colTextColor = attrStr.match(/^colcolor=(.+)$/)
     const width = attrStr.match(/^width=(.+)$/)
     const height = attrStr.match(/^height=(.+)$/)
     const tableBorder = attrStr.match(/^table\s*bordercolor=(.+)$/)
@@ -738,8 +830,12 @@ function parseTableCell(raw) {
     const tableClass = attrStr.match(/^table\s*class=(.+)$/)
 
     if (colspan) attrs.colspan = Number(colspan[1])
-    else if (rowspan) attrs.rowspan = Number(rowspan[1])
-    else if (attrStr === ':') attrs.align = 'center'
+    else if (rowspan) {
+      attrs.rowspan = Number(rowspan[2])
+      // <^|2> 는 위쪽, <v|2> 는 아래쪽 맞춤으로 세로 병합한다(<|2> 는 기본 맞춤).
+      if (rowspan[1] === '^') attrs.valign = 'top'
+      else if (rowspan[1] === 'v') attrs.valign = 'bottom'
+    } else if (attrStr === ':') attrs.align = 'center'
     else if (attrStr === '(') attrs.align = 'left'
     else if (attrStr === ')') attrs.align = 'right'
     else if (attrStr === 'nopad') attrs.nopad = true
@@ -752,6 +848,9 @@ function parseTableCell(raw) {
     else if (tableClass && CLASS_NAME_RE.test(tableClass[1])) attrs.tableAttrs = { ...attrs.tableAttrs, class: tableClass[1] }
     else if (rowbg) attrs.rowbgcolor = safeColor(rowbg[1])
     else if (colbg) attrs.colbgcolor = safeColor(colbg[1])
+    else if (textColor) attrs.color = safeColor(textColor[1])
+    else if (rowTextColor) attrs.rowcolor = safeColor(rowTextColor[1])
+    else if (colTextColor) attrs.colcolor = safeColor(colTextColor[1])
     else if (bg) attrs.bgcolor = safeColor(bg[1])
     else if (width) attrs.width = safeLength(width[1])
     else if (height) attrs.height = safeLength(height[1])
@@ -806,15 +905,19 @@ function renderTable(rows, footnotes, dataIndex, templateIndex, docIndex, imageI
   // colbgcolor "falls" down a column from the cell that declares it until
   // a later row overrides it; rowbgcolor covers the whole row it's on.
   const colBg = {}
+  const colText = {} // colcolor(글자색)도 colbgcolor 처럼 그 칸부터 아래로 이어진다
 
   const body = rows
     .map((cells) => {
       const rowBg = cells.map((c) => c.rowbgcolor).find(Boolean) || null
       const rowClass = cells.map((c) => c.rowclass).find(Boolean) || null
+      const rowText = cells.map((c) => c.rowcolor).find(Boolean) || null
       const tds = cells
         .map((cell, ci) => {
           if (cell.colbgcolor) colBg[ci] = cell.colbgcolor
+          if (cell.colcolor) colText[ci] = cell.colcolor
           const effectiveBg = cell.bgcolor || rowBg || colBg[ci] || null
+          const effectiveText = cell.color || rowText || colText[ci] || contrastTextColor(effectiveBg)
 
           const tag = cell.header ? 'th' : 'td'
           const attrParts = []
@@ -822,7 +925,9 @@ function renderTable(rows, footnotes, dataIndex, templateIndex, docIndex, imageI
           if (cell.rowspan > 1) attrParts.push(`rowspan="${cell.rowspan}"`)
           const styleParts = []
           if (cell.align) styleParts.push(`text-align:${cell.align}`)
+          if (cell.valign) styleParts.push(`vertical-align:${cell.valign}`)
           if (effectiveBg) styleParts.push(`background:${effectiveBg}`)
+          if (effectiveText) styleParts.push(`color:${effectiveText}`)
           if (cell.width) styleParts.push(`width:${cell.width}`)
           if (cell.height) styleParts.push(`height:${cell.height}`)
           if (cell.nopad) styleParts.push('padding:0')
@@ -886,6 +991,11 @@ function listDepthByIndent(buffer, line) {
   return indents.length
 }
 
+// 번호 목록을 여는 태그. 처음 항목의 번호가 1 이 아니면 그 번호부터 센다("3. 셋" → 3 부터, 빈 줄로 갈라진 "1. 가 / 2. 나" 의 둘째 목록은 2 부터).
+function openListTag(item) {
+  return item.type === 'ol' && item.start !== undefined && item.start !== 1 ? `<ol start="${item.start}">` : `<${item.type}>`
+}
+
 function buildNestedList(items) {
   let html = ''
   const stack = []
@@ -897,10 +1007,10 @@ function buildNestedList(items) {
     if (top && top.depth === item.depth && top.type === item.type) {
       html += `</li><li>${item.html}`
     } else if (top && top.depth === item.depth) {
-      html += `</li></${stack.pop().type}><${item.type}><li>${item.html}`
+      html += `</li></${stack.pop().type}>${openListTag(item)}<li>${item.html}`
       stack.push({ type: item.type, depth: item.depth })
     } else {
-      html += `<${item.type}><li>${item.html}`
+      html += `${openListTag(item)}<li>${item.html}`
       stack.push({ type: item.type, depth: item.depth })
     }
   }
@@ -1376,7 +1486,11 @@ export function parseWikiText(
   function nextHeadingNumber(level) {
     headingCounters[level] += 1
     for (let l = level + 1; l <= 6; l += 1) headingCounters[l] = 0
-    return headingCounters.slice(1, level + 1).join('.')
+    // 아직 한 번도 안 나온(0 인) 위 단계는 번호에 넣지 않는다 — `==` 로 시작하는 문서의 첫 제목이 "0.1." 이 아니라 "1." 이 되도록.
+    return headingCounters
+      .slice(1, level + 1)
+      .filter((n) => n > 0)
+      .join('.')
   }
 
   let buffer = { kind: null, items: [] }
@@ -1584,9 +1698,11 @@ export function parseWikiText(
       const level = heading[1].length
       const startsFolded = heading[2] === '#'
       const text = heading[3]
-      const id = slugifyHeading(text)
+      // 이동용 id 는 각주를 뺀 제목 글로 만든다 — `[[#제목]]` 이 `== 제목[* 주석] ==` 에도 닿도록.
+      const id = slugifyHeading(text.replace(footnoteRegExp(true), ''))
       const number = nextHeadingNumber(level)
-      toc.push({ level, text: restoreRawMath(text), id, number })
+      const rawText = restoreRawMath(text)
+      toc.push({ level, text: rawText, label: headingLabel(rawText, docIndex), id, number })
       const rawOffset = findRawHeadingOffset?.(level, restoreRawMath(text))
       const editLink =
         rawOffset === undefined
@@ -1625,7 +1741,12 @@ export function parseWikiText(
     const olistMatch = trimmed.match(OLIST_RE)
     if (olistMatch) {
       setBuffer('list')
-      buffer.items.push({ type: 'ol', depth: listDepthByIndent(buffer, line), html: applyInline(olistMatch[1], footnotes, docIndex) })
+      buffer.items.push({
+        type: 'ol',
+        depth: listDepthByIndent(buffer, line),
+        start: Number(olistMatch[1]),
+        html: applyInline(olistMatch[2], footnotes, docIndex),
+      })
       continue
     }
 
@@ -1685,7 +1806,7 @@ export function parseWikiText(
       ? `<details class="wiki-toc" open><summary>목차</summary><ul>${toc
           .map(
             (h) =>
-              `<li style="padding-left:${(h.level - 1) * 12}px"><a href="#${h.id}">${h.number}. ${escapeHtml(h.text)}</a></li>`,
+              `<li style="padding-left:${(h.level - 1) * 12}px"><a href="#${h.id}">${h.number}. ${escapeHtml(h.label)}</a></li>`,
           )
           .join('')}</ul></details>`
       : ''

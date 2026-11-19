@@ -97,6 +97,14 @@ describe('각주 내용 <-> 편집 상자 글', () => {
     expect(findFootnotes(`[* ${editableToBody('a]b')}]`)).toHaveLength(1)
   })
 
+  it('[[링크]] 와 [0] 같은 짝이 맞는 대괄호는 그대로 두고, 낱개 ] 만 바꾼다', () => {
+    expect(editableToBody('[[문서]] 와 [0] 그리고 a]b')).toBe('[[문서]] 와 [0] 그리고 a］b')
+    const line = `[* ${editableToBody('[[문서]] 참고 [0]')}] 끝`
+    const found = findFootnotes(line)
+    expect(found).toHaveLength(1)
+    expect(found[0].body).toBe('[[문서]] 참고 [0]')
+  })
+
   it('고쳐도 [br] 이 없는 내용은 그대로 돌아온다', () => {
     expect(editableToBody(bodyToEditable('015 설명'))).toBe('015 설명')
   })

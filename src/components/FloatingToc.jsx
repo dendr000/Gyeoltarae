@@ -11,10 +11,10 @@ export function FloatingToc({ toc, onJump = jumpTo }) {
       <ul>
         {toc.map((h) => (
           <li key={h.id} style={{ paddingLeft: (h.level - 1) * 8 }}>
-            <button type="button" onClick={() => onJump(h.id)} title={`${h.number}. ${h.text}`}>
+            <button type="button" onClick={() => onJump(h.id)} title={`${h.number}. ${h.label ?? h.text}`}>
               <span className="floating-toc-dot" />
               <span className="floating-toc-label">
-                {h.number}. {h.text}
+                {h.number}. {h.label ?? h.text}
               </span>
             </button>
           </li>

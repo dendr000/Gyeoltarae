@@ -995,6 +995,14 @@
   white-space: pre;
 }
 
+/* 글 속에 쓴 {{{ }}} 와 `백틱` 짧은 코드 — 문법 기호가 풀리지 않고 고정폭으로 보인다. */
+.wiki-inline-code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  font: 0.92em var(--mono);
+}
+
 .wiki-code {
   margin: 0;
   padding: 10px 14px;
@@ -3591,6 +3599,8 @@
 
 .image-sidebar-empty {
   padding: 0 16px;
+  white-space: normal; /* 안내문은 서술형이라 줄바꿈한다 (가로 스크롤이 생기지 않도록) */
+  overflow-wrap: anywhere;
 }
 
 .image-sidebar-grid {
