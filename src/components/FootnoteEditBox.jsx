@@ -1,11 +1,13 @@
 // Copyright (c) dendr000. MIT License.
 import { useEffect, useRef, useState } from 'react'
+import { handleFootnoteBoxKey } from '../lib/footnoteBoxKeys.js'
 
 // 각주([* 내용]) 하나를 여러 줄로 고치는 작은 상자. 각주 안에서 Alt+E(또는 "각주 편집" 단추)로 연다.
 // 본문의 [br] 은 여기서 진짜 줄바꿈으로 보이고, 적용하면 다시 [br] 로 저장된다(변환은 lib/footnoteEdit.js).
 // Ctrl+Enter 또는 "적용" = 반영, Esc 또는 "취소" = 버림. 상자 밖을 누르면 고친 내용이 있을 때 반영한다.
+// 본문과 같은 입력 도우미도 쓴다: 괄호 자동 닫기, Ctrl+B/U 굵게·밑줄, Alt+H 사전 순환, Alt+Shift+H 한자 등록(상자는 반영하고 닫힘), Alt+←/→ (규칙: lib/footnoteBoxKeys.js).
 // 이 상자는 글을 직접 바꾸지 않고 onApply(글)/onCancel() 만 부른다 — 본문 입력칸에 넣는 일은 EditorPane 이 한다(되돌리기 기록 유지).
-export function FootnoteEditBox({ initialValue, top, left, onApply, onCancel }) {
+export function FootnoteEditBox({ initialValue, top, left, dictMap, onOpenDict, onApply, onCancel }) {
   const [value, setValue] = useState(initialValue)
   const boxRef = useRef(null)
   const areaRef = useRef(null)
@@ -45,6 +47,16 @@ export function FootnoteEditBox({ initialValue, top, left, onApply, onCancel }) 
     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       finish(true)
+    } else {
+      handleFootnoteBoxKey(e, areaRef.current, {
+        setValue,
+        dictMap,
+        // 사전 창을 누르면 상자는 "바깥 클릭"으로 닫히므로, 먼저 지금 글을 반영하고 닫은 뒤 창을 연다.
+        openDict: (selected) => {
+          finish(true)
+          onOpenDict?.(selected)
+        },
+      })
     }
   }
 

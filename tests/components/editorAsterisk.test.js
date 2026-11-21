@@ -37,6 +37,6 @@ describe('편집창의 별표 짝 맞추기 연결', () => {
   })
 
   it('기존 자동 괄호 목록에는 별표를 넣지 않았다(다른 폴더에서는 동작하지 않아야 하므로)', () => {
-    expect(editor).toMatch(/const AUTO_PAIRS = \{ '\(': '\)', '\[': '\]', "'": "'", '"': '"', '<': '>', '\{': '\}' \}/)
+    expect(readFileSync(new URL('../../src/lib/textareaEdit.js', import.meta.url), 'utf8')).toMatch(/const AUTO_PAIRS = \{ '\(': '\)', '\[': '\]', "'": "'", '"': '"', '<': '>', '\{': '\}' \}/)
   })
 })
