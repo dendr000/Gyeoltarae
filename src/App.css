@@ -1961,7 +1961,7 @@
 
 .file-suggest-menu {
   position: fixed;
-  z-index: 200;
+  z-index: 220;
   min-width: 180px;
   max-width: 260px;
   max-height: 220px;

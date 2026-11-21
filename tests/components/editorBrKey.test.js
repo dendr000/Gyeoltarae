@@ -8,7 +8,7 @@ const pane = readFileSync(new URL('../../src/components/EditorPane.jsx', import.
 describe('EditorPane 의 숫자패드 Enter', () => {
   it('isNumpadEnterKey 로 판단해 선택 범위(없으면 커서 자리)에 [br] 을 넣는다', () => {
     expect(pane).toContain("from '../lib/numpadEnter.js'")
-    expect(pane).toMatch(/if \(isNumpadEnterKey\(e\) && !e\.nativeEvent\.isComposing\) \{\s*e\.preventDefault\(\)\s*replaceRange\(textarea, textarea\.selectionStart, textarea\.selectionEnd, '\[br\]', onChange\)/)
+    expect(pane).toMatch(/if \(isNumpadEnterKey\(e\) && !e\.nativeEvent\.isComposing\) \{\s*e\.preventDefault\(\)\s*replaceRange\(textarea, textarea\.selectionStart, textarea\.selectionEnd, '\[br\]', emitChange\)/)
   })
 
   it('입력칸의 되돌리기(Ctrl+Z)가 이어지도록 replaceRange(execCommand)로 넣는다', () => {

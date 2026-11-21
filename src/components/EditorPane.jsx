@@ -599,6 +599,11 @@ export function EditorPane({ text, onChange, disabled }) {
   const snippetStopsRef = useRef(null)
   // 상용구 본문 `{!이름}` 이 실행하는 동작들 — 매 렌더마다 최신 함수로 바꿔 둔다(동작은 펼친 글을 지운 뒤에 불러서 옛 렌더의 글을 보면 안 된다).
   const snippetActionsRef = useRef({})
+  // 각주 편집 상자가 열려 있으면 그 입력칸이 "지금 글을 고치는 곳"이다(상자는 FootnoteEditBox 가 등록). 상용구·링크 도우미가 본문과
+  // 상자에서 같은 함수를 쓰도록, 고치는 입력칸(getArea)과 글 바꾸기(emitChange)를 한 곳에서 고른다.
+  const assistRef = useRef(null)
+  const getArea = () => assistRef.current?.area ?? textareaRef.current
+  const emitChange = (value) => (assistRef.current ? assistRef.current.setValue(value) : onChange(value))
   useEffect(() => {
     snippetActionsRef.current = {
       표: openTableEditor,
@@ -726,7 +731,7 @@ export function EditorPane({ text, onChange, disabled }) {
   // have moved it into or out of a `[[파일:...` context (typing, clicking,
   // arrow keys).
   function updateFileSuggest() {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!textarea) return
     const ctx = detectFileRefQuery(textarea)
     if (!ctx) {
@@ -809,10 +814,10 @@ export function EditorPane({ text, onChange, disabled }) {
   }
 
   function selectFileSuggestItem(name) {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!fileSuggest || !textarea) return
     const { start, end } = fileSuggest
-    replaceRange(textarea, start, end, name, onChange)
+    replaceRange(textarea, start, end, name, emitChange)
     setFileSuggest(null)
     requestAnimationFrame(() => {
       textarea.focus()
@@ -848,7 +853,7 @@ export function EditorPane({ text, onChange, disabled }) {
   }
 
   function updateSnippetSuggest() {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!textarea) return
     // "타이핑 중 추천 팝업"이 꺼져 있어도 언어가 적힌 코드블록(```MySQL 등) 안에서는 켠다 —
     // 코드를 쓸 때는 단축어(SELECT 같은)를 바로 불러 쓸 수 있게. 블록 밖으로 나오면 다시 설정을
@@ -896,13 +901,18 @@ export function EditorPane({ text, onChange, disabled }) {
   // 공유— 전자는 snippetSuggest.start/end, 후자는 직접 계산한 범위를 넘겨줌.
   // 본문 해석은 lib/snippetExpansion.js: 첫 {#} 는 커서 자리, 나머지 {#} 는 Tab 으로 건너뛸 자리, `{!이름}` 은 동작 실행.
   function commitSnippetExpansion(entry, start, end) {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!textarea) return
     const parsed = parseSnippetContent(entry.content)
     // 동작 본문(`{!표}`): 친 글자(`/표`)만 지우고 그 동작을 연다. 모르는 이름이면 본문을 글자 그대로 넣는다.
     const action = parsed.action ? snippetActionsRef.current[parsed.action] : null
+    // 동작 본문({!표} 등)은 본문 전용이라 각주 상자에서는 실행하지 않는다(친 글자는 그대로 둔다).
+    if (action && assistRef.current) {
+      setSnippetSuggest(null)
+      return
+    }
     if (action) {
-      replaceRange(textarea, start, end, '', onChange)
+      replaceRange(textarea, start, end, '', emitChange)
       setSnippetSuggest(null)
       snippetStopsRef.current = null
       // 지운 글이 화면 상태에 반영된 뒤에 동작을 부른다(표 편집기는 지금 글에서 커서 자리의 표를 찾는다).
@@ -910,9 +920,9 @@ export function EditorPane({ text, onChange, disabled }) {
       return
     }
     const { text: content, caret, stops } = parsed.action ? { text: entry.content, caret: null, stops: [] } : parsed
-    replaceRange(textarea, start, end, content, onChange)
+    replaceRange(textarea, start, end, content, emitChange)
     setSnippetSuggest(null)
-    // 방금 넣은 글이 onChange 에서 옛 자리들을 밀지 않도록 글을 넣은 뒤에 새 자리들을 기억한다.
+    // 방금 넣은 글이 emitChange 에서 옛 자리들을 밀지 않도록 글을 넣은 뒤에 새 자리들을 기억한다.
     snippetStopsRef.current = stops.length > 0 ? { stops: stops.map((stop) => start + stop), length: textarea.value.length } : null
     requestAnimationFrame(() => {
       textarea.focus()
@@ -921,7 +931,7 @@ export function EditorPane({ text, onChange, disabled }) {
     })
   }
 
-  // 글이 바뀔 때마다 남은 Tab 자리들의 위치를 맞춘다(onChange 에서 부른다). 바뀐 자리는 커서에서 거꾸로 센다.
+  // 글이 바뀔 때마다 남은 Tab 자리들의 위치를 맞춘다(emitChange 에서 부른다). 바뀐 자리는 커서에서 거꾸로 센다.
   function trackSnippetStops(textarea) {
     const tracked = snippetStopsRef.current
     if (!tracked) return
@@ -954,7 +964,7 @@ export function EditorPane({ text, onChange, disabled }) {
   // detectExactSnippetMatch가 찾은 후보를 실제로 적용 — 하나면 바로 치환, 여럿이면(카테고리만
   // 다른 동일 제목) 숫자 선택 팝업. 스페이스바 자동 치환과 Alt+Enter 수동 치환이 공유.
   function applySnippetMatch(match) {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!textarea) return
     if (match.matches.length === 1) {
       commitSnippetExpansion(match.matches[0], match.start, match.end)
@@ -976,7 +986,7 @@ export function EditorPane({ text, onChange, disabled }) {
   // 채운 채로 상용구 모달을 엶. textarea 는 포커스를 잃어도(툴바 버튼을 눌러도) 선택 영역을
   // 그대로 기억하므로 버튼으로 열어도 같은 값을 읽을 수 있음.
   function openSnippetModalWithSelection() {
-    const textarea = textareaRef.current
+    const textarea = getArea()
     if (!textarea) return
     const { selectionStart, selectionEnd } = textarea
     openSnippetModal(selectionStart !== selectionEnd ? textarea.value.slice(selectionStart, selectionEnd) : '')
@@ -1149,7 +1159,9 @@ export function EditorPane({ text, onChange, disabled }) {
 
   function handleKeyDown(e) {
     const textarea = e.currentTarget
-    if (typewriterZone && isTypewriterNavKey(e.key)) requestAnimationFrame(recenterCaret)
+    // 각주 편집 상자 안(assistRef)에서는 본문 전용인 것(타자기 위치, 각주 상자 열기, 찾기, 저장)을 건너뛴다.
+    const inBox = assistRef.current !== null
+    if (!inBox && typewriterZone && isTypewriterNavKey(e.key)) requestAnimationFrame(recenterCaret)
     if (fileSuggest) {
       if (e.key === 'ArrowDown' && !e.altKey) {
         e.preventDefault()
@@ -1252,7 +1264,7 @@ export function EditorPane({ text, onChange, disabled }) {
       return
     }
     // Alt+E — 커서가 있는 각주([* ...])를 여러 줄 편집 상자로 연다(각주 안이 아니면 아무것도 하지 않고 키를 그대로 둔다).
-    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyE' || e.key.toLowerCase() === 'e') && !e.nativeEvent.isComposing) {
+    if (!inBox && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyE' || e.key.toLowerCase() === 'e') && !e.nativeEvent.isComposing) {
       if (openFootnoteBox()) {
         e.preventDefault()
         return
@@ -1276,7 +1288,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const result = resolveCycleReplacement(textarea.value.slice(0, pos), dictMap)
       if (!result) return
       const start = pos - result.matchLength
-      replaceRange(textarea, start, pos, result.replacement, onChange)
+      replaceRange(textarea, start, pos, result.replacement, emitChange)
       requestAnimationFrame(() => {
         textarea.focus()
         const newPos = start + result.replacement.length
@@ -1286,7 +1298,7 @@ export function EditorPane({ text, onChange, disabled }) {
     }
     // Ctrl+F 찾기 / Ctrl+Shift+F 찾아 바꾸기 — caps lock 등으로 e.key 대소문자가 꼬일 수
     // 있어 toLowerCase 비교 + shiftKey로 모드를 가름(대문자 F 자체에 기대지 않음).
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f') {
+    if (!inBox && (e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f') {
       e.preventDefault()
       openFindBar(e.shiftKey ? 'replace' : 'find')
       return
@@ -1296,7 +1308,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 있었음 — 그래서 "처음엔 되다가 쓰다 보면 갑자기 안 됨, 그러다 또 됨" 현상이 실제로
     // Caps Lock이 켜져 있던 동안엔 이 세 단축키가 전부 조용히 무시되고 있었던 것. Ctrl+F와
     // 똑같이 toLowerCase 비교로 통일.
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    if (!inBox && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       // Docs already autosave 800ms after the last keystroke — Ctrl+S here
       // only needs to stop the browser's own "Save Page As" dialog and,
       // since the user reached for it anyway, save immediately instead of
@@ -1309,12 +1321,12 @@ export function EditorPane({ text, onChange, disabled }) {
       e.preventDefault()
       // 굵게 — 글을 선택했으면 감싼 뒤 커서는 닫는 ''' 바깥 오른쪽에 둔다. 선택이 없으면 '''|''' 가운데(글을 써야
       // 하므로). 닫는 ''' 앞에서 → 키를 누르면 ''' 를 한 번에 건너뛴다(아래 atomicStep).
-      wrapSelection(textarea, "'''", "'''", onChange, { caretAfter: true })
+      wrapSelection(textarea, "'''", "'''", emitChange, { caretAfter: true })
       return
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') {
       e.preventDefault()
-      wrapSelection(textarea, '__', '__', onChange)
+      wrapSelection(textarea, '__', '__', emitChange)
       return
     }
     // Alt+←/→ — 줄 처음/끝으로 이동(Home/End 키가 없는 노트북용), Alt+Shift+←/→ 는 거기까지 선택.
@@ -1362,7 +1374,7 @@ export function EditorPane({ text, onChange, disabled }) {
         const range = atomicDeleteRange(value, selectionStart, erase, { tokens: !isInCodeFenceAt(value, selectionStart) })
         if (range) {
           e.preventDefault()
-          replaceRange(textarea, range.from, range.to, '', onChange)
+          replaceRange(textarea, range.from, range.to, '', emitChange)
           return
         }
       }
@@ -1375,7 +1387,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = toggleCommentEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
         e.preventDefault()
-        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd, direction)
@@ -1390,7 +1402,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = sortLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
-        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd)
@@ -1404,7 +1416,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = blockSortEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, { flip: sortFlip })
       e.preventDefault()
       if (edit) {
-        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd)
@@ -1422,7 +1434,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const selectionDirection = textarea.selectionDirection
       const edit = moveLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, lineMoveDirection)
       if (edit) {
-        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd, selectionDirection)
@@ -1438,7 +1450,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = duplicateLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
         e.preventDefault()
-        replaceRange(textarea, edit.insertAt, edit.insertAt, edit.insertText, onChange)
+        replaceRange(textarea, edit.insertAt, edit.insertAt, edit.insertText, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.selStart, edit.selEnd)
@@ -1450,7 +1462,7 @@ export function EditorPane({ text, onChange, disabled }) {
     // 키보드 배열에 따라 e.key가 '-'가 아니라 '_' 등으로 올 수 있어 code가 더 안전함.
     if (e.ctrlKey && e.shiftKey && e.altKey && (e.code === 'Minus' || e.code === 'NumpadSubtract')) {
       e.preventDefault()
-      wrapSelection(textarea, '~~', '~~', onChange)
+      wrapSelection(textarea, '~~', '~~', emitChange)
       return
     }
     // Tab — 여러 줄을 선택했으면 걸친 줄 전체를 들여쓰고, Shift+Tab 은 내어쓴다(선택이 없어도 현재 줄).
@@ -1471,7 +1483,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = indentLinesEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, e.shiftKey)
       if (edit) {
         if (edit.insert !== textarea.value.slice(edit.from, edit.to)) {
-          replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+          replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         }
         requestAnimationFrame(() => {
           textarea.focus()
@@ -1479,14 +1491,14 @@ export function EditorPane({ text, onChange, disabled }) {
         })
         return
       }
-      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, INDENT, onChange)
+      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, INDENT, emitChange)
       return
     }
     // 숫자패드 Enter: 그 자리에 [br](줄 안 줄바꿈)을 넣는다(lib/numpadEnter.js). 그냥 Enter·Shift+Enter 는 그대로다. 아래 위키 링크·목록 이어쓰기 처리가 숫자패드
     // Enter 도 Enter 로 받으므로 그보다 먼저 본다. 한글 조합 중에는 건드리지 않는다. 입력칸의 되돌리기가 이어지도록 replaceRange 로 넣는다.
     if (isNumpadEnterKey(e) && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, '[br]', onChange)
+      replaceRange(textarea, textarea.selectionStart, textarea.selectionEnd, '[br]', emitChange)
       return
     }
     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && isInsideWikiLink(textarea)) {
@@ -1498,7 +1510,7 @@ export function EditorPane({ text, onChange, disabled }) {
       e.preventDefault()
       const newPos = textarea.selectionStart + 2
       textarea.setSelectionRange(newPos, newPos)
-      maybeAutoResolveLink(textarea, docIndex, onChange)
+      maybeAutoResolveLink(textarea, docIndex, emitChange)
       updateFileSuggest()
       updateSnippetSuggest()
       return
@@ -1510,7 +1522,7 @@ export function EditorPane({ text, onChange, disabled }) {
       const edit = listContinueEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd)
       if (edit) {
         e.preventDefault()
-        replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+        replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
         requestAnimationFrame(() => {
           textarea.focus()
           textarea.setSelectionRange(edit.caret, edit.caret)
@@ -1528,7 +1540,7 @@ export function EditorPane({ text, onChange, disabled }) {
         const edit = fenceAutoCloseEdit(value, selectionStart, selectionEnd)
         if (edit) {
           e.preventDefault()
-          replaceRange(textarea, selectionStart, selectionEnd, edit.insert, onChange)
+          replaceRange(textarea, selectionStart, selectionEnd, edit.insert, emitChange)
           requestAnimationFrame(() => {
             textarea.focus()
             textarea.setSelectionRange(selectionStart + edit.caret, selectionStart + edit.caret)
@@ -1547,7 +1559,7 @@ export function EditorPane({ text, onChange, disabled }) {
             textarea.setSelectionRange(edit.caret, edit.caret)
             return
           }
-          replaceRange(textarea, edit.from, edit.to, edit.insert, onChange)
+          replaceRange(textarea, edit.from, edit.to, edit.insert, emitChange)
           textarea.setSelectionRange(edit.selStart, edit.selEnd)
           if (edit.fresh) asteriskFreshRef.current = edit.selStart
           requestAnimationFrame(() => {
@@ -1563,7 +1575,7 @@ export function EditorPane({ text, onChange, disabled }) {
         textarea.setSelectionRange(newPos, newPos)
         // Stepping over an already-there closer (see the comment above
         // AUTO_PAIR_CLOSERS) only moves the cursor — no text actually
-        // changes, so no input/onChange event fires. That's exactly how a
+        // changes, so no input/emitChange event fires. That's exactly how a
         // real person types "]]" to close a [[문서명]] (the opener already
         // auto-inserted both closing brackets; typing "]" twice just walks
         // past them) — so without this, manually typing out the closing
@@ -1572,8 +1584,8 @@ export function EditorPane({ text, onChange, disabled }) {
         // closer/context; it only ever matches right after "]]". Same
         // reasoning applies to the [[파일: suggestion popup below — closing
         // it here too, since stepping past ]] this way needs the same
-        // explicit nudge onChange would otherwise give it for free.
-        maybeAutoResolveLink(textarea, docIndex, onChange)
+        // explicit nudge emitChange would otherwise give it for free.
+        maybeAutoResolveLink(textarea, docIndex, emitChange)
         updateFileSuggest()
         updateSnippetSuggest()
         return
@@ -1582,9 +1594,9 @@ export function EditorPane({ text, onChange, disabled }) {
         e.preventDefault()
         const closer = AUTO_PAIRS[e.key]
         if (selectionStart !== selectionEnd) {
-          wrapSelection(textarea, e.key, closer, onChange)
+          wrapSelection(textarea, e.key, closer, emitChange)
         } else {
-          replaceRange(textarea, selectionStart, selectionEnd, `${e.key}${closer}`, onChange)
+          replaceRange(textarea, selectionStart, selectionEnd, `${e.key}${closer}`, emitChange)
           requestAnimationFrame(() => {
             textarea.focus()
             textarea.setSelectionRange(selectionStart + 1, selectionStart + 1)
@@ -1592,6 +1604,33 @@ export function EditorPane({ text, onChange, disabled }) {
         }
       }
     }
+  }
+
+  // 각주 편집 상자가 본문과 같은 입력 도우미(상용구 팝업·괄호 자동 닫기·링크 보조 등)를 쓰게 하는 연결. 규칙은 모두 위의 본문 함수를 그대로 쓴다.
+  const footnoteAssist = {
+    register: (target) => {
+      assistRef.current = target
+      if (!target) {
+        setFileSuggest(null)
+        setSnippetSuggest(null)
+      }
+    },
+    onKeyDown: (e) => handleKeyDown(e),
+    onChange: (e, setValue) => {
+      trackSnippetStops(e.target)
+      const rewrote = maybeAutoResolveLink(e.target, docIndex, setValue)
+      if (!rewrote) setValue(e.target.value)
+      updateFileSuggest()
+      updateSnippetSuggest()
+    },
+    onCursorMove: () => {
+      updateFileSuggest()
+      updateSnippetSuggest()
+    },
+    onBlur: () => {
+      setFileSuggest(null)
+      setSnippetSuggest(null)
+    },
   }
 
   function openTableEditor() {
@@ -1933,8 +1972,9 @@ export function EditorPane({ text, onChange, disabled }) {
           initialValue={footnoteBox.value}
           top={footnoteBox.top}
           left={footnoteBox.left}
-          dictMap={dictMap}
+          assist={footnoteAssist}
           onOpenDict={openDictModal}
+          onOpenSnippetModal={openSnippetModal}
           onApply={applyFootnoteBox}
           onCancel={cancelFootnoteBox}
         />

@@ -45,7 +45,7 @@ npm run test:changed  # 지금 바뀐 파일과 관련된 테스트만 돌림 (�
 | `tests/lib/listAndRule.test.js` | 목록 들여쓰기 하위 항목(공백 1·2·4칸, 탭, 번호 목록, 예전 `**` 방식), 목록 항목 아래 코드블록(목록이 끊기지 않는지, 빈 줄·접기 블록은 예전대로), `---` 구분선과 굵기 | 순수 함수 |
 | `tests/electron/softRefocus.test.js` | 클릭으로 여는 동작이 blur 가 들어간 창 포커스 호출을 쓰지 않는지(뒤의 앱이 깜빡이던 문제의 회귀 방지), 가벼운 포커스 함수가 `blur()` 를 쓰지 않는지, IPC 이름 일치 | 소스 검사 |
 | `tests/electron/watchScheduler.test.js` | 폴더 감시기를 켜는 시점(첫 색인 뒤, 입력이 3초 쉴 때, 계속 입력해도 20초 뒤), 시작·삭제·이동 경로가 감시기를 직접 켜지 않는지 | 가짜 시계 · 소스 검사 |
-| `tests/lib/footnoteBoxKeys.test.js` | 각주 편집 상자의 입력 도우미(괄호 자동 닫기·선택 감싸기·닫는 글자 건너뛰기·한글 조합 중 무시, 굵게·밑줄·취소선, Alt+H 사전 순환·등록, Alt+←/→), 상자와 편집기 연결(소스) | 가짜 입력칸 |
+| `tests/components/footnoteBoxAssist.test.js` | 각주 편집 상자가 본문의 입력 도우미(상용구 팝업·자동 닫기·링크 보조·줄 편집)를 같은 함수로 쓰는지: 입력칸·글 바꾸기 선택(getArea·emitChange), 본문 전용 키 건너뛰기, 동작 상용구 제외, 등록·해제, 팝업 갱신·닫기, Esc 순서, 팝업 클릭이 바깥 클릭이 아님, 팝업 겹침 순서 | 소스 검사 |
 | `tests/electron/watchProcess.test.js` | 감시 제외 규칙(점 파일·node_modules 제외, 내용 폴더 포함), 감시 별도 프로세스 래퍼(시작 메시지·이벤트 전달·옛 프로세스 끄기와 늦은 이벤트 버리기·stop 이 끝날 때까지 기다림·시간 초과·저절로 죽음 알림), 메인이 chokidar 를 직접 쓰지 않는지 | 가짜 자식 프로세스 · 소스 검사 |
 | `tests/lib/defaultTemplate.test.js`, `tests/electron/defaultTemplate.test.js`, `tests/store/defaultTemplate.test.js` | 폴더 기본 틀: 시작 틀 우선순위(직접 고른 틀 > 폴더 기본 틀 > 내장 기본 내용), 설정 파일 읽기·쓰기(물려받기·해제·망가진 파일), 새 문서 만들기 | 순수 함수 · 임시 폴더 · mockApi |
 | `tests/components/treeLabel.test.js` | 파일 트리의 숫자 배지(폴더·문서 이름, `2024년`·`3D`·숫자만 있는 이름 제외, HTML 이스케이프) | 서버 렌더링(DOM 없이 문자열) |

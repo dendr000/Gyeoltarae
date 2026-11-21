@@ -25,7 +25,7 @@ describe('편집창의 별표 짝 맞추기 연결', () => {
   })
 
   it('글을 바꿀 때는 되돌리기(Ctrl+Z)가 되도록 다른 편집과 같은 replaceRange 를 쓰고 선택을 바로·다음 프레임에 맞춘다', () => {
-    expect(editor).toMatch(/replaceRange\(textarea, edit\.from, edit\.to, edit\.insert, onChange\)\s*textarea\.setSelectionRange\(edit\.selStart, edit\.selEnd\)/)
+    expect(editor).toMatch(/replaceRange\(textarea, edit\.from, edit\.to, edit\.insert, emitChange\)\s*textarea\.setSelectionRange\(edit\.selStart, edit\.selEnd\)/)
     expect(editor).toMatch(/requestAnimationFrame\(\(\) => \{\s*textarea\.focus\(\)\s*textarea\.setSelectionRange\(edit\.selStart, edit\.selEnd\)/)
   })
 
