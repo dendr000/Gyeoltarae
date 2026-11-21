@@ -147,3 +147,30 @@ describe('checkDocument: 각주 안의 대괄호', () => {
     expect(kinds('가[* 배열 a[0] 과 [br] 줄바꿈]나')).toEqual([])
   })
 })
+
+describe('checkDocument: 인물 문서 점검', () => {
+  const doc = (extra) => ['= 가 =', '특기:a', '= 나 =', '특기:b', '= 다 =', '120 회차', extra].join('\n')
+
+  it('인물 문서에서 아무것도 안 적은 인물을 그 제목 줄로 알린다', () => {
+    const issues = checkDocument(doc('= 라 =\n설명뿐'))
+    const empty = issues.filter((i) => i.kind === 'character-empty')
+    expect(empty).toHaveLength(1)
+    expect(empty[0].line).toBe(7)
+    expect(empty[0].severity).toBe('info')
+    expect(empty[0].message).toContain('라')
+  })
+
+  it('같은 이름이 또 나오면 알린다', () => {
+    const issues = checkDocument(doc('= 가 =\n특기:z'))
+    expect(issues.filter((i) => i.kind === 'character-duplicate')).toHaveLength(2)
+  })
+
+  it('이름이 ??? 인 인물이 여럿이어도 중복으로 알리지 않는다', () => {
+    const issues = checkDocument(doc('= ??? =\n특기:z\n= ??? =\n특기:y'))
+    expect(issues.filter((i) => i.kind === 'character-duplicate')).toEqual([])
+  })
+
+  it('인물 문서가 아닌 보통 글(제목만 여럿)에는 인물 점검을 하지 않는다', () => {
+    expect(checkDocument('= 소개 =\n글\n= 방법 =\n글\n= 결론 =\n글\n= 참고 =\n글')).toEqual([])
+  })
+})

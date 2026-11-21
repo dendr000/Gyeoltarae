@@ -2,6 +2,7 @@
 import { isCodeFenceClose, matchCodeFenceOpen } from './codeFence.js'
 import { footnoteRegExp } from './footnoteSyntax.js'
 import { inlineCodeRanges } from './inlineCode.js'
+import { looksLikeCharacterDoc, parseCharacters } from './characterTable.js'
 
 // 문서 점검: 글이 화면에서 엉뚱하게 보이게 만드는 흔한 실수(닫히지 않은 코드블록·{{{·각주·수식, = 개수가 다른 제목, 없는 문서 링크)를 찾는다.
 // 화면과 분리한 순수 함수라서 시험할 수 있다(tests/lib/docCheck.test.js). 코드블록(```) 안과 한 줄 안의 `코드`·{{{ 코드 }}} 안은 점검하지 않는다.
@@ -15,6 +16,8 @@ const LABELS = {
   'math-open': '수식이 닫히지 않음',
   'heading-mismatch': '제목의 = 개수가 다름',
   'link-missing': '없는 문서 링크',
+  'character-empty': '속성·회차가 없는 인물',
+  'character-duplicate': '이름이 같은 인물',
 }
 
 // 수식의 여는/닫는 표시: 백슬래시 + 괄호 (\( 와 \)).
@@ -114,6 +117,15 @@ export function checkDocument(text, { missingLinks = [] } = {}) {
     if (lead !== tail) issues.push({ kind: 'heading-mismatch', offset: starts[i] })
   })
 
+  // 인물 문서(인물 3명 이상, 절반 이상이 속성·회차를 가짐)에서만: 아무것도 안 적은 인물과 이름이 겹치는 인물을 알린다(인물 표 보기와 같은 읽기 규칙).
+  const parsed = parseCharacters(text)
+  if (looksLikeCharacterDoc(parsed)) {
+    for (const c of parsed.characters) {
+      if (c.empty) issues.push({ kind: 'character-empty', offset: c.offset, name: c.name })
+      else if (c.duplicate) issues.push({ kind: 'character-duplicate', offset: c.offset, name: c.name })
+    }
+  }
+
   // 없는 문서 링크: 그려진 글에서 모은 이름이 글의 어디에 있는지 찾는다(못 찾으면 맨 앞).
   const missing = []
   for (const name of missingLinks) {
@@ -125,7 +137,7 @@ export function checkDocument(text, { missingLinks = [] } = {}) {
   return all
     .map((issue) => ({
       kind: issue.kind,
-      severity: issue.kind === 'link-missing' ? 'info' : 'warn',
+      severity: issue.kind === 'link-missing' || issue.kind.startsWith('character-') ? 'info' : 'warn',
       label: LABELS[issue.kind],
       message: messageFor(issue),
       offset: issue.offset,
@@ -148,6 +160,10 @@ function messageFor(issue) {
       return `${MATH_OPEN} 로 연 수식에 닫는 ${MATH_CLOSE} 가 없어 수식으로 그려지지 않습니다`
     case 'heading-mismatch':
       return '제목의 앞뒤 = 개수가 달라 제목 글자에 =가 섞여 보입니다'
+    case 'character-empty':
+      return `${issue.name || '(이름 없음)'}: 특기:값 같은 속성 줄도, 회차 줄도 없습니다`
+    case 'character-duplicate':
+      return `${issue.name}: 같은 이름의 인물이 문서에 또 있습니다`
     case 'link-missing':
       return `[[${issue.name}]] 문서가 없습니다 (눌러서 만들 수는 있습니다)`
     default:

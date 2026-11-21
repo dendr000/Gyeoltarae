@@ -32,6 +32,14 @@ const SAVE_LABEL = {
 export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onThemeChange }) {
   // 상용구를 불러오는 중이면 { done, total }(lib/snippetLoad.js). "저장됨" 옆에 돌아가는 표시와 게이지바로 보여 준다.
   const snippetLoad = useAppStore((s) => s.snippetLoad)
+  const characterTableOpen = useAppStore((s) => s.characterTableOpen)
+  const setCharacterTableOpen = useAppStore((s) => s.setCharacterTableOpen)
+  // 인물 표는 뷰어에 그려지므로, 편집 모드(뷰어가 안 보임)에서 켜면 듀얼로 바꿔 보이게 한다.
+  const toggleCharacterTable = () => {
+    const next = !characterTableOpen
+    setCharacterTableOpen(next)
+    if (next && mode === 'focus') onModeChange('dual')
+  }
   const nextTheme = () => {
     const idx = THEME_ORDER.indexOf(theme)
     onThemeChange(THEME_ORDER[(idx + 1) % THEME_ORDER.length])
@@ -68,6 +76,14 @@ export function EditorHeader({ title, mode, onModeChange, saveStatus, theme, onT
             </span>
           </span>
         )}
+        <button
+          type="button"
+          className={`mode-btn character-table-btn${characterTableOpen ? ' active' : ''}`}
+          onClick={toggleCharacterTable}
+          title="이 문서의 인물을 표로 모아 보고 걸러 봅니다 (뷰어에 표시됩니다)"
+        >
+          인물 표
+        </button>
         <span className={`save-status save-status-${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
         <FontSettings />
         <button

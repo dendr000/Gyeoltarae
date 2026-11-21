@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { parseWikiText, groupByChoseong, extractCategories } from '../lib/wikiParser.js'
 import { FloatingToc } from './FloatingToc.jsx'
+import { CharacterTableView } from './CharacterTableView.jsx'
+import { Table2 } from 'lucide-react'
 import { ContextMenu } from './ContextMenu.jsx'
 import { useAppStore } from '../store/useAppStore.js'
 import { getApi } from '../lib/api.js'
@@ -476,6 +478,18 @@ function revealAndScroll(element) {
   element.scrollIntoView({ behavior: 'auto', block: 'start' })
 }
 
+// 인물 표에서 고른 인물의 제목으로 스크롤한다. 문서 보기로 돌아간 직후에는 그림이 아직 없을 수 있어 몇 프레임 기다린다.
+// 제목 옆 [편집] 링크가 원문의 제목 줄 위치(data-source-offset)를 갖고 있어서 그것으로 찾는다.
+function scrollToCharacter(offset, attemptsLeft = 20) {
+  const link = document.querySelector(`.wiki-heading-edit-link[data-source-offset="${offset}"]`)
+  const heading = link?.closest('h1, h2, h3, h4, h5, h6')
+  if (heading) {
+    revealAndScroll(heading)
+    return
+  }
+  if (attemptsLeft > 0) requestAnimationFrame(() => scrollToCharacter(offset, attemptsLeft - 1))
+}
+
 function jumpToHeadingId(id) {
   const element = document.getElementById(id)
   if (element) revealAndScroll(element)
@@ -493,6 +507,8 @@ export function ViewerPane({ text, emptyHint }) {
   const viewingData = useAppStore((s) => s.viewingData)
   const viewingTemplate = useAppStore((s) => s.viewingTemplate)
   const openFile = useAppStore((s) => s.openFile)
+  const characterTableOpen = useAppStore((s) => s.characterTableOpen)
+  const setCharacterTableOpen = useAppStore((s) => s.setCharacterTableOpen)
   const openCategory = useAppStore((s) => s.openCategory)
   const createCategoryPage = useAppStore((s) => s.createCategoryPage)
   const openDataEntry = useAppStore((s) => s.openDataEntry)
@@ -778,8 +794,38 @@ export function ViewerPane({ text, emptyHint }) {
     return <div className="viewer-pane viewer-pane-empty">{emptyHint}</div>
   }
 
+  if (characterTableOpen) {
+    return (
+      <div className="viewer-pane">
+        <CharacterTableView
+          key={openPath ?? ''}
+          text={text}
+          openPath={openPath}
+          onClose={() => setCharacterTableOpen(false)}
+          onGo={(c) => {
+            setCharacterTableOpen(false)
+            scrollToCharacter(c.offset)
+          }}
+          onEdit={(c) => {
+            getApi().softRefocusWindow?.()
+            requestEditorJump(c.offset)
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="viewer-pane">
+      <button
+        type="button"
+        className="ctable-open"
+        onClick={() => setCharacterTableOpen(true)}
+        title="이 문서의 인물을 표로 모아 보고 이름·속성·회차로 걸러 봅니다"
+      >
+        <Table2 size={14} />
+        <span>인물 표</span>
+      </button>
       <div
         className="viewer-scroll"
         ref={scrollRef}

@@ -504,6 +504,7 @@ export const useAppStore = create((set, get) => ({
   // 갈아끼우는 식으로 동기화됨. 재시작하면 초기화됨(워크스페이스 자체처럼 영속시키진 않음).
   tabs: [],
   activeTabId: null,
+  characterTableOpen: false,
   mode: DEFAULT_MODE, // 'preview' | 'dual' | 'focus' — 기본은 편집(focus). 규칙: lib/viewMode.js
   // Set by a heading's [편집] link (see wikiParser.js's editableOffsets and
   // ViewerPane.jsx's handleWikiContentClick) to the character offset in the
@@ -1848,5 +1849,10 @@ export const useAppStore = create((set, get) => ({
 
   clearEditorJump() {
     set({ editorJumpOffset: null })
+  },
+
+  // 인물 표 보기(뷰어에서 문서 대신 인물 표를 보여 줌). 규칙: lib/characterTable.js
+  setCharacterTableOpen(open) {
+    set({ characterTableOpen: !!open })
   },
 }))
